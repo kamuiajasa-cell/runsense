@@ -11,15 +11,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
           channel: 'stable'
 
-      - name: Setup project
+      - name: Extract project from run_sense.zip
         run: |
-          flutter pub get
-          flutter create . --project-name run_sense --org com.runsense.app --platforms=android || true
+          unzip -q run_sense.zip -d _tmp
+          rsync -a --exclude '.git' _tmp/run_sense/ ./
+          rm -rf _tmp
+
+      - name: Remove empty assets folder from pubspec
+        run: |
+          sed -i '/^  assets:/d; /assets\/images\//d' pubspec.yaml
+          cat pubspec.yaml
+
+      - name: Generate Android platform files
+        run: flutter create . --project-name run_sense --org com.runsense.app --platforms=android
+
+      - name: Add INTERNET permission for release build
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          if ! grep -q "android.permission.INTERNET" "$MANIFEST"; then
+            sed -i 's|<manifest xmlns:android="http://schemas.android.com/apk/res/android">|&\n    <uses-permission android:name="android.permission.INTERNET"/>|' "$MANIFEST"
+          fi
+          head -5 "$MANIFEST"
+
+      - name: Get dependencies
+        run: flutter pub get
 
       - name: Build APK
         run: flutter build apk --release
