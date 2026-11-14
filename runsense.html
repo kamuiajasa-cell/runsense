@@ -2731,6 +2731,7 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
         lowConf + `</div>`;
     }
     $("#mainCard").innerHTML = h;
+    climHome();
 
     /* Konfirmasi jenis sesi */
     const now = Date.now();
@@ -2939,6 +2940,7 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
       body += `<div class="insight" style="margin-top:12px">Intensitas ≈ <b>${Math.round(pct * 100)}%</b> Max METs (${f1(st.m)}) · tahan ${durText(pct)} · tahap T${st.s}</div>`;
     }
 
+    body += climAct(act);
     $("#mBody").innerHTML = body;
     $("#actModal").classList.add("show");
   }
@@ -3281,6 +3283,7 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
       const r = [+w.start, k, w.durSec / 60, km, +w.avgHr || 0, +w.elevUp || 0, id, String(w.name || "").slice(0, 50), +w.maxHr || 0, id, 0];
       const m = matchIcu(r);
       const key = m ? String(m[9]) : id;
+      if (k === "run") clGpsPts(m ? m[0] : r[0], w.pts, w.durSec);
       if (k === "run" && r[2] >= 20 && r[3] >= 3 && !state.sx[key] && Array.isArray(w.pts) && w.pts.length >= 40) {
         state.sx[key] = hwSummary(w.pts) || { none: 1 };
       }
@@ -3715,6 +3718,235 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
   window.logout = logout;
   window.syncNow = syncNow;
   window.setType = setType;
+  /* ---------- Climate-aware coach (brief-3): cuaca = konteks, bukan pengukuran ---------- */
+  const CK = "runsense_clim";
+  let CL = { loc: null, ctx: {}, wx: {}, gps: {} }, clBusy = 0, clGeo = 0;
+  try { const d = JSON.parse(localStorage.getItem(CK) || "null"); if (d) CL = Object.assign(CL, d); } catch (_) {}
+  CL.gps = CL.gps || {};
+  const clSave = () => { try {
+    const ks = Object.keys(CL.wx); if (ks.length > 40) ks.slice(0, ks.length - 40).forEach((k) => delete CL.wx[k]);
+    const cs = Object.keys(CL.ctx).sort(); if (cs.length > 400) cs.slice(0, cs.length - 400).forEach((k) => delete CL.ctx[k]);
+    const gs = Object.keys(CL.gps).sort(); if (gs.length > 400) gs.slice(0, gs.length - 400).forEach((k) => delete CL.gps[k]);
+    localStorage.setItem(CK, JSON.stringify(CL));
+  } catch (_) {} };
+  const HV = "temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,precipitation,shortwave_radiation,cloud_cover,weather_code";
+  const cD = (ms) => { const d = new Date(ms); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+  const cH = (ms) => new Date(ms).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(":", ".");
+  const cMed = (x) => { const b = x.slice().sort((p, q) => p - q); return b[Math.floor(b.length / 2)]; };
+
+  /* WeatherProvider: Open-Meteo, cache per grid 0.1 derajat; gagal -> cache lama (bila ada) */
+  async function wxGet(la, lo, mode, day) {
+    const k = mode + la.toFixed(1) + "," + lo.toFixed(1) + (mode === "ar" ? day : "");
+    const c = CL.wx[k], ttl = mode === "fc" ? 30 * 60e3 : 30 * 864e5;
+    if (c && Date.now() - c.t < ttl) return c;
+    const q = "latitude=" + la.toFixed(2) + "&longitude=" + lo.toFixed(2) + "&timezone=auto&hourly=" + HV;
+    const u = mode === "fc" ? "https://api.open-meteo.com/v1/forecast?" + q + ",precipitation_probability&past_days=7&forecast_days=3"
+      : "https://archive-api.open-meteo.com/v1/archive?" + q + "&start_date=" + day + "&end_date=" + day;
+    try {
+      const r = await fetch(u); if (!r.ok) throw 0;
+      const j = await r.json(); if (!j.hourly || !j.hourly.time) throw 0;
+      const o = { t: Date.now(), h: j.hourly, src: "Open-Meteo" };
+      CL.wx[k] = o; clSave(); return o;
+    } catch (_) { return c || null; }
+  }
+  /* Rata-rata variabel selama [from,to]; jam yang memuat 'from' ikut dihitung */
+  function clAvg(o, from, to) {
+    if (!o || !o.h) return null;
+    const T = o.h.time.map((s) => +new Date(s)), ix = [];
+    T.forEach((m, i) => { if (m > from - 3600e3 && m <= to) ix.push(i); });
+    if (!ix.length) return null;
+    const m = (k) => { const v = ix.map((i) => o.h[k] && o.h[k][i]).filter((x) => x != null); return v.length ? v.reduce((p, q) => p + q, 0) / v.length : null; };
+    const mx = (k) => Math.max(0, ...ix.map((i) => (o.h[k] && o.h[k][i]) || 0));
+    const c = { t: m("temperature_2m"), rh: m("relative_humidity_2m"), at: m("apparent_temperature"), w: m("wind_speed_10m"), sr: m("shortwave_radiation") || 0, p: mx("precipitation"), code: mx("weather_code"), n: ix.length };
+    return c.at == null ? null : c;
+  }
+  /* HeatStressEngine: estimasi (bukan WBGT). Nyaman dan aman dipisah: petir/hujan lebat menang atas skor. */
+  const clV = (c) => c.at + c.sr / 150;
+  function clCls(c) { const v = clV(c); return v < 25 ? "sejuk" : v < 29 ? "hangat" : c.rh >= 70 ? "panas & lembap" : "panas"; }
+  function clStat(c) {
+    const v = clV(c);
+    if (c.code >= 95 || c.p >= 8) return { k: "bad", lb: "Berisiko", why: "ada petir atau hujan sangat lebat" };
+    if (v >= 38) return { k: "bad", lb: "Berisiko", why: "tekanan panas estimasi sangat tinggi" };
+    if (c.p >= 2 || v >= 33) return { k: "bad", lb: "Kurang disarankan", why: c.p >= 2 ? "hujan cukup deras" : "panas terik" };
+    if (v >= 27 || c.p >= 0.3) return { k: "wn", lb: "Perlu penyesuaian", why: v >= 27 ? "hangat/panas" : "gerimis" };
+    return { k: "ok", lb: "Nyaman", why: "kondisi relatif mendukung" };
+  }
+  /* PersonalClimateProfile: easy run saja, bandingkan HR ke baseline sejuk pada pace sebanding (median) */
+  function clProfile() {
+    const g = {};
+    (state.acts || []).forEach((a) => {
+      const c = CL.ctx[a[0]];
+      if (!c || !c.cls || a[1] !== "run" || !(a[4] > 0) || a[3] < 2) return;
+      let ty; try { ty = detectType(a).type; } catch (_) { return; }
+      if (ty === "easy") (g[c.cls] = g[c.cls] || []).push({ hr: a[4], pace: a[2] / a[3] });
+    });
+    const S = {}; Object.keys(g).forEach((k) => { S[k] = { n: g[k].length, hr: cMed(g[k].map((x) => x.hr)), pace: cMed(g[k].map((x) => x.pace)) }; });
+    const cmp = {}, b = S.sejuk;
+    if (b && b.n >= 3) Object.keys(S).forEach((k) => {
+      if (k === "sejuk" || S[k].n < 3 || Math.abs(S[k].pace - b.pace) > 0.5) return;
+      const n = Math.min(S[k].n, b.n);
+      cmp[k] = { d: Math.round(S[k].hr - b.hr), n, conf: n < 6 ? "mulai terbaca" : n < 12 ? "cukup konsisten" : "semakin matang" };
+    });
+    return { S, cmp };
+  }
+  /* GPS aktivitas: simpan <=5 titik (detik sejak start, lat, lon; 2 desimal) per lari, bukan seluruh rute */
+  const gOK = (a, b) => typeof a === "number" && typeof b === "number" && isFinite(a) && isFinite(b) && (a || b) && Math.abs(a) <= 90 && Math.abs(b) <= 180;
+  function gPick(T, la, lo, durSec) {
+    const ix = []; for (let i = 0; i < la.length; i++) if (gOK(la[i], lo[i])) ix.push(i);
+    if (ix.length < 2) return { none: 1 };
+    const n = Math.min(5, ix.length), p = [];
+    for (let k = 0; k < n; k++) {
+      const i = ix[Math.round((k * (ix.length - 1)) / (n - 1 || 1))];
+      p.push([T && T[i] != null ? Math.max(0, T[i] - (T[0] || 0)) : Math.round((i / la.length) * durSec), +la[i].toFixed(2), +lo[i].toFixed(2)]);
+    }
+    return { p };
+  }
+  function clGpsPts(ms, pts, durSec) {   /* data jam: [detik, hr, m/s, tinggi, kadens, lat, lon] */
+    if (CL.gps[ms] || !Array.isArray(pts)) return;
+    const v = pts.filter((p) => Array.isArray(p));
+    CL.gps[ms] = gPick(v.map((p) => +p[0]), v.map((p) => +p[5]), v.map((p) => +p[6]), durSec);
+    clSave();
+  }
+  async function clGpsIcu(a) {           /* null = gagal sementara, coba lagi nanti */
+    const id = a[9] ? String(a[9]) : "";
+    if (!id || /^hw/.test(id)) return (CL.gps[a[0]] = { none: 1 });
+    if (!state.apiKey || state.apiKey === "demo") return null;
+    try {
+      const raw = await icuGet("activity/" + id + "/streams?types=time,latlng");
+      const get = (t) => Array.isArray(raw) ? raw.find((x) => x && x.type === t) : raw && raw[t];
+      const ll = get("latlng"), tm = get("time");
+      let la = ll && ll.data, lo = ll && ll.data2;
+      if (Array.isArray(la) && Array.isArray(la[0])) { lo = la.map((x) => x && x[1]); la = la.map((x) => x && x[0]); }
+      const g = Array.isArray(la) && Array.isArray(lo) ? gPick(tm && tm.data, la, lo, a[2] * 60) : { none: 1 };
+      return (CL.gps[a[0]] = g);
+    } catch (e) {
+      if (/HTTP 4\d\d/.test(String(e && e.message)) && !/ditolak/.test(String(e.message))) return (CL.gps[a[0]] = { none: 1 });
+      return null;
+    }
+  }
+  /* ActivityWeatherMatcher: cuaca per segmen waktu dan titik GPS; tanpa GPS jatuh ke lokasi terakhir (keyakinan rendah) */
+  async function clMatch() {
+    if (clBusy) return;
+    const needs = (x) => { const c = CL.ctx[x[0]]; if (!c) return true; if (c.gps) return false; const g = CL.gps[x[0]]; return !g || !!g.p; };
+    const todo = (state.acts || []).filter((x) => x[1] === "run" && x[3] >= 1.5 && Date.now() - x[0] > 3600e3 && needs(x)).sort((p, q) => q[0] - p[0]).slice(0, 10);
+    if (!todo.length) return;
+    clBusy = 1; let n = 0;
+    try {
+      for (const a of todo) {
+        const g = CL.gps[a[0]] || (await clGpsIcu(a));
+        if (!g && !(CL.loc && (!state.apiKey || state.apiKey === "demo"))) continue;
+        const pts = g && g.p ? g.p : CL.loc ? [[0, CL.loc.lat, CL.loc.lon]] : null;
+        if (!pts) continue;
+        const fc = Date.now() - a[0] < 7 * 864e5, cs = [];
+        let ok = 1;
+        for (let i = 0; i < pts.length; i++) {
+          const t0 = a[0] + pts[i][0] * 1e3, t1 = i + 1 < pts.length ? a[0] + pts[i + 1][0] * 1e3 : a[0] + a[2] * 60e3;
+          const o = await wxGet(pts[i][1], pts[i][2], fc ? "fc" : "ar", cD(t0));
+          if (!o) { ok = 0; break; }
+          const c = clAvg(o, t0, Math.max(t1, t0 + 1)); if (c) cs.push(c);
+        }
+        if (!ok) continue;
+        const mean = (k) => cs.reduce((s, c) => s + c[k], 0) / cs.length;
+        if (!cs.length) { CL.ctx[a[0]] = { na: 1 }; n++; continue; }
+        const c = { t: mean("t"), rh: mean("rh"), at: mean("at"), w: mean("w"), sr: mean("sr"), p: Math.max(...cs.map((x) => x.p)), code: Math.max(...cs.map((x) => x.code)), n: cs.length, amin: Math.min(...cs.map((x) => x.at)), amax: Math.max(...cs.map((x) => x.at)) };
+        CL.ctx[a[0]] = Object.assign(c, { cls: clCls(c), src: "Open-Meteo", at0: Date.now(), gps: g && g.p ? 1 : 0, ng: pts.length, q: g && g.p ? "titik GPS aktivitas (" + pts.length + " titik)" : "lokasi pengguna terakhir (perkiraan, tanpa GPS aktivitas)" });
+        n++;
+      }
+    } catch (_) {}
+    clBusy = 0;
+    if (n) { clSave(); if (state.athlete) renderAll(); }
+  }
+  /* WeatherAwareRecommendation */
+  function clSlots(o, dur, nowC) {
+    const T = o.h.time.map((s) => +new Date(s)), now = Date.now(), out = [];
+    T.forEach((m, i) => {
+      const hr = new Date(m).getHours();
+      if (m <= now + 3600e3 || m > now + 40 * 3600e3 || hr < 5 || hr > 18) return;
+      const c = clAvg(o, m, m + dur * 60e3); if (!c || c.n < 1) return;
+      out.push({ m, c, s: clV(c) + (c.p >= 0.3 ? 6 : 0) + (c.p >= 2 ? 10 : 0) + (c.code >= 95 ? 50 : 0) });
+    });
+    out.sort((p, q) => p.s - q.s);
+    const pick = out.length ? [out[0]] : [];
+    const s2 = out.find((x) => pick[0] && Math.abs(x.m - pick[0].m) >= 2 * 3600e3); if (s2) pick.push(s2);
+    const base = clV(nowC) + (nowC.p >= 0.3 ? 6 : 0);
+    return pick.filter((x) => x.s <= base - 1.5).map((x) => {
+      const why = [];
+      if (nowC.at - x.c.at >= 2) why.push("suhu terasa ±" + Math.round(x.c.at) + "°C vs " + Math.round(nowC.at) + "°C sekarang");
+      if (nowC.sr - x.c.sr >= 150) why.push("matahari lebih lemah");
+      if (nowC.p > x.c.p) why.push("lebih kering");
+      const dd = Math.round((new Date(cD(x.m)) - new Date(cD(now))) / 864e5);
+      return (dd === 0 ? "Hari ini " : dd === 1 ? "Besok " : "") + cH(x.m) + (why.length ? " · " + why.join(", ") : "");
+    });
+  }
+  function climPaint(el, o) {
+    const r = curRec || state.recommendation || {}, now = Date.now();
+    const dur = Math.min(150, parseInt(r.duration) || 40);
+    const c = clAvg(o, now, now + dur * 60e3);
+    if (!c) { el.innerHTML = `<b>Cuaca</b> · data belum tersedia. Coach memakai logika latihan biasa.`; return; }
+    const st = clStat(c), P = clProfile(), cls = clCls(c), pc = P.cmp[cls];
+    const off = r.rested || r.status === "rest" || r.status === "done";
+    const hard = r.tag === "QUALITY", lng = r.tag === "LONG";
+    let tx;
+    if (off) tx = "Hari ini bukan hari lari, jadi cuaca hanya jadi catatan.";
+    else if (st.k === "ok") tx = "Kondisi mendukung. Jalankan sesi sesuai rencana.";
+    else if (st.lb === "Berisiko") tx = "Jangan lari di luar ruang sekarang. Pilih indoor atau tunda.";
+    else if (st.lb === "Kurang disarankan") tx = "Lebih baik geser ke jam lain atau latihan indoor." + (r.walk ? "" : " Target asli sesi tetap sama, hanya waktunya yang bergeser.");
+    else if (hard) tx = "Sesi berat sebaiknya digeser ke jam lebih sejuk. Kalau tetap sekarang, ikuti HR/RPE, bukan pace target.";
+    else if (lng) tx = "Panas menumpuk selama durasi panjang. Rencanakan air, rute teduh, dan jangan hanya lihat cuaca saat start.";
+    else tx = "Jaga effort tetap santai, jangan kejar pace seperti saat sejuk. Pantau HR dan rasa tubuh, cari rute teduh, bawa air.";
+    if (!off && st.k !== "ok") tx += pc ? ` Di kondisi ${cls}, HR easy-mu biasanya sekitar ${pc.d > 0 ? "+" : ""}${pc.d} bpm dibanding saat sejuk (pace sebanding, ${pc.n} sesi, ${pc.conf}).` : " Data pribadi belum cukup, jadi panduan memakai effort dan HR, bukan angka pace.";
+    if (!off && st.k !== "ok") tx += " Berhenti dan cari pertolongan bila pusing, bingung, atau lemas berat.";
+    const sl = off ? [] : clSlots(o, dur, c), stale = now - o.t > 45 * 60e3;
+    el.innerHTML = `<div class="label" style="margin-bottom:6px">Kalau lari sekarang · ${cH(now)}</div>` +
+      `<p style="font-size:14px;margin-bottom:4px"><b style="color:var(--${st.k === "ok" ? "primary" : st.k === "wn" ? "yellow" : "red"})">${st.lb}</b> · terasa ${Math.round(c.at)}°C, lembap ${Math.round(c.rh)}%${c.p >= 0.3 ? ", hujan" : ""}</p>` +
+      `<p style="font-size:13px;color:var(--light-grey)">${tx}</p>` +
+      (sl.length ? `<div class="label" style="margin:10px 0 4px">Kalau ingin lebih nyaman</div>` + sl.map((s) => `<p style="font-size:13px">• ${s}</p>`).join("") : "") +
+      `<p style="font-size:11px;color:var(--grey);margin-top:8px">Estimasi model ${o.src}, bukan pengukuran di tubuhmu${stale ? " · cache " + cH(o.t) : ""} · lokasi ${CL.loc.name || (CL.loc.manual ? "manual" : "terakhir")} · <a href="#" onclick="clLoc();return false" style="color:var(--primary)">ganti</a></p>`;
+  }
+  function climHome() {
+    const mc = $("#mainCard"); if (!mc) return;
+    let el = $("#climCard");
+    if (!el) { el = document.createElement("div"); el.id = "climCard"; el.className = "insight"; el.style.margin = "12px 0"; mc.insertAdjacentElement("afterend", el); }
+    if (state.apiKey === "demo") { el.style.display = "none"; return; }
+    const go = async () => {
+      clMatch();
+      if (!CL.loc) { el.style.display = ""; el.innerHTML = `<b>Cuaca</b> · belum aktif, coach memakai logika latihan biasa. <a href="#" onclick="clLoc();return false" style="color:var(--primary)">Pilih lokasi</a>`; return; }
+      const o = await wxGet(CL.loc.lat, CL.loc.lon, "fc");
+      el.style.display = "";
+      if (!o) el.innerHTML = `<b>Cuaca</b> · gagal dimuat dan belum ada cache. Penyesuaian cuaca belum tersedia.`; else climPaint(el, o);
+      clMatch();
+    };
+    if (!CL.loc && !clGeo && navigator.geolocation) {
+      clGeo = 1;
+      navigator.geolocation.getCurrentPosition((p) => { CL.loc = { lat: +p.coords.latitude.toFixed(2), lon: +p.coords.longitude.toFixed(2), t: Date.now() }; clSave(); go(); }, () => go(), { timeout: 6000, maximumAge: 3600e3 });
+    } else go();
+  }
+  async function clLoc() {
+    const n = prompt("Nama kota untuk cuaca (mis. Jakarta):"); if (!n) return;
+    try {
+      const j = await (await fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&language=id&name=" + encodeURIComponent(n))).json();
+      const g = j.results && j.results[0]; if (!g) { alert("Kota tidak ditemukan."); return; }
+      CL.loc = { lat: +g.latitude.toFixed(2), lon: +g.longitude.toFixed(2), name: g.name, manual: 1, t: Date.now() };
+      CL.wx = {}; CL.ctx = {}; clSave(); climHome();
+    } catch (_) { alert("Gagal mencari lokasi. Cek koneksi."); }
+  }
+  window.clLoc = clLoc;
+  /* ClimateActivityAnalysis: konteks cuaca di detail aktivitas, data mentah tidak diubah */
+  function climAct(act) {
+    if (act[1] !== "run" || state.apiKey === "demo") return "";
+    const c = CL.ctx[act[0]], bx = (t) => `<div class="insight" style="margin-top:12px">${t}</div>`;
+    if (!c) return bx("Konteks cuaca lari ini belum dicocokkan.");
+    if (c.na) return bx("Data cuaca historis tidak tersedia untuk lari ini. Tidak ditebak.");
+    let t = `<b>Kondisi saat lari</b> · ${cH(act[0])}–${cH(act[0] + act[2] * 60e3)} · ${c.cls}<br>Suhu ${Math.round(c.t)}°C (terasa ${Math.round(c.at)}°C${c.amax - c.amin >= 2 ? ", berubah " + Math.round(c.amin) + "–" + Math.round(c.amax) + "°C selama lari" : ""}) · lembap ${Math.round(c.rh)}% · angin ${Math.round(c.w)} km/j${c.p >= 0.3 ? " · hujan" : ""}<br>` +
+      `<span style="color:var(--grey);font-size:12px">Estimasi model ${c.src} (grid ±10 km) di ${c.q}${c.gps ? "" : ", keyakinan lebih rendah"}.</span>`;
+    const P = clProfile(), b = P.S.sejuk;
+    let ty; try { ty = detectType(act).type; } catch (_) {}
+    if (ty === "easy" && act[4] > 0 && c.cls !== "sejuk" && b && b.n >= 3 && Math.abs(act[2] / act[3] - b.pace) <= 0.5)
+      t += `<br>HR rata-rata ${Math.round(act[4])} bpm; easy run sejenis di kondisi sejuk median ${Math.round(b.hr)} bpm. Cuaca mungkin ikut menambah beban, tapi jangan langsung menyimpulkan kebugaran turun: tidur, hidrasi, dan elevasi juga berpengaruh.`;
+    else if (c.cls !== "sejuk") t += `<br>Cuaca mungkin ikut memengaruhi HR dan pace. Pembanding sejenis belum cukup untuk kesimpulan pribadi.`;
+    return bx(t);
+  }
+
   window.openAct = openAct;
   window.closeModal = closeModal;
   window.openSettings = openSettings;
