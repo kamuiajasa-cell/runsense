@@ -2117,15 +2117,15 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     if (r.steps && r.title === "Hari lomba" && (+state.raceDist || 0) >= 21) r.steps.push(["Nutrisi", "Karbo 40–60 g/jam sejak menit 40, minum di tiap pos"]);
     return r;
   }
-  /* Cuaca otomatis (Open-Meteo, tanpa API key): suhu terasa >= 30 C saat app dibuka = hari panas. Sekali sehari. */
+  /* Cuaca otomatis (Open-Meteo, tanpa API key): suhu udara asli >= 30 C saat app dibuka = hari panas. Sekali sehari. */
   function autoHeat() {
     if (state.apiKey === "demo" || !navigator.geolocation) return;
     try { if (localStorage.getItem("runsense_wx") === ymd()) return; } catch (_) {}
     navigator.geolocation.getCurrentPosition((p) => {
-      fetch("https://api.open-meteo.com/v1/forecast?latitude=" + p.coords.latitude.toFixed(2) + "&longitude=" + p.coords.longitude.toFixed(2) + "&current=apparent_temperature")
+      fetch("https://api.open-meteo.com/v1/forecast?latitude=" + p.coords.latitude.toFixed(2) + "&longitude=" + p.coords.longitude.toFixed(2) + "&current=temperature_2m")
         .then((r) => r.json()).then((j) => {
           try { localStorage.setItem("runsense_wx", ymd()); } catch (_) {}
-          const t = j && j.current && j.current.apparent_temperature;
+          const t = j && j.current && j.current.temperature_2m;
           if (t >= 30 && !heatOn()) toggleHeat();
         }).catch(() => {});
     }, () => {}, { timeout: 6000, maximumAge: 3600e3 });
@@ -3818,17 +3818,72 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     const m = (k) => { const v = ix.map((i) => o.h[k] && o.h[k][i]).filter((x) => x != null); return v.length ? v.reduce((p, q) => p + q, 0) / v.length : null; };
     const mx = (k) => Math.max(0, ...ix.map((i) => (o.h[k] && o.h[k][i]) || 0));
     const c = { t: m("temperature_2m"), rh: m("relative_humidity_2m"), at: m("apparent_temperature"), w: m("wind_speed_10m"), sr: m("shortwave_radiation") || 0, p: mx("precipitation"), code: mx("weather_code"), n: ix.length };
-    return c.at == null ? null : c;
+    return c.t == null && c.at == null ? null : c;
   }
   /* HeatStressEngine: estimasi (bukan WBGT). Nyaman dan aman dipisah: petir/hujan lebat menang atas skor. */
-  const clV = (c) => c.at + c.sr / 150;
-  function clCls(c) { const v = clV(c); return v < 25 ? "sejuk" : v < 29 ? "hangat" : c.rh >= 70 ? "panas & lembap" : "panas"; }
+  const clV = (c) => (c.t != null ? c.t : c.at) + c.sr / 150;   /* suhu udara asli + beban matahari; kelembapan dipisah di clCls */
+  /* Ambang: default 25/27/29, diganti ambang pribadi bila riwayat cukup (clPers). Batas keselamatan (33/38) tidak pernah dipersonalisasi. */
+  function clTh() {
+    const P = clPers(), cool = P.ok && P.cool != null ? P.cool : 25, hot = P.ok && P.hot != null ? P.hot : 29;
+    return { cool, hot, wn: P.ok && P.cool != null ? (P.hot != null ? (cool + hot) / 2 : cool + 2) : 27 };
+  }
+  function clCls(c) { const v = clV(c), th = clTh(); return v < th.cool ? "sejuk" : v < th.hot ? "hangat" : c.rh >= 70 ? "panas & lembap" : "panas"; }
+  const clK = (c) => (c.t != null && c.rh != null ? clCls(c) : c.cls);   /* kelas selalu dihitung ulang dengan ambang terbaru */
+  /* Ambang pribadi: efisiensi easy run (meter per detak) dibanding easy run lain +-28 hari (buang tren kebugaran),
+     dikelompokkan per 2 poin suhu efektif (suhu udara + efek matahari). Bin paling efisien = optimum;
+     ambang = ujung atas bin yang efisiensinya masih dalam 1,5 / 4 poin persen dari optimum. */
+  function clPers() {
+    const key = Object.keys(CL.ctx).length + ":" + (state.acts || []).length;
+    if (clPers.k === key && clPers.v) return clPers.v;
+    const rows = [];
+    (state.acts || []).forEach((a) => {
+      const c = CL.ctx[a[0]];
+      if (!c || c.na || c.t == null || a[1] !== "run" || !(a[4] > 0) || !(a[3] >= 2) || !(a[2] > 0)) return;
+      let ty; try { ty = detectType(a).type; } catch (_) { return; }
+      if (ty !== "easy") return;
+      rows.push({ ms: a[0], v: clV(c), e: (a[3] * 1000 / a[2]) / a[4] });
+    });
+    const rr = [];
+    rows.forEach((r) => {
+      const nb = rows.filter((x) => x !== r && Math.abs(x.ms - r.ms) <= 28 * 864e5);
+      if (nb.length >= 4) rr.push({ v: r.v, r: r.e / cMed(nb.map((x) => x.e)) - 1 });
+    });
+    let out = { ok: false, n: rr.length, cand: rows.length, reason: "baru " + rr.length + " easy run yang bisa dipakai (butuh minimal 12, tersebar di ≥ 3 rentang suhu)" };
+    if (rr.length >= 12) {
+      const g = {};
+      rr.forEach((x) => { const lo = Math.floor(x.v / 2) * 2; (g[lo] = g[lo] || []).push(x.r); });
+      const bins = Object.keys(g).map(Number).sort((p, q) => p - q).filter((lo) => g[lo].length >= 3).map((lo) => ({ lo, hi: lo + 2, n: g[lo].length, med: cMed(g[lo]) * 100 }));
+      if (bins.length >= 3) {
+        let bi = 0; bins.forEach((b, i) => { if (b.med > bins[bi].med) bi = i; });
+        const best = bins[bi];
+        let cool = best.hi, hot = best.hi, sawDrop = false, found = false;
+        for (let k = bi + 1; k < bins.length; k++) {
+          if (bins[k].lo !== bins[k - 1].hi) break;
+          const d = best.med - bins[k].med;
+          if (d <= 1.5 && !sawDrop) { cool = hot = bins[k].hi; }
+          else if (d <= 4) { sawDrop = true; hot = bins[k].hi; }
+          else { sawDrop = true; found = true; break; }
+        }
+        const cl = (x, a, b) => Math.max(a, Math.min(b, x));
+        const cv = cl(cool, 20, 30);
+        out = { ok: true, n: rr.length, opt: best.lo + 1, cool: sawDrop ? cv : null, hot: found ? cl(hot, cv + 2, 34) : null, bins, conf: rr.length < 20 ? "awal" : rr.length < 40 ? "cukup" : "matang" };
+      } else out.reason = "easy run-mu baru tersebar di " + bins.length + " rentang suhu (butuh ≥ 3 dengan masing-masing ≥ 3 lari)";
+    }
+    clPers.k = key; clPers.v = out; return out;
+  }
+  const clSc = (c) => { const v = clV(c), P = clPers(); return P.ok ? (v < P.opt ? (P.opt - v) * 0.5 : v - P.opt) : v; };
+  function clPersTxt() {
+    const P = clPers();
+    if (!P.ok) return `Ambang masih default (25° / 29°): ${P.reason}.`;
+    return `Ambang pribadi dari ${P.n} easy run (${P.conf}): paling efisien ±${P.opt}°C · nyaman < ${P.cool != null ? P.cool + "°C" : "25°C (default)"} · berat ≥ ${P.hot != null ? P.hot + "°C" : "29°C (default)"}. Suhu efektif = suhu udara + efek matahari.`;
+  }
   function clStat(c) {
     const v = clV(c);
     if (c.code >= 95 || c.p >= 8) return { k: "bad", lb: "Berisiko", why: "ada petir atau hujan sangat lebat" };
     if (v >= 38) return { k: "bad", lb: "Berisiko", why: "tekanan panas estimasi sangat tinggi" };
     if (c.p >= 2 || v >= 33) return { k: "bad", lb: "Kurang disarankan", why: c.p >= 2 ? "hujan cukup deras" : "panas terik" };
-    if (v >= 27 || c.p >= 0.3) return { k: "wn", lb: "Perlu penyesuaian", why: v >= 27 ? "hangat/panas" : "gerimis" };
+    const wn = clTh().wn;
+    if (v >= wn || c.p >= 0.3) return { k: "wn", lb: "Perlu penyesuaian", why: v >= wn ? "hangat/panas" : "gerimis" };
     return { k: "ok", lb: "Nyaman", why: "kondisi relatif mendukung" };
   }
   /* PersonalClimateProfile: easy run saja, bandingkan HR ke baseline sejuk pada pace sebanding (median) */
@@ -3836,9 +3891,9 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     const g = {};
     (state.acts || []).forEach((a) => {
       const c = CL.ctx[a[0]];
-      if (!c || !c.cls || a[1] !== "run" || !(a[4] > 0) || a[3] < 2) return;
+      if (!c || !clK(c) || a[1] !== "run" || !(a[4] > 0) || a[3] < 2) return;
       let ty; try { ty = detectType(a).type; } catch (_) { return; }
-      if (ty === "easy") (g[c.cls] = g[c.cls] || []).push({ hr: a[4], pace: a[2] / a[3] });
+      if (ty === "easy") (g[clK(c)] = g[clK(c)] || []).push({ hr: a[4], pace: a[2] / a[3] });
     });
     const S = {}; Object.keys(g).forEach((k) => { S[k] = { n: g[k].length, hr: cMed(g[k].map((x) => x.hr)), pace: cMed(g[k].map((x) => x.pace)) }; });
     const cmp = {}, b = S.sejuk;
@@ -3914,28 +3969,28 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
       }
     } catch (_) {}
     clBusy = 0;
-    if (n) { clSave(); if (state.athlete) renderAll(); }
+    if (n) { clSave(); clPers.k = null; if (state.athlete) renderAll(); setTimeout(clMatch, 800); }
   }
   /* WeatherAwareRecommendation */
   function clSlots(o, dur, nowC) {
     const T = o.h.time.map((s) => +new Date(s)), now = Date.now(), out = [];
-    T.forEach((m, i) => {
+    T.forEach((m) => {
       const hr = new Date(m).getHours();
-      if (m <= now + 3600e3 || m > now + 40 * 3600e3 || hr < 5 || hr > 18) return;
-      const c = clAvg(o, m, m + dur * 60e3); if (!c || c.n < 1) return;
-      out.push({ m, c, s: clV(c) + (c.p >= 0.3 ? 6 : 0) + (c.p >= 2 ? 10 : 0) + (c.code >= 95 ? 50 : 0) });
+      if (m <= now || m > now + 40 * 3600e3 || hr < 5 || hr > 18) return;
+      const c = clAvg(o, m, m + dur * 60e3); if (!c) return;
+      out.push({ m, c, s: clSc(c) + (c.p >= 0.3 ? 6 : 0) + (c.p >= 2 ? 10 : 0) + (c.code >= 95 ? 50 : 0) });
     });
     out.sort((p, q) => p.s - q.s);
     const pick = out.length ? [out[0]] : [];
     const s2 = out.find((x) => pick[0] && Math.abs(x.m - pick[0].m) >= 2 * 3600e3); if (s2) pick.push(s2);
-    const base = clV(nowC) + (nowC.p >= 0.3 ? 6 : 0);
-    return pick.filter((x) => x.s <= base - 1.5).map((x) => {
-      const why = [];
-      if (nowC.at - x.c.at >= 2) why.push("suhu terasa ±" + Math.round(x.c.at) + "°C vs " + Math.round(nowC.at) + "°C sekarang");
+    const base = clSc(nowC) + (nowC.p >= 0.3 ? 6 : 0);
+    return pick.map((x) => {
+      const why = ["suhu " + Math.round(x.c.t != null ? x.c.t : x.c.at) + "°C" + (x.c.at != null && x.c.t != null ? " (terasa " + Math.round(x.c.at) + "°C)" : "")];
+      if (nowC.t != null && x.c.t != null && nowC.t - x.c.t >= 2) why.push("lebih sejuk " + Math.round(nowC.t - x.c.t) + "°C dari sekarang");
       if (nowC.sr - x.c.sr >= 150) why.push("matahari lebih lemah");
-      if (nowC.p > x.c.p) why.push("lebih kering");
+      if (x.c.p < 0.3) why.push("kering"); else why.push("ada hujan");
       const dd = Math.round((new Date(cD(x.m)) - new Date(cD(now))) / 864e5);
-      return (dd === 0 ? "Hari ini " : dd === 1 ? "Besok " : "") + cH(x.m) + (why.length ? " · " + why.join(", ") : "");
+      return { better: x.s <= base - 1.5, txt: (dd === 0 ? "Hari ini " : dd === 1 ? "Besok " : "") + cH(x.m) + " · " + why.join(", ") };
     });
   }
   function climPaint(el, o) {
@@ -3958,9 +4013,10 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     if (!off && st.k !== "ok") tx += " Berhenti dan cari pertolongan bila pusing, bingung, atau lemas berat.";
     const sl = off ? [] : clSlots(o, dur, c), stale = now - o.t > 45 * 60e3;
     el.innerHTML = `<div class="label" style="margin-bottom:6px">Kalau lari sekarang · ${cH(now)}</div>` +
-      `<p style="font-size:14px;margin-bottom:4px"><b style="color:var(--${st.k === "ok" ? "primary" : st.k === "wn" ? "yellow" : "red"})">${st.lb}</b> · terasa ${Math.round(c.at)}°C, lembap ${Math.round(c.rh)}%${c.p >= 0.3 ? ", hujan" : ""}</p>` +
+      `<p style="font-size:14px;margin-bottom:4px"><b style="color:var(--${st.k === "ok" ? "primary" : st.k === "wn" ? "yellow" : "red"})">${st.lb}</b> · suhu ${Math.round(c.t != null ? c.t : c.at)}°C${c.t != null && c.at != null ? " (terasa " + Math.round(c.at) + "°C)" : ""}, lembap ${Math.round(c.rh)}%${c.p >= 0.3 ? ", hujan" : ""}</p>` +
       `<p style="font-size:13px;color:var(--light-grey)">${tx}</p>` +
-      (sl.length ? `<div class="label" style="margin:10px 0 4px">Kalau ingin lebih nyaman</div>` + sl.map((s) => `<p style="font-size:13px">• ${s}</p>`).join("") : "") +
+      `<p style="font-size:11.5px;color:var(--grey);margin-top:6px">${clPersTxt()}</p>` +
+      (sl.length ? `<div class="label" style="margin:10px 0 4px">${sl[0].better || st.k !== "ok" ? "Jam lari yang lebih nyaman" : "Jam lari terbaik (sekarang pun sudah oke)"}</div>` + sl.map((s) => `<p style="font-size:13px">• ${s.txt}</p>`).join("") : "") +
       `<p style="font-size:11px;color:var(--grey);margin-top:8px">Estimasi model ${o.src}, bukan pengukuran di tubuhmu${stale ? " · cache " + cH(o.t) : ""} · lokasi ${CL.loc.name || (CL.loc.manual ? "manual" : "terakhir")} · <a href="#" onclick="clLoc();return false" style="color:var(--primary)">ganti</a></p>`;
   }
   function climHome() {
@@ -3997,13 +4053,13 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     const c = CL.ctx[act[0]], bx = (t) => `<div class="insight" style="margin-top:12px">${t}</div>`;
     if (!c) return bx("Konteks cuaca lari ini belum dicocokkan.");
     if (c.na) return bx("Data cuaca historis tidak tersedia untuk lari ini. Tidak ditebak.");
-    let t = `<b>Kondisi saat lari</b> · ${cH(act[0])}–${cH(act[0] + act[2] * 60e3)} · ${c.cls}<br>Suhu ${Math.round(c.t)}°C (terasa ${Math.round(c.at)}°C${c.amax - c.amin >= 2 ? ", berubah " + Math.round(c.amin) + "–" + Math.round(c.amax) + "°C selama lari" : ""}) · lembap ${Math.round(c.rh)}% · angin ${Math.round(c.w)} km/j${c.p >= 0.3 ? " · hujan" : ""}<br>` +
+    let t = `<b>Kondisi saat lari</b> · ${cH(act[0])}–${cH(act[0] + act[2] * 60e3)} · ${clK(c)}<br>Suhu ${Math.round(c.t)}°C (terasa ${Math.round(c.at)}°C${c.amax - c.amin >= 2 ? ", berubah " + Math.round(c.amin) + "–" + Math.round(c.amax) + "°C selama lari" : ""}) · lembap ${Math.round(c.rh)}% · angin ${Math.round(c.w)} km/j${c.p >= 0.3 ? " · hujan" : ""}<br>` +
       `<span style="color:var(--grey);font-size:12px">Estimasi model ${c.src} (grid ±10 km) di ${c.q}${c.gps ? "" : ", keyakinan lebih rendah"}.</span>`;
     const P = clProfile(), b = P.S.sejuk;
     let ty; try { ty = detectType(act).type; } catch (_) {}
-    if (ty === "easy" && act[4] > 0 && c.cls !== "sejuk" && b && b.n >= 3 && Math.abs(act[2] / act[3] - b.pace) <= 0.5)
+    if (ty === "easy" && act[4] > 0 && clK(c) !== "sejuk" && b && b.n >= 3 && Math.abs(act[2] / act[3] - b.pace) <= 0.5)
       t += `<br>HR rata-rata ${Math.round(act[4])} bpm; easy run sejenis di kondisi sejuk median ${Math.round(b.hr)} bpm. Cuaca mungkin ikut menambah beban, tapi jangan langsung menyimpulkan kebugaran turun: tidur, hidrasi, dan elevasi juga berpengaruh.`;
-    else if (c.cls !== "sejuk") t += `<br>Cuaca mungkin ikut memengaruhi HR dan pace. Pembanding sejenis belum cukup untuk kesimpulan pribadi.`;
+    else if (clK(c) !== "sejuk") t += `<br>Cuaca mungkin ikut memengaruhi HR dan pace. Pembanding sejenis belum cukup untuk kesimpulan pribadi.`;
     return bx(t);
   }
 
