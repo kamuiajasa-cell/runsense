@@ -221,6 +221,19 @@ input::placeholder { color: var(--input-ph); }
 .hcard-st b{display:block;font-size:14.5px;font-weight:700;white-space:nowrap}
 .hcard-st span{display:block;font-size:10.5px;color:var(--grey);margin-top:1px}
 
+
+/* ---------- Progres ---------- */
+.nav-item{padding:4px 10px}
+.prg-card{background:var(--card);border:1px solid var(--card-border);border-radius:18px;padding:16px;margin-bottom:12px}
+.prg-card h4{margin:0 0 2px;font-size:14px;font-weight:700}
+.prg-card .sub{font-size:12px;color:var(--grey);margin-bottom:10px}
+.prg-card svg{width:100%;height:auto;display:block;overflow:visible}
+.prg-row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--card-border);font-size:13.5px}
+.prg-row:first-of-type{border-top:0}.prg-row span{color:var(--grey)}.prg-row b{font-weight:700;text-align:right}
+.prg-up{color:var(--primary)}.prg-dn{color:var(--yellow)}
+.prg-leg{display:flex;gap:14px;font-size:11.5px;color:var(--grey);margin-top:8px}
+.prg-leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+
 .bottom-nav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 430px; background: var(--bg);
@@ -568,6 +581,15 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     </div>
   </div>
 
+  <!-- PROGRES -->
+  <div id="screen-progress" class="screen">
+    <div class="content">
+      <div class="page-title">Progres</div>
+      <div class="fchips" id="prgChips"></div>
+      <div id="progressBody"></div>
+    </div>
+  </div>
+
   <!-- SAYA -->
   <div id="screen-me" class="screen">
     <div class="content">
@@ -680,6 +702,10 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     <button class="nav-item" data-screen="history" onclick="showScreen('history')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
       Riwayat
+    </button>
+    <button class="nav-item" data-screen="progress" onclick="showScreen('progress')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17l6-6 4 4 8-8v4h2V4h-7v2h4l-7 7-4-4-8 8z"/></svg>
+      Progres
     </button>
     <button class="nav-item" data-screen="me" onclick="showScreen('me')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.33 0-8 1.67-8 5v1h16v-1c0-3.33-4.67-5-8-5z"/></svg>
@@ -1497,6 +1523,7 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     $("#screen-" + name).classList.add("active");
     document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.screen === name));
     window.scrollTo(0, 0);
+    if (name === "progress" && window.renderProgress) renderProgress();
   }
 
   function selectStyle(el) {
@@ -2869,6 +2896,154 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
       return `<div class="hist-grp"><span>${label}</span><i>${g.items.length} sesi • ${f1(gKm)} km</i></div>` + g.items.map(card).join("");
     }).join("");
   }
+
+
+  /* ================= PROGRES ================= */
+  let prgR = 8;
+  function setPrg(n) { prgR = n; renderProgress(); }
+  window.setPrg = setPrg;
+  function renderProgress() {
+    const el = $("#progressBody"); if (!el) return;
+    $("#prgChips").innerHTML = [[8, "8 minggu"], [26, "6 bulan"], [52, "1 tahun"]]
+      .map(([n, t]) => `<button type="button" class="fchip${prgR === n ? " active" : ""}" onclick="setPrg(${n})">${t}</button>`).join("");
+    const runs = (state.acts || []).filter((x) => x[1] === "run" && x[3] > 0 && x[2] > 0);
+    if (!runs.length) { el.innerHTML = '<p class="empty">Belum ada data lari. Progres muncul setelah lari pertama tersinkron.</p>'; return; }
+    const wkS = (ms) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); };
+    const w0 = wkS(Date.now()), weeks = [];
+    for (let i = prgR - 1; i >= 0; i--) { const d = new Date(w0); d.setDate(d.getDate() - i * 7); weeks.push({ k: d.getTime(), km: 0, n: 0, min: 0 }); }
+    const idx = {}; weeks.forEach((w, i) => (idx[w.k] = i));
+    const inR = runs.filter((x) => wkS(x[0]) in idx);
+    inR.forEach((x) => { const w = weeks[idx[wkS(x[0])]]; w.km += x[3]; w.n++; w.min += x[2]; });
+    const fmt1 = (v) => (Math.round(v * 10) / 10).toString().replace(".", ",");
+    const pace = (min, km) => { const p = min / km, m = Math.floor(p); let sc = Math.round((p - m) * 60), mm = m; if (sc === 60) { sc = 0; mm++; } return mm + ":" + String(sc).padStart(2, "0"); };
+    const totKm = weeks.reduce((n, w) => n + w.km, 0), totN = inR.length, active = weeks.filter((w) => w.n >= 2).length;
+    const dm = (ms) => new Date(ms).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+
+    /* kartu ringkas */
+    let h = `<div class="hist-sum">` + [[fmt1(totKm), "km total"], [totN, "lari"], [fmt1(totKm / prgR), "km/minggu"], [active + "/" + prgR, "minggu aktif"]]
+      .map(([v, l]) => `<div class="hs"><b>${v}</b><span>${l}</span></div>`).join("") + `</div>`;
+
+    /* volume mingguan */
+    const W = 340, H = 120, pb = 18, mx = Math.max(10, ...weeks.map((w) => w.km)), bw = W / weeks.length, step = Math.ceil(weeks.length / 6);
+    const last = weeks[weeks.length - 1], prev = weeks[weeks.length - 2];
+    const dlt = prev && prev.km > 0 ? Math.round(((last.km - prev.km) / prev.km) * 100) : null;
+    let bars = "";
+    weeks.forEach((w, i) => {
+      const bh = Math.max(w.km > 0 ? 2 : 0, (w.km / mx) * (H - pb - 6)), x = i * bw + bw * 0.15, cur = i === weeks.length - 1;
+      bars += `<rect x="${x.toFixed(1)}" y="${(H - pb - bh).toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="var(--primary)" opacity="${cur ? 1 : 0.55}"/>`;
+      if (i % step === 0 || cur) bars += `<text x="${(x + bw * 0.35).toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="var(--grey)">${dm(w.k)}</text>`;
+    });
+    h += `<div class="prg-card"><h4>Volume mingguan</h4><div class="sub">Minggu ini ${fmt1(last.km)} km` +
+      (dlt != null ? ` · <span class="${dlt >= 0 ? "prg-up" : "prg-dn"}">${dlt >= 0 ? "+" : ""}${dlt}%</span> dari minggu lalu` : "") +
+      `</div><svg viewBox="0 0 ${W} ${H}">${bars}</svg></div>`;
+
+    /* kebugaran CTL/ATL */
+    const wl = (state.wellness || []).filter((x) => x.ctl != null && x.atl != null && new Date(x.id).getTime() >= w0 - (prgR - 1) * 7 * 864e5);
+    if (wl.length >= 3) {
+      const pts = wl.length > 70 ? wl.filter((_, i) => i % Math.ceil(wl.length / 70) === 0 || i === wl.length - 1) : wl;
+      const all = pts.flatMap((x) => [x.ctl, x.atl]), lo = Math.min(...all), hi = Math.max(...all), rg = Math.max(1, hi - lo);
+      const path = (k) => pts.map((x, i) => (i ? "L" : "M") + ((i / (pts.length - 1)) * W).toFixed(1) + " " + (96 - ((x[k] - lo) / rg) * 88 + 4).toFixed(1)).join(" ");
+      const L = wl[wl.length - 1], F = wl[0], tsb = L.ctl - L.atl;
+      const tl = tsb > 10 ? "segar/siap" : tsb >= -10 ? "seimbang" : tsb >= -30 ? "sedang membangun" : "sangat lelah";
+      h += `<div class="prg-card"><h4>Kebugaran &amp; kelelahan</h4><div class="sub">CTL ${L.ctl.toFixed(1)} (${L.ctl - F.ctl >= 0 ? "+" : ""}${(L.ctl - F.ctl).toFixed(1)} sejak awal rentang) · TSB ${tsb.toFixed(1)}, ${tl}</div>` +
+        `<svg viewBox="0 0 ${W} 100"><path d="${path("atl")}" fill="none" stroke="var(--yellow)" stroke-width="2" opacity=".8"/><path d="${path("ctl")}" fill="none" stroke="var(--primary)" stroke-width="2.5"/></svg>` +
+        `<div class="prg-leg"><span><i style="background:var(--primary)"></i>Kebugaran (CTL)</span><span><i style="background:var(--yellow)"></i>Kelelahan (ATL)</span></div></div>`;
+    }
+
+    const hm = (t) => { t = Math.round(t); const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sc = t % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(sc).padStart(2, "0"); };
+    const sgn = (t) => (t < 0 ? "−" : "+") + hm(Math.abs(t));
+
+    /* 1. prediksi waktu lomba dari minggu ke minggu */
+    const D = state.raceDist > 0 ? state.raceDist : ({ "5K": 5, "10K": 10, "Half": 21.0975, "Marathon": 42.195 }[state.goal] || 5);
+    const DL = state.raceDist > 0 ? fmt1(D) + " km" : state.goal === "Umum" ? "5K" : state.goal;
+    let tgt = null; { const g = (state.raceGoal || "").split(":").map(Number); if (state.raceDist > 0 && g.length >= 2 && !g.some(isNaN)) tgt = g.length === 3 ? g[0] * 3600 + g[1] * 60 + g[2] : g[0] * 60 + g[1]; }
+    const est = [];
+    weeks.forEach((w, i) => {
+      const end = w.k + 7 * 864e5;
+      const c = runs.filter((x) => x[0] < end && x[0] >= end - 42 * 864e5 && x[3] >= 2 && x[3] <= 12 && x[2] >= 10).map((x) => x[2] * 60 * Math.pow(D / x[3], 1.06));
+      if (c.length) est.push({ i, t: Math.min(...c) });
+    });
+    if (est.length >= 3) {
+      const ts = est.map((x) => x.t); if (tgt && Math.abs(tgt / cMed(ts) - 1) < 0.4) ts.push(tgt);
+      const lo = Math.min(...ts), hi = Math.max(...ts), rg = Math.max(1, hi - lo), Y = (t) => 8 + ((t - lo) / rg) * 84;
+      const X = (i) => (weeks.length > 1 ? (i / (weeks.length - 1)) * (W - 8) + 4 : W / 2);
+      const d = est.map((x, k) => (k ? "L" : "M") + X(x.i).toFixed(1) + " " + Y(x.t).toFixed(1)).join(" ");
+      const f0 = est[0].t, f1 = est[est.length - 1].t, df = f1 - f0;
+      const tl = tgt ? `<line x1="0" x2="${W}" y1="${Y(tgt).toFixed(1)}" y2="${Y(tgt).toFixed(1)}" stroke="var(--yellow)" stroke-width="1.5" stroke-dasharray="5 4"/>` : "";
+      h += `<div class="prg-card"><h4>Prediksi ${DL}</h4><div class="sub">Sekarang <b>${hm(f1)}</b> ` +
+        (Math.abs(df) >= 1 ? `(<span class="${df < 0 ? "prg-up" : "prg-dn"}">${sgn(df)}</span> sejak awal rentang)` : "") +
+        (tgt ? ` · target ${hm(tgt)}, ${f1 <= tgt ? "sudah tercapai" : "kurang " + hm(f1 - tgt)}` : "") +
+        `</div><svg viewBox="0 0 ${W} 100">${tl}<path d="${d}" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linejoin="round"/>` +
+        est.map((x) => `<circle cx="${X(x.i).toFixed(1)}" cy="${Y(x.t).toFixed(1)}" r="2.5" fill="var(--primary)"/>`).join("") + `</svg>` +
+        `<div class="prg-leg"><span>Riegel dari lari tercepat 6 minggu terakhir. Perkiraan kasar, bukan jaminan hasil lomba.${tgt ? ' <span style="color:var(--yellow)">- - -</span> target' : ""}</span></div></div>`;
+    }
+
+    /* 2. pace easy run pada HR yang sama */
+    const eff = [];
+    inR.forEach((x) => { let ty; try { ty = detectType(x).type; } catch (_) { return; } if (ty === "easy" && x[4] > 0 && x[3] >= 2) eff.push({ ms: x[0], hr: x[4], e: (x[3] * 1000 / x[2]) / x[4] }); });
+    if (eff.length >= 4) {
+      eff.sort((p, q) => p.ms - q.ms);
+      const ref = Math.round(cMed(eff.map((x) => x.hr))), pr0 = (x) => 1000 / (x.e * ref);   /* menit/km di HR acuan (kecepatan dianggap sebanding dengan HR) */
+      const ps = eff.map(pr0), half = Math.floor(eff.length / 2), a1 = cMed(ps.slice(0, half)), b1 = cMed(ps.slice(half)), dsec = (b1 - a1) * 60;
+      const lo = Math.min(...ps), hi = Math.max(...ps), rg = Math.max(0.01, hi - lo), Y = (v) => 8 + ((v - lo) / rg) * 76;
+      const X = (i) => (eff.length > 1 ? (i / (eff.length - 1)) * (W - 8) + 4 : W / 2);
+      const roll = ps.map((_, i) => cMed(ps.slice(Math.max(0, i - 2), i + 3)));
+      h += `<div class="prg-card"><h4>Pace easy run di HR ${ref}</h4><div class="sub">Pace yang dinormalkan ke HR ${ref} bpm. Paruh akhir <b>${pace(b1, 1)} /km</b> ` +
+        (Math.abs(dsec) >= 1 ? `(<span class="${dsec < 0 ? "prg-up" : "prg-dn"}">${dsec < 0 ? "−" : "+"}${Math.round(Math.abs(dsec))} dtk/km</span> dibanding paruh awal, ${eff.length} lari)` : `(tidak berubah berarti, ${eff.length} lari)`) +
+        `</div><svg viewBox="0 0 ${W} 92">` + ps.map((v, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.8" fill="var(--primary)" opacity=".4"/>`).join("") +
+        `<path d="${roll.map((v, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join(" ")}" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linejoin="round"/></svg>` +
+        `<div class="prg-leg"><span>Naik ke atas = lebih lambat. Titik: tiap lari, garis: rata-rata bergerak 5 lari.</span></div></div>`;
+    }
+
+    /* 3. suhu & efisiensi pribadi */
+    try {
+      const PS = clPers();
+      if (PS.ok) {
+        const bn = PS.bins, mxa = Math.max(2, ...bn.map((x) => Math.abs(x.med))), bw3 = W / bn.length, z = 44;
+        let sv = "";
+        bn.forEach((x, i) => {
+          const bh = (Math.abs(x.med) / mxa) * 38, xx = i * bw3 + bw3 * 0.12, isOpt = x.lo + 1 === PS.opt;
+          sv += `<rect x="${xx.toFixed(1)}" y="${(x.med >= 0 ? z - bh : z).toFixed(1)}" width="${(bw3 * 0.76).toFixed(1)}" height="${Math.max(1.5, bh).toFixed(1)}" rx="3" fill="${isOpt ? "var(--primary)" : x.med >= 0 ? "var(--primary)" : "var(--yellow)"}" opacity="${isOpt ? 1 : 0.5}"/>` +
+            `<text x="${(xx + bw3 * 0.38).toFixed(1)}" y="100" text-anchor="middle" font-size="9" fill="var(--grey)">${x.lo}–${x.hi}°</text><text x="${(xx + bw3 * 0.38).toFixed(1)}" y="112" text-anchor="middle" font-size="8" fill="var(--grey)" opacity=".7">n=${x.n}</text>`;
+        });
+        h += `<div class="prg-card"><h4>Suhu &amp; efisiensi</h4><div class="sub">Efisiensi easy run (dibanding lari sekitarnya) per rentang suhu efektif. Terbaik di <b>±${PS.opt}°C</b>.</div>` +
+          `<svg viewBox="0 0 ${W} 116"><line x1="0" x2="${W}" y1="${z}" y2="${z}" stroke="var(--card-border)" stroke-width="1.5"/>${sv}</svg>` +
+          `<div class="prg-leg"><span>${clPersTxt()}</span></div></div>`;
+      } else h += `<div class="prg-card"><h4>Suhu &amp; efisiensi</h4><div class="sub" style="margin:0">${clPersTxt()} Cuaca tiap lari dicocokkan otomatis; grafik muncul begitu datanya cukup.</div></div>`;
+    } catch (_) {}
+
+    /* pemulihan */
+    const wr = (state.wellness || []).filter((x) => x.restingHR > 0 || x.hrv > 0);
+    const avg = (arr) => arr.length ? arr.reduce((n, v) => n + v, 0) / arr.length : null;
+    const rec = wr.slice(-7), base = wr.slice(-35, -7);
+    const rows = [];
+    [["restingHR", "HR istirahat", "bpm", -1], ["hrv", "HRV", "ms", 1]].forEach(([k, lb, u, good]) => {
+      const r7 = avg(rec.filter((x) => x[k] > 0).map((x) => x[k])), r28 = avg(base.filter((x) => x[k] > 0).map((x) => x[k]));
+      if (r7 == null) return;
+      const d = r28 != null ? r7 - r28 : null, bet = d != null && d * good > 0.5;
+      rows.push(`<div class="prg-row"><span>${lb} (rata-rata 7 hari)</span><b>${Math.round(r7)} ${u}${d != null && Math.abs(d) >= 0.5 ? ` <small class="${bet ? "prg-up" : "prg-dn"}">${d > 0 ? "+" : ""}${Math.round(d)} vs 4 minggu sebelumnya</small>` : ""}</b></div>`);
+    });
+    if (rows.length) h += `<div class="prg-card"><h4>Pemulihan</h4>${rows.join("")}</div>`;
+
+    /* target & rekor */
+    const all = runs, pr = [];
+    const lg = all.reduce((m, x) => (x[3] > m[3] ? x : m), all[0]);
+    pr.push(["Lari terpanjang", fmt1(lg[3]) + " km · " + dm(lg[0])]);
+    const fast = all.filter((x) => x[3] >= 3).reduce((m, x) => (!m || x[2] / x[3] < m[2] / m[3] ? x : m), null);
+    if (fast) pr.push(["Pace tercepat (≥ 3 km)", pace(fast[2], fast[3]) + " /km · " + dm(fast[0])]);
+    const wAll = {}; all.forEach((x) => { const k = wkS(x[0]); wAll[k] = (wAll[k] || 0) + x[3]; });
+    const bw2 = Object.keys(wAll).reduce((m, k) => (wAll[k] > (wAll[m] || 0) ? k : m), Object.keys(wAll)[0]);
+    pr.push(["Minggu terjauh", fmt1(wAll[bw2]) + " km · minggu " + dm(+bw2)]);
+    const ks = Object.keys(wAll).map(Number).sort((p, q) => p - q); let best = 0, cur = 0, pk = null;
+    ks.forEach((k) => { const c = new Date(k); c.setDate(c.getDate() - 7); const ok = pk != null && c.getTime() === pk; cur = ok ? cur + 1 : 1; pk = k; if (cur > best) best = cur; });
+    pr.push(["Minggu beruntun berlari", best + " minggu"]);
+    const ge = state.goalEst, tg = [];
+    if (ge && ge.current && ge.current !== "—:—") tg.push(`<div class="prg-row"><span>Estimasi ${state.goal} sekarang</span><b>${ge.current}</b></div>`);
+    if (state.race) { const dl = Math.round((new Date(state.race + "T00:00") - Date.now()) / 864e5); if (dl >= 0) tg.push(`<div class="prg-row"><span>Hari lomba</span><b>${dl} hari lagi</b></div>`); }
+    h += `<div class="prg-card"><h4>Target &amp; rekor</h4>${tg.join("")}${pr.map(([l, v]) => `<div class="prg-row"><span>${l}</span><b>${v}</b></div>`).join("")}</div>`;
+    el.innerHTML = h;
+  }
+  window.renderProgress = renderProgress;
 
   /* Buka pengaturan.html (layar native) — tombolnya hanya tampil di APK */
   async function openPengaturan() {
