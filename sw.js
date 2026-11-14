@@ -1,5 +1,5 @@
-// RunSense service worker
-const CACHE = "runsense-v1";
+// RunSense service worker v2: selalu ambil versi terbaru dari server, cache hanya cadangan offline.
+const CACHE = "runsense-v2";
 const ASSETS = [
   "./runsense.html",
   "./manifest.webmanifest",
@@ -9,7 +9,13 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then((c) => Promise.all(ASSETS.map((u) =>
+        fetch(u, { cache: "no-store" }).then((r) => (r.ok ? c.put(u, r) : null)).catch(() => null)
+      )))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (e) => {
@@ -20,7 +26,7 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-// Network-first untuk file milik sendiri (supaya update langsung masuk), cache sebagai cadangan offline.
+// Network-first tanpa cache HTTP browser (no-store); cache dipakai hanya saat offline.
 // Request lintas domain (Intervals.icu API, Google Fonts) tidak disentuh.
 self.addEventListener("fetch", (e) => {
   const req = e.request;
@@ -28,13 +34,12 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   e.respondWith(
-    fetch(req)
+    fetch(req, { cache: "no-store" })
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
         return res;
       })
-      .catch(() => caches.match(req).then((r) => r || caches.match("./runsense.html")))
+      .catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || caches.match("./runsense.html")))
   );
 });
 

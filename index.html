@@ -3640,8 +3640,19 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
 // PWA: service worker (hanya jalan di http/https; di file:// atau WebView tanpa dukungan dilewati diam-diam)
 (function () {
   if (!("serviceWorker" in navigator) || !/^https?:$/.test(location.protocol)) return;
+  // Muat ulang sekali bila service worker baru mengambil alih (supaya update langsung terlihat)
+  var hadCtl = !!navigator.serviceWorker.controller, reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", function () {
+    if (!hadCtl || reloaded) { hadCtl = true; return; }
+    reloaded = true; location.reload();
+  });
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register("sw.js").catch(function () {});
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
+      reg.update().catch(function () {});
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible") reg.update().catch(function () {});
+      });
+    }).catch(function () {});
   });
   // Helper notifikasi lokal + badge angka di icon app (dipakai saat app terbuka)
   window.rsNotify = async function (title, body) {
