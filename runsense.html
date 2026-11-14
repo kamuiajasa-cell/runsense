@@ -332,6 +332,7 @@ input::placeholder { color: var(--input-ph); }
 .field{display:flex;align-items:center;justify-content:space-between;padding:7px 0;font-size:14.5px}
 input[type="number"]{width:96px;text-align:right;background:var(--el);border:1.5px solid var(--card-border);border-radius:12px;padding:10px 12px;color:var(--tx);font:inherit;font-size:15px;outline:none}
 input[type="number"]:focus{border-color:var(--primary)}
+#raceDist,#raceGoal,#rwRun,#rwWalk{width:100%;margin-top:6px;background:var(--el);border:1.5px solid var(--card-border);border-radius:12px;padding:10px 12px;color:var(--tx);font:inherit;font-size:15px;outline:none}
 #inLtp{width:96px;text-align:right;background:var(--el);border:1.5px solid var(--card-border);border-radius:12px;padding:10px 12px;color:var(--tx);font:inherit;font-size:15px;outline:none}
 #inLtp:focus{border-color:var(--primary)}
 .chev{color:var(--grey);font-size:20px;flex:none}
@@ -584,6 +585,13 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
         <div class="label" style="margin-top:14px">Tanggal race</div>
         <input type="date" id="raceDate" onchange="setRace(this.value)" />
         <button type="button" class="btn btn-outline sm" style="margin-top:8px" onclick="setRace('')">Hapus tanggal race</button>
+        <div class="label" style="margin-top:14px">Jarak race dan target waktu</div>
+        <select id="raceDist" onchange="setRaceX()"><option value="">Pilih jarak</option><option value="5">5K</option><option value="10">10K</option><option value="21.1">Half marathon</option><option value="42.2">Maraton</option></select>
+        <input type="text" id="raceGoal" placeholder="Target, mis. 1:05:00 atau 55:00" onchange="setRaceX()" />
+        <div class="label" style="margin-top:14px">Pola run-walk</div>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="rwOn" onchange="setRw()"> Pakai run-walk di semua tahap</label>
+        <input type="text" id="rwRun" placeholder="Durasi lari, mm:ss (3:45)" onchange="setRw()" />
+        <input type="text" id="rwWalk" placeholder="Durasi jalan, mm:ss (0:30)" onchange="setRw()" />
       </div>
 
       <div class="card">
@@ -941,13 +949,14 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
 
     const hv = W.filter((w) => w.hrv > 0 && !w.hrvSpot);
     const hl = hv.length ? hv[hv.length - 1] : null;
+    const hr3 = hv.slice(-3), hm = hr3.length ? hr3.reduce((u, w) => u + w.hrv, 0) / hr3.length : 0; // rata-rata 3 malam
     if (hl && fresh(hl)) {
       out.hrv = Math.round(hl.hrv);
-      const base = hv.slice(0, -1).filter((w) => (w.hrvSrc || "") === (hl.hrvSrc || "")).slice(-28);
+      const base = hv.slice(0, -hr3.length).filter((w) => (w.hrvSrc || "") === (hl.hrvSrc || "")).slice(-28);
       if (base.length >= 7) {
         const m = med(base.map((w) => w.hrv));
         if (m > 0) {
-          out.hrvPct = Math.round((hl.hrv / m - 1) * 100);
+          out.hrvPct = Math.round((hm / m - 1) * 100);
           if (out.hrvPct <= -8) parts.push("HRV " + out.hrvPct + "%");
         }
       }
@@ -955,11 +964,12 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
 
     const rh = W.filter((w) => w.restingHR > 30);
     const rl = rh.length ? rh[rh.length - 1] : null;
+    const rr3 = rh.slice(-3), rm = rr3.length ? rr3.reduce((u, w) => u + w.restingHR, 0) / rr3.length : 0; // rata-rata 3 hari
     if (rl && fresh(rl)) {
       out.rhr = Math.round(rl.restingHR);
-      const base = rh.slice(0, -1).filter((w) => (w.rhrSrc || "") === (rl.rhrSrc || "")).slice(-28);
+      const base = rh.slice(0, -rr3.length).filter((w) => (w.rhrSrc || "") === (rl.rhrSrc || "")).slice(-28);
       if (base.length >= 7) {
-        out.rhrD = Math.round(rl.restingHR - med(base.map((w) => w.restingHR)));
+        out.rhrD = Math.round(rm - med(base.map((w) => w.restingHR)));
         if (out.rhrD >= 3) parts.push("RHR +" + out.rhrD + " bpm");
       }
     }
@@ -997,11 +1007,11 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     if (au0.stressD != null && au0.stressD >= 15) sc -= 4;
     const rh = (state.wellness || []).filter((w) => w.restingHR > 30).map((w) => w.restingHR);
     if (rh.length >= 8) {
-      const b = rh.slice(-29, -1).sort((p, q) => p - q);
-      sc += clamp((b[Math.floor(b.length / 2)] - rh[rh.length - 1]) * 1.3, -14, 12);
+      const b = rh.slice(-31, -3).sort((p, q) => p - q);
+      sc += clamp((b[Math.floor(b.length / 2)] - rh.slice(-3).reduce((u, v) => u + v, 0) / Math.min(3, rh.length)) * 1.3, -14, 12);
       inputs++;
     }
-    const acute = loadDays(7), chronic = loadDays(28) / 4;
+    const acute = loadDays(7), chronic = (loadDays(28) - acute) / 3;
     if (chronic > 25) {
       inputs++;
       const r = acute / chronic;
@@ -1867,6 +1877,8 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
   function loadPlan() {
     try { state.plan = JSON.parse(localStorage.getItem("runsense_plan") || "{}") || {}; } catch (_) { state.plan = {}; }
     state.race = localStorage.getItem("runsense_race") || "";
+    try { const x = JSON.parse(localStorage.getItem("runsense_racex") || "{}"); state.raceDist = +x.d || 0; state.raceGoal = x.g || ""; } catch (_) {}
+    try { const x = JSON.parse(localStorage.getItem("runsense_rw") || "null"); state.rw = x && x.run ? x : { on: false, run: 225, walk: 30 }; } catch (_) { state.rw = { on: false, run: 225, walk: 30 }; }
   }
   function planOf(dow) {
     const p = state.plan && state.plan[dow];
@@ -1891,13 +1903,39 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     }
     return L.every((v) => v > 0) && Math.min(...L) >= 0.85 * Math.max(...L);
   }
+  const rwOn = () => !!(state.rw && state.rw.on);
+  const rwT = (n) => Math.floor(n / 60) + ":" + String(n % 60).padStart(2, "0");
+  /* Pace lari murni dari pace rata-rata run-walk (jalan dianggap ~11 mnt/km). */
+  function runPaceOf(avg) {
+    const f = state.rw.run / (state.rw.run + state.rw.walk), inv = (1 / avg - (1 - f) / 11) / f;
+    return inv > 0 ? Math.max(1 / inv, 4.5) : avg;
+  }
+  function goalPace() {
+    const g = (state.raceGoal || "").split(":").map(Number);
+    if (g.length < 2 || g.some(isNaN)) return 0;
+    const sec = g.length === 3 ? g[0] * 3600 + g[1] * 60 + g[2] : g[0] * 60 + g[1], km = +state.raceDist || 0;
+    return km > 0 && sec > 0 ? sec / 60 / km : 0;
+  }
+  function setRaceX() {
+    state.raceDist = +$("#raceDist").value || 0;
+    state.raceGoal = ($("#raceGoal").value || "").trim();
+    try { localStorage.setItem("runsense_racex", JSON.stringify({ d: state.raceDist, g: state.raceGoal })); } catch (_) {}
+    applyLater();
+  }
+  function setRw() {
+    const pt = (v, d) => { const m = /^(\d{1,2}):(\d{2})$/.exec((v || "").trim()); const t = m ? +m[1] * 60 + +m[2] : 0; return m && +m[2] < 60 && t >= 10 ? t : d; };
+    state.rw = { on: $("#rwOn").checked, run: pt($("#rwRun").value, 225), walk: pt($("#rwWalk").value, 30) };
+    try { localStorage.setItem("runsense_rw", JSON.stringify(state.rw)); } catch (_) {}
+    applyLater();
+  }
   function racePhase() {
     if (!state.race) return null;
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(state.race);
     if (!m) return null;
     const days = Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) - today()) / 864e5);
     if (days < 0) return null;
-    return { days, k: days === 0 ? "race" : days <= 14 ? "taper" : days <= 28 ? "peak" : "build" };
+    const D = +state.raceDist || 0, tp = D >= 42 ? 21 : D >= 21 ? 14 : D >= 10 ? 10 : D > 0 ? 7 : 14;
+    return { days, k: days === 0 ? "race" : days <= tp ? "taper" : days <= tp + 14 ? "peak" : "build" };
   }
   function renderPlanUI() {
     const g = $("#planGrid");
@@ -1910,11 +1948,21 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     }).join("");
     const rd = $("#raceDate");
     if (rd) rd.value = state.race || "";
+    const sd = $("#raceDist"), sg = $("#raceGoal"), ro = $("#rwOn"), rr = $("#rwRun"), rw2 = $("#rwWalk");
+    if (sd) sd.value = state.raceDist ? String(state.raceDist) : "";
+    if (sg) sg.value = state.raceGoal || "";
+    if (ro) { ro.checked = rwOn(); rr.value = rwT((state.rw || {}).run || 225); rw2.value = rwT((state.rw || {}).walk || 30); }
     const tot = planWeekKm();
     const lk = Math.max(0, ...PLAN_DAYS.filter((d) => (state.plan[d[0]] || {}).t === "long").map((d) => Number(state.plan[d[0]].km) || 0));
     const w = $("#planWarn");
     const msgs = [];
     if (tot > 0 && lk > 0.3 * tot) msgs.push(`Long ${lk} km = ${Math.round((lk / tot) * 100)}% volume minggu. Batas ~30%. Kurangi long atau tambah easy.`);
+    const wkS = today() - ((new Date().getDay() + 6) % 7) * 864e5;
+    const lastKm = (state.acts || []).filter((x) => x[1] === "run" && d0(x[0]) >= wkS - 7 * 864e5 && d0(x[0]) < wkS).reduce((a, x) => a + x[3], 0);
+    if (lastKm > 0) {
+      const cap = Math.round(lastKm * 1.1);
+      msgs.push("Minggu lalu " + Math.round(lastKm) + " km. Batas naik aman ~10%: " + cap + " km minggu ini." + (tot > cap * 1.05 ? " Rencanamu " + tot + " km melewati batas itu." : ""));
+    }
     const ty = (d) => (state.plan[d] || {}).t;
     PLAN_DAYS.forEach(([d, n], i) => {
       const nx = PLAN_DAYS[(i + 1) % 7];
@@ -1977,7 +2025,8 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
       .filter((a) => a[1] === "run" && a[0] >= cut && a[3] >= 2.5 && a[2] >= 15)
       .filter((a) => detectType(a).type === "easy")
       .map((a) => a[2] / a[3])
-      .filter((p) => p >= 4.5 && p <= 11);
+      .filter((p) => p >= 4.5 && p <= (rwOn() ? 14 : 11))
+      .map((p) => (rwOn() ? runPaceOf(p) : p));
     if (L.length < 3) return null;
     L.sort((x, y) => x - y);
     return L[Math.floor(L.length / 2)];
@@ -2007,7 +2056,44 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
       r.reason += ` (${{ taper: "Taper", peak: "Peak", build: "Build" }[ph.k]} · H-${ph.days})`;
     }
     if (r && ph && ph.k === "race" && r.status === "done") r.reason += " Race hari ini sudah dilari. Pulihkan diri.";
+    return decorate(r);
+  }
+  function decorate(r) {
+    if (!r) return r;
+    const a = state.athlete || {}, L = +a.lthr || 0, fl = flagInfo();
+    const zb = { 1: [0, 0.81], 2: [0.81, 0.89], 3: [0.9, 0.93], 4: [0.94, 0.99], 5: [1, 1.06] };
+    if (L && typeof r.hr === "string") {
+      if (/LTHR/.test(r.hr)) r.hr = "Jangan lewat " + L + " bpm di awal";
+      else r.hr = r.hr.replace(/Zone (\d)(?:–(\d))?/, (m, x, y) => {
+        const lo = Math.round(L * zb[x][0]), hi = Math.round(L * zb[y || x][1]);
+        return m + " · " + (lo ? lo + "–" + hi : "<" + hi) + " bpm";
+      });
+    }
+    if (a.ltPace && r.pace === "Mendekati LTPace") r.pace = a.ltPace + " /km (LTPace)";
+    const RW = ["Easy Run", "Easy terbatas", "Easy recovery", "Long Run", "Easy taper", "Long dipotong", "Recovery Run"];
+    if (rwOn() && r.status === "train" && stage().s >= 3 && RW.includes(r.title)) {
+      const cyc = (state.rw.run + state.rw.walk) / 60, n = Math.max(4, Math.round(((parseInt(r.duration) || 40) - 10) / cyc));
+      r.steps = [["Pemanasan", "5 mnt jalan"], ["Inti", n + "× (" + rwT(state.rw.run) + " lari + " + rwT(state.rw.walk) + " jalan)" + (/\d/.test(r.pace) ? ", lari @ " + r.pace.replace(" /km", "") : "")], ["Pendinginan", "5 mnt jalan"]];
+      if (/\d/.test(r.pace)) r.pace += " (saat lari)";
+    }
+    if (r.steps && (r.status === "rest" || r.tag === "RECOVERY") && !(fl && fl.lv === 2)) r.steps.push(["Kekuatan", "15 mnt, 2×/minggu: glute bridge 2×12, calf raise 2×15, plank 2×30 dtk, keseimbangan 1 kaki 2×30 dtk"]);
+    if (r.steps && /^Easy (Run|terbatas)$/.test(r.title) && r.score > 65 && [2, 4].includes(new Date().getDay())) r.steps.push(["Opsional", "4× 20 dtk strides santai, jeda jalan 1 mnt"]);
+    if (r.steps && r.title === "Long Run" && parseInt(r.duration) >= 60) r.steps.push(["Nutrisi", "Karbo 30–60 g/jam mulai menit 45, minum 150–250 ml tiap 20 mnt"]);
+    if (r.steps && r.title === "Hari lomba" && (+state.raceDist || 0) >= 21) r.steps.push(["Nutrisi", "Karbo 40–60 g/jam sejak menit 40, minum di tiap pos"]);
     return r;
+  }
+  /* Cuaca otomatis (Open-Meteo, tanpa API key): suhu terasa >= 30 C saat app dibuka = hari panas. Sekali sehari. */
+  function autoHeat() {
+    if (state.apiKey === "demo" || !navigator.geolocation) return;
+    try { if (localStorage.getItem("runsense_wx") === ymd()) return; } catch (_) {}
+    navigator.geolocation.getCurrentPosition((p) => {
+      fetch("https://api.open-meteo.com/v1/forecast?latitude=" + p.coords.latitude.toFixed(2) + "&longitude=" + p.coords.longitude.toFixed(2) + "&current=apparent_temperature")
+        .then((r) => r.json()).then((j) => {
+          try { localStorage.setItem("runsense_wx", ymd()); } catch (_) {}
+          const t = j && j.current && j.current.apparent_temperature;
+          if (t >= 30 && !heatOn()) toggleHeat();
+        }).catch(() => {});
+    }, () => {}, { timeout: 6000, maximumAge: 3600e3 });
   }
   function renderRaceLine() {
     const el = $("#raceLine");
@@ -2077,6 +2163,9 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
           reason: `Kaki sakit, hari ke-${fl.dayN} dari ${FLAG_DAYS[2]}. Rest. Jangan tes kaki dengan lari. Kalau nyeri tidak turun setelah 3 hari, periksakan ke dokter atau fisioterapis.`,
           steps: [["Saran", "Kompres bila bengkak, jalan seperlunya saja"]], score, tag: "RECOVERY" };
       }
+      if (fl.dayN >= 8) return { k: "wn", status: "train", title: "Kembali lari bertahap", duration: "20 menit", hr: "Zone 1–2", pace: "Santai",
+        reason: `Kaki sakit, hari ke-${fl.dayN} dari ${FLAG_DAYS[2]}. Coba lari pendek dulu. Berhenti dan tandai Sakit lagi bila nyeri muncul.`,
+        steps: [["Pemanasan", "5 mnt jalan"], ["Inti", "5× (1 mnt lari + 2 mnt jalan), berhenti bila nyeri"], ["Pendinginan", "3 mnt jalan"]], score, stage: 1, tag: "RECOVERY" };
       return { k: "wn", status: "train", title: "Jalan sangat mudah", duration: "20–30 menit", hr: "Zone 1", pace: "Santai, tanpa lari",
         reason: `Kaki sakit, hari ke-${fl.dayN} dari ${FLAG_DAYS[2]}. Jalan saja. Berhenti kalau nyeri naik. Lari lagi setelah jalan 30 menit tanpa nyeri, mulai dari easy pendek.`,
         steps: [["Inti", "20–30 mnt jalan santai"], ["Batas", "Nyeri naik = pulang"]], score, stage: 1, tag: "RECOVERY" };
@@ -2119,11 +2208,21 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     if (ph && ph.k === "race") {
       return {
         k: "ok", status: "train", title: "Hari lomba", duration: "Sesuai target", hr: "Jangan lewat LTHR di awal",
-        pace: "Mulai tahan, 1–2 km pertama lebih lambat dari target",
+        pace: goalPace() ? mp(goalPace()) + " /km target · 1–2 km awal +5–10 dtk/km" : "Mulai tahan, 1–2 km pertama lebih lambat dari target",
         reason: "Hari H. Jangan coba hal baru: sepatu, gel, pace. Start terlalu kencang yang paling sering menghancurkan race.",
         steps: [["Pemanasan", "10 mnt jog + 3 strides"], ["Inti", "Race. Negative split lebih aman"], ["Pendinginan", "10 mnt jalan"]],
         score, stage: st.s, tag: "LOMBA"
       };
+    }
+
+    let cons = 0;
+    for (let i = 1; i <= 7; i++) {
+      const t = today() - i * 864e5;
+      if ((state.acts || []).some((x) => d0(x[0]) === t && x[1] === "run")) cons++; else break;
+    }
+    if (cons >= (st.s <= 2 ? 3 : 5)) {
+      return { k: "wn", status: "rest", title: "Istirahat (wajib)", duration: "—", hr: "—", pace: "—",
+        reason: `Sudah ${cons} hari lari berturut-turut. Satu hari rest menjaga tulang dan tendon beradaptasi.`, steps: [], score, tag: "RECOVERY" };
     }
 
     // Taper (10–14 hari pra-race: volume turun, quality jarang, long dipotong)
@@ -2293,10 +2392,17 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
       const vo2Ok = score >= 75 && st.s >= 4 && !au.warn && !heat;
       const hillsOk = hillsRelevant();
       const idx = n28 % 3;
-      const kindQ = idx === 0 ? "tempo" : idx === 1 ? "cruise"
+      const gp = goalPace(), rp = ph && ph.k === "peak" && gp > 0 && n28 % 2 === 1;
+      const kindQ = rp ? "racepace" : idx === 0 ? "tempo" : idx === 1 ? "cruise"
         : (vo2Ok && !(hillsOk && Math.floor(n28 / 3) % 2 === 1)) ? "vo2" : hillsOk ? "hills" : "cruise";
       let q;
-      if (kindQ === "tempo") {
+      if (kindQ === "racepace") {
+        const D = +state.raceDist || 10, w = D >= 21 ? 10 : D >= 10 ? 8 : 5, r = (D >= 21 ? [2, 3, 3, 4] : [3, 4, 4, 5])[lv];
+        q = { title: "Race-pace intervals", dur: 18 + r * (w + 2) - 2, hr: "Zone 3–4", pace: mp(gp) + " /km (target race)",
+          core: r + "×" + w + " mnt di pace target, jeda 2 mnt jog",
+          wl: ["Warmup", "- 10m Z2 HR", "", r + "x", "- " + w + "m Z4 HR", "- 2m Z1 HR", "", "Cooldown", "- 8m Z1 HR"],
+          why: "Race-pace " + r + "×" + w + " mnt: melatih tubuh memegang pace target." };
+      } else if (kindQ === "tempo") {
         const w = [20, 23, 26, 30][lv];
         q = { title: "Tempo continuous", dur: w + 18, hr: "Zone 3–4", pace: "Mendekati LTPace",
           core: w + " mnt tempo steady, tepat di bawah LTPace",
@@ -3532,6 +3638,7 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     applyTheme();
     setGreeting();
     restore();
+    setTimeout(autoHeat, 3000);
 
     // Theme button (home header; may be re-created? static in HTML)
     document.addEventListener("click", (e) => {
@@ -3609,6 +3716,8 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
   window.shareWatch = shareWatch;
   window.closeWatch = closeWatch;
   window.setRace = setRace;
+  window.setRaceX = setRaceX;
+  window.setRw = setRw;
   window.closeSettings = closeSettings;
   window.pickStyle = pickStyle;
   window.runBacktest = runBacktest;
