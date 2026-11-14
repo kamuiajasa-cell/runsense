@@ -1118,22 +1118,22 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     const S_next = sec("Lanjut");
 
     const push = (section, k, text) => section.notes.push({ k, text });
+    const why = []; // alasan singkat untuk judul
 
     // —— Summary line ——
     const summary =
       f1(km) + " km · " + fmtM(dur) + " · " + mp(pace) + "/km" +
       (hr ? " · HR " + Math.round(hr) + (maxH ? "–" + Math.round(maxH) : "") : "") +
       (load ? " · load " + Math.round(load) : "") +
-      (elev ? " · +" + Math.round(elev) + " m" : "") +
+      (elev ? " · tanjakan " + Math.round(elev) + " m" : "") +
       (det.type ? " · " + (VX_LB[det.type] || det.type) : "") +
       (name ? " · “" + name.slice(0, 28) + (name.length > 28 ? "…" : "") + "”" : "");
 
     // —— 1. Intensitas (METs / capacity) ——
     if (M && pct != null) {
       push(S_int, "g",
-        "Kapasitas Max ≈ " + f1(M) + " METs (T" + st.s + "). Sesi ini ≈ " +
-        Math.round(pct * 100) + "% Max · tubuh biasanya tahan " + durText(pct) +
-        " di intensitas ini (batas nyaman untuk " + fmtM(dur) + " ≈ " + Math.round(lim * 100) + "%)."
+        "Sesi ini ≈ " + Math.round(pct * 100) + "% dari kapasitasmu (Max ≈ " + f1(M) + " METs). Di intensitas ini tubuh biasanya tahan " + durText(pct) +
+        ". Batas nyaman untuk " + fmtM(dur) + " sekitar " + Math.round(lim * 100) + "%."
       );
 
       if (dur >= 10 && pct > lim + 0.07) {
@@ -1143,7 +1143,7 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
         );
       } else if (dur >= 20 && pct <= 0.68) {
         push(S_int, "g",
-          "Zona aerobik jujur (≤68% Max) — cocok ditahan 45–90+ menit. Fondasi yang rapi."
+          "Intensitas rata-ratanya masih zona aerobik (≤68% kapasitas), cocok ditahan 45–90+ menit."
         );
       } else if (pct >= 0.9) {
         push(S_int, "r",
@@ -1181,29 +1181,30 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     if (hr > 0 && lthr > 0) {
       const ratio = hr / lthr;
       if (ratio >= 1.02) {
-        push(S_int, "r", "HR rata (" + Math.round(hr) + ") di atas LTHR (~" + lthr + " bpm). Threshold atau lebih keras.");
+        push(S_int, "r", "Detak rata-rata (" + Math.round(hr) + ") sudah di atas LTHR (~" + lthr + " bpm). Ini intensitas threshold atau lebih.");
       } else if (ratio >= 0.92) {
-        push(S_int, "y", "HR dekat LTHR (" + Math.round(hr) + " vs ~" + lthr + "). Zona quality.");
+        push(S_int, "y", "Detak dekat LTHR (" + Math.round(hr) + " dari ~" + lthr + "). Ini zona sesi keras.");
       } else if (ratio <= 0.82) {
-        push(S_int, "g", "HR jelas di bawah LTHR — mudah dari sisi detak.");
+        push(S_int, "g", "Detak jauh di bawah LTHR, terasa mudah buat jantung.");
       } else {
-        push(S_int, "g", "HR " + Math.round(hr) + " bpm (~" + Math.round(ratio * 100) + "% LTHR).");
+        push(S_int, "g", "Detak rata-rata " + Math.round(hr) + " bpm (~" + Math.round(ratio * 100) + "% LTHR).");
       }
       if (maxH > hr + 15) {
-        push(S_ex, "y", "HR maks " + Math.round(maxH) + " — ada lonjakan di sesi (bukit, surging, atau blok keras).");
+        why.push("detak sempat melonjak");
+        push(S_ex, "y", "Detak jantung sempat naik sampai " + Math.round(maxH) + ", mungkin karena tanjakan atau sempat ngebut.");
       }
     } else if (hr > 0 && rst > 0 && mx > rst) {
       const hrr = (hr - rst) / (mx - rst);
-      if (hrr >= 0.88) push(S_int, "r", "HR ≈ " + Math.round(hrr * 100) + "% heart-rate reserve — sangat keras.");
-      else if (hrr >= 0.78) push(S_int, "y", "HR ≈ " + Math.round(hrr * 100) + "% reserve — zona kualitas.");
-      else if (hrr <= 0.65) push(S_int, "g", "HR ≈ " + Math.round(hrr * 100) + "% reserve — zona aerobik.");
+      if (hrr >= 0.88) push(S_int, "r", "Detak ≈ " + Math.round(hrr * 100) + "% dari cadangan jantungmu, sangat keras.");
+      else if (hrr >= 0.78) push(S_int, "y", "Detak ≈ " + Math.round(hrr * 100) + "% dari cadangan jantungmu, zona sesi keras.");
+      else if (hrr <= 0.65) push(S_int, "g", "Detak ≈ " + Math.round(hrr * 100) + "% dari cadangan jantungmu, zona aerobik.");
       else push(S_int, "g", "HR ≈ " + Math.round(hrr * 100) + "% reserve.");
     } else if (!hr) {
       push(S_int, "y", "Tanpa data HR. Analisis hanya dari pace/METs — pastikan jam terhubung ke Intervals.");
     }
 
     // —— 2. Eksekusi: type consistency, pace vs history ——
-    push(S_ex, "g", "Jenis sesi: " + (VX_LB[det.type] || det.type) + " (keyakinan " + det.conf + "). " + det.why + ".");
+    push(S_ex, "g", "Jenis sesi: " + (VX_LB[det.type] || det.type) + " (keyakinan " + det.conf + "), " + det.why + ".");
 
     if (det.type === "easy" && pct != null && pct > 0.75) {
       push(S_ex, "y", "Berlabel easy tapi intensitas di atas zona easy. Kalau recovery, pelankan lain kali — ini sumber kelelahan tersembunyi.");
@@ -1212,7 +1213,7 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
       push(S_ex, "y", "Label " + (VX_LB[det.type] || det.type) + " tapi intensitas relatif rendah. Konfirmasi jenis sesi jika perlu.");
     }
     if (det.type === "long") {
-      push(S_ex, km >= 16 ? "y" : "g", "Long " + f1(km) + " km. Prioritaskan makan, tidur, dan easy 24–48 jam.");
+      push(S_ex, km >= 16 ? "y" : "g", "Long " + f1(km) + " km. Makan cukup, tidur cukup, lalu beri 24–48 jam easy setelahnya.");
     }
 
     // Pace vs recent easy baseline
@@ -1265,11 +1266,17 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     } else if (sx) {
       const steady = det.type === "easy" || det.type === "long" || det.type === "race";
       if (steady && sx.fast) push(S_ex, "y", `Start terlalu kencang: km 1–2 ${mp(sx.fast.p12)}/km vs median sisanya ${mp(sx.fast.med)}/km (${sx.fast.pct}% lebih cepat). Pelankan dua km pertama.`);
-      if (steady && sx.fade) push(S_ex, "y", `Fade: km akhir ${sx.fade.pct}% lebih lambat dari bagian tengah. Mulai lebih pelan atau potong durasi.`);
+      if (steady && sx.fade) push(S_ex, "y", `Melambat di akhir: km terakhir ${sx.fade.pct}% lebih lambat dari bagian tengah. Mulai lebih pelan atau potong durasi.`);
       if (steady && sx.dec) push(S_ex, sx.dec.pct >= 5 ? "y" : "g", sx.dec.pct >= 5
-        ? `Decoupling kasar ${sx.dec.pct}%: HR naik relatif pace di paruh kedua. Aerobik belum stabil di durasi ini.`
-        : `Decoupling kasar ${sx.dec.pct}%. Stabil.`);
-      if (sx.tiz) push(S_ex, "g", "Waktu di zona HR (HRR): " + sx.tiz.map((v, i) => (v > 0 ? "Z" + (i + 1) + " " + v + "%" : "")).filter(Boolean).join(" · ") + ".");
+        ? `Di paruh kedua detak jantung naik sekitar ${sx.dec.pct}% dibanding pace-nya. Dasar aerobikmu belum stabil untuk durasi ini.`
+        : `Detak jantung stabil dari awal sampai akhir (selisih ${sx.dec.pct}%). Tanda dasar aerobik yang kuat.`);
+      if (sx.tiz) {
+        push(S_ex, "g", "Sebaran waktu per zona detak jantung: " + sx.tiz.map((v, i) => (v > 0 ? "Z" + (i + 1) + " " + v + "%" : "")).filter(Boolean).join(" · ") + ".");
+        if ((det.type === "easy" || det.type === "long") && sx.tiz.slice(2).reduce((u, v) => u + v, 0) >= 50) {
+          why.push("banyak waktu di intensitas sedang");
+          push(S_ex, "y", "Lebih dari separuh waktunya di Z3 ke atas, jadi lebih keras dari easy murni. Pelankan sedikit supaya benar-benar aerobik.");
+        }
+      }
     }
 
     // —— 3. Load & week context ——
@@ -1278,17 +1285,17 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
       .filter((x) => x[0] >= Date.now() - 7 * 864e5 && x[1] === "run")
       .reduce((s, x) => s + x[3], 0);
 
-    push(S_load, "g", "Load sesi " + Math.round(load) + (icuLoad ? " (ICU)" : " (estimasi)") +
-      " · load 7 hari ≈ " + f1(weekLoad) + " · jarak 7 hari ≈ " + f1(weekKm) + " km.");
+    push(S_load, "g", "Beban sesi ini " + Math.round(load) + " poin (" + (icuLoad ? "dari Intervals" : "perkiraan app") +
+      "). Total 7 hari terakhir ≈ " + f1(weekLoad) + " poin dan " + f1(weekKm) + " km.");
 
     if (load >= 120) {
-      push(S_load, "r", "Load sangat tinggi. Cadangan terkuras — jangan quality atau long besok.");
+      push(S_load, "r", "Beban sangat tinggi. Jangan lari keras atau long besok.");
     } else if (load >= 80) {
-      push(S_load, "y", "Load tinggi untuk satu sesi. Sisakan ruang pemulihan.");
+      push(S_load, "y", "Beban sesi ini tinggi. Beri tubuh waktu untuk pulih.");
     }
 
     if (weekLoad > 0 && load / weekLoad >= 0.45) {
-      push(S_load, "y", "Sesi ini ≈ " + Math.round((load / weekLoad) * 100) + "% dari load 7 hari — porsi besar dalam seminggu.");
+      push(S_load, "y", "Sesi ini menyumbang " + Math.round((load / weekLoad) * 100) + "% dari beban 7 hari terakhir, porsi yang besar.");
     }
 
     // Hard streak
@@ -1305,7 +1312,7 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
       else break;
     }
     if (streak >= 3) {
-      push(S_load, "r", "Sudah " + streak + " hari berturut bermuatan tinggi/keras. Risiko overreach — selipkan rest.");
+      push(S_load, "r", streak + " hari berturut-turut berat. Risiko kelelahan menumpuk, selipkan hari istirahat.");
     } else if (streak === 2) {
       push(S_load, "y", "Dua hari beruntun cukup berat. Besok lebih aman easy atau libur.");
     }
@@ -1318,7 +1325,8 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     if (prevSessions.length >= 4) {
       const avgL = prevSessions.reduce((s, v) => s + v, 0) / prevSessions.length;
       if (load > avgL * 1.6) {
-        push(S_load, "y", "Load " + Math.round((load / avgL - 1) * 100) + "% di atas rata-rata sesi 2 minggu terakhir.");
+        why.push("bebanmu naik cepat");
+        push(S_load, "y", "Sesi ini " + Math.round((load / avgL - 1) * 100) + "% lebih berat dari rata-rata lari 2 minggu terakhir.");
       }
     }
 
@@ -1328,33 +1336,33 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     let tomorrow = "";
     let toneNext = "g";
     if (hard && longish) {
-      tomorrow = "Besok: istirahat penuh atau jalan santai 20–30 menit. Jangan lari quality.";
+      tomorrow = "Besok: istirahat penuh atau jalan santai 20–30 menit. Jangan lari keras.";
       toneNext = "r";
     } else if (hard) {
-      tomorrow = "Besok: easy jujur (napas nyaman) atau rest. Jangan quality berturut-turut.";
+      tomorrow = "Besok: lari santai (masih bisa ngobrol) atau istirahat. Jangan lari keras dua hari beruntun.";
       toneNext = "y";
     } else if (longish) {
-      tomorrow = "Besok: easy pendek (30–40 mnt) atau rest aktif. Kaki butuh darah segar, bukan intervensi.";
+      tomorrow = "Besok: lari santai 30–40 menit atau jalan santai. Kaki butuh pulih, bukan dipaksa.";
       toneNext = "y";
     } else if (streak >= 2) {
-      tomorrow = "Besok: utamakan recovery. Form bagus di kertas tetap bisa menipu kalau streak keras.";
+      tomorrow = "Besok: utamakan pemulihan. Skor kesiapan bagus belum tentu badan siap kalau beberapa hari terakhir berat.";
       toneNext = "y";
     } else if (pct != null && pct <= 0.68) {
       tomorrow = "Besok: boleh lanjut sesuai rencana bila bangun tidur terasa oke.";
       toneNext = "g";
     } else {
-      tomorrow = "Besok: cek form pagi (RHR/mood/kaki). Ragu → easy.";
+      tomorrow = "Besok: cek kondisi pagi (detak istirahat, mood, kaki). Kalau ragu, lari santai saja.";
       toneNext = "g";
     }
     push(S_next, toneNext, tomorrow);
 
     // Coach one-liner on purpose
     if (det.type === "easy" && pct != null && pct <= 0.68) {
-      push(S_next, "g", "Tujuan sesi (easy aerobik) tercapai. Ini yang membangun fondasi — jangan diubah jadi tempo karena 'feeling bagus'.");
+      push(S_next, "g", "Tujuan sesi santai tercapai. Inilah yang membangun dasar aerobik. Jangan dijadikan tempo hanya karena lagi enak.");
     } else if (det.type === "thr" || det.type === "vo2") {
-      push(S_next, "g", "Stimulus kualitas masuk. Nilai sesi ini di pemulihan dan sesi easy berikutnya, bukan di apakah bisa lebih kencang.");
+      push(S_next, "g", "Sesi kerasnya sudah masuk. Nilainya ada di pemulihan dan lari santai berikutnya, bukan di seberapa kencang kamu bisa.");
     } else if (det.type === "long") {
-      push(S_next, "g", "Long adalah latihan ketahanan + kepala. Yang dihitung selesai dengan kontrol, bukan pace heroik di 5 km terakhir.");
+      push(S_next, "g", "Long itu melatih ketahanan dan mental. Yang dihitung selesai dengan terkendali, bukan ngebut di 5 km terakhir.");
     }
 
     // —— Tone & headline ——
@@ -1366,11 +1374,11 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     else if (nY >= 2) tone = "y";
 
     let headline;
-    if (tone === "r") headline = "Sesi membebani — prioritaskan pemulihan.";
-    else if (tone === "y") headline = "Ada sinyal untuk waspada. Besok lebih aman mudah.";
-    else if (det.type === "easy" && pct != null && pct <= 0.68) headline = "Easy terkendali. Fondasi bertambah.";
-    else if (det.type === "long") headline = "Long selesai dengan beban yang perlu dihormati.";
-    else if (det.type === "thr" || det.type === "vo2") headline = "Quality terlaksana — sekarang pulihkan.";
+    if (tone === "r") headline = "Sesi ini berat. Prioritaskan pemulihan.";
+    else if (tone === "y") headline = why.length ? "Hati-hati: " + why.slice(0, 2).join(" dan ") + ". Besok santai dulu." : "Ada sinyal untuk waspada. Besok santai dulu.";
+    else if (det.type === "easy" && pct != null && pct <= 0.68) headline = "Lari santai yang terkendali. Dasar aerobikmu bertambah.";
+    else if (det.type === "long") headline = "Long selesai. Bebannya perlu dipulihkan dengan baik.";
+    else if (det.type === "thr" || det.type === "vo2") headline = "Sesi keras terlaksana. Sekarang waktunya pulih.";
     else headline = "Sesi terkendali. Lanjut sesuai tubuh, bukan ego.";
 
     const sections = [S_int, S_ex, S_load, S_next].filter((sec) => sec.notes.length);
@@ -1390,8 +1398,8 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     // accept either structured review or legacy notes array
     if (!rev) return null;
     if (Array.isArray(rev)) {
-      if (rev.some((n) => n.k === "r")) return { k: "r", text: "Sesi membebani — prioritaskan pemulihan." };
-      if (rev.filter((n) => n.k === "y").length >= 2) return { k: "y", text: "Ada sinyal untuk waspada. Besok lebih baik mudah." };
+      if (rev.some((n) => n.k === "r")) return { k: "r", text: "Sesi ini berat. Prioritaskan pemulihan." };
+      if (rev.filter((n) => n.k === "y").length >= 2) return { k: "y", text: "Ada sinyal untuk waspada. Besok santai dulu." };
       return { k: "g", text: "Sesi terkendali." };
     }
     return rev.headline ? { k: rev.tone || "g", text: rev.headline } : null;
