@@ -233,8 +233,19 @@ input::placeholder { color: var(--input-ph); }
 .prg-up{color:var(--primary)}.prg-dn{color:var(--yellow)}
 .prg-card svg[data-c]{touch-action:pan-y;cursor:crosshair;-webkit-tap-highlight-color:transparent}
 .prg-read{font-size:12.5px;margin-top:8px;min-height:19px;line-height:1.4}
-.prg-leg{display:flex;gap:14px;font-size:11.5px;color:var(--grey);margin-top:8px}
+.prg-leg{display:flex;flex-wrap:wrap;gap:10px 14px;font-size:11.5px;color:var(--grey);margin-top:8px}
 .prg-leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.prg-insight{font-size:13px;line-height:1.5;color:var(--light-grey);margin-top:10px;padding-top:10px;border-top:1px solid var(--card-border)}
+.prg-insight b{color:var(--tx);font-weight:600}
+.prg-mix{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.prg-mix .pm{background:var(--el);border-radius:12px;padding:10px 8px;text-align:center}
+.prg-mix .pm b{display:block;font-size:16px;font-weight:800;letter-spacing:-.02em}
+.prg-mix .pm span{display:block;font-size:10.5px;color:var(--grey);margin-top:2px}
+.prg-bar{height:10px;border-radius:999px;background:var(--el);overflow:hidden;display:flex;margin:10px 0 4px}
+.prg-bar i{display:block;height:100%}
+.prg-empty{color:var(--grey);text-align:center;padding:28px 16px;font-size:14px;line-height:1.55}
+.prg-empty b{color:var(--tx);display:block;margin-bottom:6px;font-size:15px}
+.prg-yax{font-size:9px;fill:var(--grey)}
 
 .bottom-nav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
@@ -2909,137 +2920,404 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     $("#prgChips").innerHTML = [[8, "8 minggu"], [26, "6 bulan"], [52, "1 tahun"]]
       .map(([n, t]) => `<button type="button" class="fchip${prgR === n ? " active" : ""}" onclick="setPrg(${n})">${t}</button>`).join("");
     const runs = (state.acts || []).filter((x) => x[1] === "run" && x[3] > 0 && x[2] > 0);
-    if (!runs.length) { el.innerHTML = '<p class="empty">Belum ada data lari. Progres muncul setelah lari pertama tersinkron.</p>'; return; }
-    const wkS = (ms) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); };
-    const w0 = wkS(Date.now()), weeks = [];
-    for (let i = prgR - 1; i >= 0; i--) { const d = new Date(w0); d.setDate(d.getDate() - i * 7); weeks.push({ k: d.getTime(), km: 0, n: 0, min: 0 }); }
-    const idx = {}; weeks.forEach((w, i) => (idx[w.k] = i));
-    const inR = runs.filter((x) => wkS(x[0]) in idx);
-    inR.forEach((x) => { const w = weeks[idx[wkS(x[0])]]; w.km += x[3]; w.n++; w.min += x[2]; });
-    const fmt1 = (v) => (Math.round(v * 10) / 10).toString().replace(".", ",");
-    const pace = (min, km) => { const p = min / km, m = Math.floor(p); let sc = Math.round((p - m) * 60), mm = m; if (sc === 60) { sc = 0; mm++; } return mm + ":" + String(sc).padStart(2, "0"); };
-    const totKm = weeks.reduce((n, w) => n + w.km, 0), totN = inR.length, active = weeks.filter((w) => w.n >= 2).length;
-    const dm = (ms) => new Date(ms).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-    const hm = (t) => { t = Math.round(t); const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sc = t % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(sc).padStart(2, "0"); };
-    const sgn = (t) => (t < 0 ? "−" : "+") + hm(Math.abs(t));
-    /* grafik yang bisa disentuh: pts = [{x, y, t}] dalam koordinat viewBox; sentuh/geser untuk melihat nilai */
-    let cid = 0; window.PRG = {};
-    const chart = (vbH, inner, pts) => {
-      const id = "pc" + cid++; window.PRG[id] = pts;
-      return `<svg id="${id}" data-c="1" viewBox="0 0 340 ${vbH}">${inner}<g class="mk" style="display:none;pointer-events:none"><line y1="0" y2="${vbH}" stroke="var(--grey)" stroke-dasharray="3 3" stroke-width="1"/><circle r="5" fill="var(--card)" stroke="var(--primary)" stroke-width="2.5"/></g></svg>` +
-        `<div class="prg-read" data-for="${id}"><span style="color:var(--grey);font-weight:500">Sentuh atau geser grafik untuk melihat nilainya</span></div>`;
-    };
-
-    /* kartu ringkas */
-    let h = `<div class="hist-sum">` + [[fmt1(totKm), "km total"], [totN, "lari"], [fmt1(totKm / prgR), "km/minggu"], [active + "/" + prgR, "minggu aktif"]]
-      .map(([v, l]) => `<div class="hs"><b>${v}</b><span>${l}</span></div>`).join("") + `</div>`;
-
-    /* volume mingguan */
-    const W = 340, H = 120, pb = 18, mx = Math.max(10, ...weeks.map((w) => w.km)), bw = W / weeks.length, step = Math.ceil(weeks.length / 6);
-    const last = weeks[weeks.length - 1], prev = weeks[weeks.length - 2];
-    const dlt = prev && prev.km > 0 ? Math.round(((last.km - prev.km) / prev.km) * 100) : null;
-    let bars = ""; const vpts = [];
-    weeks.forEach((w, i) => {
-      const bh = Math.max(w.km > 0 ? 2 : 0, (w.km / mx) * (H - pb - 6)), x = i * bw + bw * 0.15, cur = i === weeks.length - 1;
-      vpts.push({ x: x + bw * 0.35, y: H - pb - bh, t: `<b>${dm(w.k)} – ${dm(w.k + 6 * 864e5)}</b> · ${fmt1(w.km)} km · ${w.n} lari${w.min ? " · " + hm(w.min * 60) : ""}` });
-      bars += `<rect x="${x.toFixed(1)}" y="${(H - pb - bh).toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="var(--primary)" opacity="${cur ? 1 : 0.55}"/>`;
-      if (i % step === 0 || cur) bars += `<text x="${(x + bw * 0.35).toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="var(--grey)">${dm(w.k)}</text>`;
-    });
-    h += `<div class="prg-card"><h4>Volume mingguan</h4><div class="sub">Minggu ini ${fmt1(last.km)} km` +
-      (dlt != null ? ` · <span class="${dlt >= 0 ? "prg-up" : "prg-dn"}">${dlt >= 0 ? "+" : ""}${dlt}%</span> dari minggu lalu` : "") +
-      `</div>${chart(H, bars, vpts)}</div>`;
-
-    /* kebugaran CTL/ATL */
-    const wl = (state.wellness || []).filter((x) => x.ctl != null && x.atl != null && new Date(x.id).getTime() >= w0 - (prgR - 1) * 7 * 864e5);
-    if (wl.length >= 3) {
-      const pts = wl.length > 70 ? wl.filter((_, i) => i % Math.ceil(wl.length / 70) === 0 || i === wl.length - 1) : wl;
-      const all = pts.flatMap((x) => [x.ctl, x.atl]), lo = Math.min(...all), hi = Math.max(...all), rg = Math.max(1, hi - lo);
-      const path = (k) => pts.map((x, i) => (i ? "L" : "M") + ((i / (pts.length - 1)) * W).toFixed(1) + " " + (96 - ((x[k] - lo) / rg) * 88 + 4).toFixed(1)).join(" ");
-      const cpts = pts.map((x, i) => ({ x: (i / (pts.length - 1)) * W, y: 96 - ((x.ctl - lo) / rg) * 88 + 4, t: `<b>${dm(new Date(x.id).getTime())}</b> · CTL ${x.ctl.toFixed(1)} · ATL ${x.atl.toFixed(1)} · TSB ${(x.ctl - x.atl).toFixed(1)}` }));
-      const L = wl[wl.length - 1], F = wl[0], tsb = L.ctl - L.atl;
-      const tl = tsb > 10 ? "segar/siap" : tsb >= -10 ? "seimbang" : tsb >= -30 ? "sedang membangun" : "sangat lelah";
-      h += `<div class="prg-card"><h4>Kebugaran &amp; kelelahan</h4><div class="sub">CTL ${L.ctl.toFixed(1)} (${L.ctl - F.ctl >= 0 ? "+" : ""}${(L.ctl - F.ctl).toFixed(1)} sejak awal rentang) · TSB ${tsb.toFixed(1)}, ${tl}</div>` +
-        chart(100, `<path d="${path("atl")}" fill="none" stroke="var(--yellow)" stroke-width="2" opacity=".8"/><path d="${path("ctl")}" fill="none" stroke="var(--primary)" stroke-width="2.5"/>`, cpts) +
-        `<div class="prg-leg"><span><i style="background:var(--primary)"></i>Kebugaran (CTL)</span><span><i style="background:var(--yellow)"></i>Kelelahan (ATL)</span></div></div>`;
+    if (!runs.length) {
+      el.innerHTML = `<div class="prg-empty"><b>Belum ada data lari</b>Sinkronkan Intervals.icu atau jam, lalu lari pertama akan mengisi volume, kebugaran, dan prediksi di sini.</div>`;
+      return;
     }
 
+    const wkS = (ms) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); };
+    const w0 = wkS(Date.now()), weeks = [];
+    for (let i = prgR - 1; i >= 0; i--) {
+      const d = new Date(w0); d.setDate(d.getDate() - i * 7);
+      weeks.push({ k: d.getTime(), km: 0, n: 0, min: 0, easy: 0, qual: 0, long: 0, other: 0 });
+    }
+    const idx = {}; weeks.forEach((w, i) => (idx[w.k] = i));
+    const inR = runs.filter((x) => wkS(x[0]) in idx);
+    inR.forEach((x) => {
+      const w = weeks[idx[wkS(x[0])]];
+      w.km += x[3]; w.n++; w.min += x[2];
+      let ty = "easy";
+      try { ty = detectType(x).type; } catch (_) {}
+      if (ty === "long") w.long += x[3];
+      else if (ty === "thr" || ty === "vo2" || ty === "race") w.qual += x[3];
+      else if (ty === "easy") w.easy += x[3];
+      else w.other += x[3];
+    });
 
-    /* 1. prediksi waktu lomba dari minggu ke minggu */
+    const fmt1 = (v) => (Math.round(v * 10) / 10).toString().replace(".", ",");
+    const pace = (min, km) => {
+      const p = min / km, m = Math.floor(p); let sc = Math.round((p - m) * 60), mm = m;
+      if (sc === 60) { sc = 0; mm++; }
+      return mm + ":" + String(sc).padStart(2, "0");
+    };
+    const totKm = weeks.reduce((n, w) => n + w.km, 0), totN = inR.length, active = weeks.filter((w) => w.n >= 1).length;
+    const active2 = weeks.filter((w) => w.n >= 2).length;
+    const dm = (ms) => new Date(ms).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    const hm = (t) => {
+      t = Math.round(t);
+      const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sc = t % 60;
+      return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(sc).padStart(2, "0");
+    };
+    const sgn = (t) => (t < 0 ? "−" : "+") + hm(Math.abs(t));
+    const cMed = (a) => { const b = a.slice().sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : null; };
+
+    let cid = 0; window.PRG = {};
+    const LP = 34, RP = 8, W = 340;
+    const plotW = W - LP - RP;
+    const chart = (vbH, inner, pts, opts) => {
+      opts = opts || {};
+      const id = "pc" + cid++;
+      window.PRG[id] = pts || [];
+      const last = pts && pts.length ? pts[pts.length - 1] : null;
+      const def = last ? last.t : (opts.empty || `<span style="color:var(--grey);font-weight:500">Belum ada titik data</span>`);
+      const yLab = (opts.yLabels || []).map((lb) =>
+        `<text class="prg-yax" x="${LP - 4}" y="${lb.y}" text-anchor="end" dominant-baseline="middle">${lb.t}</text>`
+      ).join("");
+      return `<svg id="${id}" data-c="1" viewBox="0 0 ${W} ${vbH}">${yLab}${inner}<g class="mk" style="display:none;pointer-events:none"><line y1="0" y2="${vbH}" stroke="var(--grey)" stroke-dasharray="3 3" stroke-width="1"/><circle r="5" fill="var(--card)" stroke="var(--primary)" stroke-width="2.5"/></g></svg>` +
+        `<div class="prg-read" data-for="${id}">${def}</div>`;
+    };
+
+    let h = "";
+    if (active < Math.max(3, Math.floor(prgR * 0.25))) {
+      h += `<div class="prg-card"><div class="prg-empty" style="padding:16px 8px"><b>Data masih tipis di rentang ini</b>Hanya ${active} dari ${prgR} minggu punya lari. Grafik tetap ditampilkan; prediksi dan tren akan lebih stabil setelah ${Math.max(4, Math.ceil(prgR * 0.4))} minggu aktif.</div></div>`;
+    }
+
+    h += `<div class="hist-sum">` + [
+      [fmt1(totKm), "km total"],
+      [totN, "lari"],
+      [fmt1(totKm / Math.max(1, prgR)), "km/minggu"],
+      [active + "/" + prgR, "minggu aktif"]
+    ].map(([v, l]) => `<div class="hs"><b>${v}</b><span>${l}</span></div>`).join("") + `</div>`;
+
+    /* Volume */
+    const H = 128, pb = 20, top = 10;
+    const mx = Math.max(10, ...weeks.map((w) => w.km));
+    const bw = plotW / weeks.length;
+    const step = Math.ceil(weeks.length / 6);
+    const last = weeks[weeks.length - 1], prev = weeks[weeks.length - 2];
+    const dlt = prev && prev.km > 0 ? Math.round(((last.km - prev.km) / prev.km) * 100) : null;
+    const yTicks = [0, 0.5, 1].map((f) => ({ t: fmt1(mx * f), y: top + (1 - f) * (H - pb - top) }));
+    let bars = ""; const vpts = [];
+    weeks.forEach((w, i) => {
+      const bh = Math.max(w.km > 0 ? 2 : 0, (w.km / mx) * (H - pb - top));
+      const x = LP + i * bw + bw * 0.12;
+      const cur = i === weeks.length - 1;
+      vpts.push({
+        x: x + bw * 0.38, y: H - pb - bh,
+        t: `<b>${dm(w.k)} – ${dm(w.k + 6 * 864e5)}</b> · ${fmt1(w.km)} km · ${w.n} lari` +
+          (w.min ? " · " + hm(w.min * 60) : "") +
+          (w.km ? ` · easy ${fmt1(w.easy)} · quality ${fmt1(w.qual)} · long ${fmt1(w.long)}` : "")
+      });
+      bars += `<rect x="${x.toFixed(1)}" y="${(H - pb - bh).toFixed(1)}" width="${(bw * 0.76).toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="var(--primary)" opacity="${cur ? 1 : w.km ? 0.55 : 0.2}"/>`;
+      if (i % step === 0 || cur) {
+        bars += `<text x="${(x + bw * 0.38).toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="var(--grey)">${dm(w.k)}</text>`;
+      }
+    });
+    const half = Math.floor(weeks.length / 2);
+    const km1 = weeks.slice(0, half).reduce((s, w) => s + w.km, 0) / Math.max(1, half);
+    const km2 = weeks.slice(half).reduce((s, w) => s + w.km, 0) / Math.max(1, weeks.length - half);
+    const volDelta = km1 > 0.5 ? Math.round(((km2 - km1) / km1) * 100) : null;
+    let volInsight = "";
+    if (last.km === 0 && active > 0) volInsight = "Minggu ini belum ada volume. Kalau memang recovery week, itu wajar — jangan paksa mengejar rata-rata.";
+    else if (volDelta != null && volDelta >= 15) volInsight = `Rata-rata paruh akhir <b>+${volDelta}%</b> dibanding paruh awal. Naik volume bagus, tapi jaga agar tidak dua lonjakan besar beruntun tanpa minggu lebih ringan.`;
+    else if (volDelta != null && volDelta <= -15) volInsight = `Rata-rata paruh akhir <b>${volDelta}%</b> dari paruh awal. Kalau ini deload sengaja, bagus. Kalau tidak, cek konsistensi dan kesiapan.`;
+    else if (active2 >= Math.max(3, Math.floor(prgR * 0.5))) volInsight = "Volume relatif stabil. Konsistensi seperti ini yang membangun kapasitas jangka panjang.";
+    else volInsight = "Masih banyak minggu sepi. Fokus dulu mengisi 3–4 minggu aktif beruntun sebelum mengejar angka tinggi.";
+
+    h += `<div class="prg-card"><h4>Volume mingguan</h4><div class="sub">Minggu ini <b>${fmt1(last.km)} km</b>` +
+      (dlt != null ? ` · <span class="${dlt >= 0 ? "prg-up" : "prg-dn"}">${dlt >= 0 ? "+" : ""}${dlt}%</span> dari minggu lalu` : "") +
+      `</div>${chart(H, bars, vpts, { yLabels: yTicks })}` +
+      (volInsight ? `<div class="prg-insight">${volInsight}</div>` : "") +
+      `</div>`;
+
+    /* Komposisi */
+    const te = weeks.reduce((s, w) => s + w.easy, 0);
+    const tq = weeks.reduce((s, w) => s + w.qual, 0);
+    const tlng = weeks.reduce((s, w) => s + w.long, 0);
+    const tMix = te + tq + tlng;
+    if (tMix > 0.5) {
+      const pe = Math.round((te / tMix) * 100), pq = Math.round((tq / tMix) * 100), pl = Math.max(0, 100 - pe - pq);
+      let mixInsight = "";
+      if (pq >= 35) mixInsight = "Porsi quality cukup tinggi. Pastikan easy benar-benar easy agar tidak menumpuk lelah.";
+      else if (pq <= 8 && active >= 4) mixInsight = "Hampir semua easy/long. Setelah fondasi stabil, 1 sesi quality per minggu biasanya cukup.";
+      else if (pl >= 30) mixInsight = "Long mendominasi volume — bagus untuk ketahanan, jaga recovery 24–48 jam setelahnya.";
+      else mixInsight = "Campuran easy–quality–long terlihat seimbang untuk rentang ini.";
+      h += `<div class="prg-card"><h4>Komposisi sesi</h4><div class="sub">Proporsi jarak di rentang terpilih (deteksi otomatis + konfirmasi manual)</div>
+        <div class="prg-bar"><i style="width:${pe}%;background:var(--primary)"></i><i style="width:${pq}%;background:var(--yellow)"></i><i style="width:${pl}%;background:#a78bfa"></i></div>
+        <div class="prg-mix">
+          <div class="pm"><b>${pe}%</b><span>Easy · ${fmt1(te)} km</span></div>
+          <div class="pm"><b>${pq}%</b><span>Quality · ${fmt1(tq)} km</span></div>
+          <div class="pm"><b>${pl}%</b><span>Long · ${fmt1(tlng)} km</span></div>
+        </div>
+        <div class="prg-insight">${mixInsight}</div>
+      </div>`;
+    }
+
+    /* Plan adherence */
+    try {
+      const plan = state.plan || {};
+      const planDays = Object.keys(plan).filter((k) => plan[k] && plan[k].t && plan[k].t !== "auto");
+      if (planDays.length) {
+        const weekStart = w0;
+        const weekActs = (state.acts || []).filter((x) => x[1] === "run" && x[0] >= weekStart && x[0] < weekStart + 7 * 864e5);
+        let planKm = 0, doneKm = 0, planN = 0, doneN = 0;
+        for (let d = 0; d < 7; d++) {
+          const day = new Date(weekStart); day.setDate(day.getDate() + d);
+          const dow = day.getDay();
+          const p = plan[dow];
+          if (!p || !p.t || p.t === "auto" || p.t === "rest") continue;
+          planN++;
+          planKm += +p.km || 0;
+          const day0 = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+          const hit = weekActs.some((a) => {
+            const ad = new Date(a[0]);
+            return Date.UTC(ad.getFullYear(), ad.getMonth(), ad.getDate()) === day0;
+          });
+          if (hit) doneN++;
+        }
+        doneKm = weekActs.reduce((s, a) => s + a[3], 0);
+        if (planKm > 0 || planN > 0) {
+          const pctKm = planKm > 0 ? Math.round((doneKm / planKm) * 100) : null;
+          const pctN = planN > 0 ? Math.round((doneN / planN) * 100) : null;
+          let pInsight = "";
+          if (pctKm != null && pctKm >= 90 && pctKm <= 120) pInsight = "Volume minggu ini mendekati rencana. Pertahankan konsistensi.";
+          else if (pctKm != null && pctKm < 70) pInsight = "Masih di bawah rencana. Lebih baik selesaikan sisa hari dengan easy daripada memaksa quality.";
+          else if (pctKm != null && pctKm > 130) pInsight = "Sudah jauh di atas rencana. Hati-hati overload — prioritaskan recovery.";
+          else pInsight = "Rencana hanya panduan; sesuaikan dengan kesiapan harian di beranda.";
+          h += `<div class="prg-card"><h4>Rencana minggu ini</h4>
+            <div class="prg-row"><span>Volume rencana</span><b>${fmt1(planKm)} km</b></div>
+            <div class="prg-row"><span>Sudah dijalankan</span><b>${fmt1(doneKm)} km${pctKm != null ? " · " + pctKm + "%" : ""}</b></div>
+            <div class="prg-row"><span>Hari terencana</span><b>${doneN}/${planN}${pctN != null ? " · " + pctN + "%" : ""}</b></div>
+            <div class="prg-insight">${pInsight}</div>
+          </div>`;
+        }
+      }
+    } catch (_) {}
+
+    /* CTL/ATL */
+    const wl = (state.wellness || []).filter((x) => x.ctl != null && x.atl != null && new Date(x.id).getTime() >= w0 - (prgR - 1) * 7 * 864e5);
+    if (wl.length >= 3) {
+      const pts = wl.length > 80 ? wl.filter((_, i) => i % Math.ceil(wl.length / 80) === 0 || i === wl.length - 1) : wl;
+      const allV = pts.flatMap((x) => [x.ctl, x.atl]);
+      const lo = Math.min(...allV), hi = Math.max(...allV), rg = Math.max(1, hi - lo);
+      const plotH = 100, padT = 8, padB = 8;
+      const Yc = (v) => padT + (1 - (v - lo) / rg) * (plotH - padT - padB);
+      const Xp = (i) => LP + (pts.length > 1 ? (i / (pts.length - 1)) * plotW : plotW / 2);
+      const path = (k) => pts.map((x, i) => (i ? "L" : "M") + Xp(i).toFixed(1) + " " + Yc(x[k]).toFixed(1)).join(" ");
+      const cpts = pts.map((x, i) => ({
+        x: Xp(i), y: Yc(x.ctl),
+        t: `<b>${dm(new Date(x.id).getTime())}</b> · CTL ${x.ctl.toFixed(1)} · ATL ${x.atl.toFixed(1)} · TSB ${(x.ctl - x.atl).toFixed(1)}`
+      }));
+      const L = wl[wl.length - 1], F = wl[0], tsb = L.ctl - L.atl;
+      const tl = tsb > 10 ? "segar/siap" : tsb >= -10 ? "seimbang" : tsb >= -30 ? "sedang membangun" : "sangat lelah";
+      const yL = [
+        { t: hi.toFixed(0), y: Yc(hi) },
+        { t: ((hi + lo) / 2).toFixed(0), y: Yc((hi + lo) / 2) },
+        { t: lo.toFixed(0), y: Yc(lo) }
+      ];
+      let cInsight = "";
+      const dCtl = L.ctl - F.ctl;
+      if (tsb < -25) cInsight = "TSB sangat negatif: beban akut tinggi. Utamakan easy/rest sampai TSB naik mendekati nol.";
+      else if (tsb > 15 && dCtl < 1) cInsight = "Kamu segar tapi kebugaran (CTL) datar. Ini jendela bagus untuk quality terkontrol.";
+      else if (dCtl >= 3) cInsight = `CTL naik <b>+${dCtl.toFixed(1)}</b> di rentang ini — kapasitas kronis bertambah. Pertahankan kenaikan gradual.`;
+      else if (dCtl <= -3) cInsight = `CTL turun <b>${dCtl.toFixed(1)}</b>. Bisa deload yang sehat, atau tanda volume terlalu jarang.`;
+      else cInsight = `TSB ${tsb.toFixed(1)} (${tl}). Kebugaran relatif stabil; sesuaikan intensitas dengan skor kesiapan harian.`;
+      h += `<div class="prg-card"><h4>Kebugaran &amp; kelelahan</h4><div class="sub">CTL <b>${L.ctl.toFixed(1)}</b> (${dCtl >= 0 ? "+" : ""}${dCtl.toFixed(1)} sejak awal) · TSB <b>${tsb.toFixed(1)}</b>, ${tl}</div>` +
+        chart(plotH, `<path d="${path("atl")}" fill="none" stroke="var(--yellow)" stroke-width="2" opacity=".85"/><path d="${path("ctl")}" fill="none" stroke="var(--primary)" stroke-width="2.5"/>`, cpts, { yLabels: yL }) +
+        `<div class="prg-leg"><span><i style="background:var(--primary)"></i>Kebugaran (CTL)</span><span><i style="background:var(--yellow)"></i>Kelelahan (ATL)</span></div>` +
+        `<div class="prg-insight">${cInsight}</div></div>`;
+    }
+
+    /* Prediksi */
     const D = state.raceDist > 0 ? state.raceDist : ({ "5K": 5, "10K": 10, "Half": 21.0975, "Marathon": 42.195 }[state.goal] || 5);
     const DL = state.raceDist > 0 ? fmt1(D) + " km" : state.goal === "Umum" ? "5K" : state.goal;
-    let tgt = null; { const g = (state.raceGoal || "").split(":").map(Number); if (state.raceDist > 0 && g.length >= 2 && !g.some(isNaN)) tgt = g.length === 3 ? g[0] * 3600 + g[1] * 60 + g[2] : g[0] * 60 + g[1]; }
+    let tgt = null;
+    {
+      const g = (state.raceGoal || "").split(":").map(Number);
+      if (state.raceDist > 0 && g.length >= 2 && !g.some(isNaN))
+        tgt = g.length === 3 ? g[0] * 3600 + g[1] * 60 + g[2] : g[0] * 60 + g[1];
+    }
     const est = [];
     weeks.forEach((w, i) => {
       const end = w.k + 7 * 864e5;
-      const c = runs.filter((x) => x[0] < end && x[0] >= end - 42 * 864e5 && x[3] >= 2 && x[3] <= 12 && x[2] >= 10).map((x) => x[2] * 60 * Math.pow(D / x[3], 1.06));
-      if (c.length) est.push({ i, t: Math.min(...c) });
+      const c = runs
+        .filter((x) => x[0] < end && x[0] >= end - 42 * 864e5 && x[3] >= 2 && x[3] <= 12 && x[2] >= 10)
+        .map((x) => x[2] * 60 * Math.pow(D / x[3], 1.06));
+      if (c.length) est.push({ i, t: Math.min(...c), n: c.length });
     });
     if (est.length >= 3) {
-      const ts = est.map((x) => x.t); if (tgt && Math.abs(tgt / cMed(ts) - 1) < 0.4) ts.push(tgt);
-      const lo = Math.min(...ts), hi = Math.max(...ts), rg = Math.max(1, hi - lo), Y = (t) => 8 + ((t - lo) / rg) * 84;
-      const X = (i) => (weeks.length > 1 ? (i / (weeks.length - 1)) * (W - 8) + 4 : W / 2);
+      const ts = est.map((x) => x.t);
+      if (tgt && Math.abs(tgt / cMed(ts) - 1) < 0.4) ts.push(tgt);
+      const lo = Math.min(...ts), hi = Math.max(...ts), rg = Math.max(1, hi - lo);
+      const Y = (t) => 10 + ((t - lo) / rg) * 78;
+      const X = (i) => LP + (weeks.length > 1 ? (i / (weeks.length - 1)) * plotW : plotW / 2);
       const d = est.map((x, k) => (k ? "L" : "M") + X(x.i).toFixed(1) + " " + Y(x.t).toFixed(1)).join(" ");
       const f0 = est[0].t, f1 = est[est.length - 1].t, df = f1 - f0;
-      const tl = tgt ? `<line x1="0" x2="${W}" y1="${Y(tgt).toFixed(1)}" y2="${Y(tgt).toFixed(1)}" stroke="var(--yellow)" stroke-width="1.5" stroke-dasharray="5 4"/>` : "";
+      const recent = est.slice(-3).map((x) => x.t);
+      const spread = Math.max(...recent) - Math.min(...recent);
+      const conf = spread < 45 ? "cukup stabil" : spread < 120 ? "berfluktuasi" : "masih goyah";
+      const tline = tgt ? `<line x1="${LP}" x2="${W - RP}" y1="${Y(tgt).toFixed(1)}" y2="${Y(tgt).toFixed(1)}" stroke="var(--yellow)" stroke-width="1.5" stroke-dasharray="5 4"/>` : "";
+      const yL = [
+        { t: hm(lo), y: Y(lo) },
+        { t: hm((lo + hi) / 2), y: Y((lo + hi) / 2) },
+        { t: hm(hi), y: Y(hi) }
+      ];
+      const epts = est.map((x) => ({
+        x: X(x.i), y: Y(x.t),
+        t: `<b>Pekan ${dm(weeks[x.i].k)}</b> · estimasi ${DL}: ${hm(x.t)}${tgt ? " (" + sgn(x.t - tgt) + " dari target)" : ""} · dari ${x.n} lari`
+      }));
+      let rInsight = `Estimasi Riegel dari lari 3–12 km (6 minggu bergulir). Rentang 3 pekan terakhir ${conf}`;
+      if (tgt) {
+        if (f1 <= tgt) rInsight += ` — sudah di bawah target ${hm(tgt)}.`;
+        else rInsight += ` — masih kurang ${hm(f1 - tgt)} dari target.`;
+      } else rInsight += ".";
+      if (Math.abs(df) >= 30) rInsight += df < 0 ? " Tren membaik di rentang ini." : " Tren sedikit melambat; cek quality dan recovery.";
+      rInsight += " Ini perkiraan kasar, bukan jaminan hasil lomba.";
       h += `<div class="prg-card"><h4>Prediksi ${DL}</h4><div class="sub">Sekarang <b>${hm(f1)}</b> ` +
         (Math.abs(df) >= 1 ? `(<span class="${df < 0 ? "prg-up" : "prg-dn"}">${sgn(df)}</span> sejak awal rentang)` : "") +
-        (tgt ? ` · target ${hm(tgt)}, ${f1 <= tgt ? "sudah tercapai" : "kurang " + hm(f1 - tgt)}` : "") +
-        `</div>` + chart(100, `${tl}<path d="${d}" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linejoin="round"/>` +
-        est.map((x) => `<circle cx="${X(x.i).toFixed(1)}" cy="${Y(x.t).toFixed(1)}" r="2.5" fill="var(--primary)"/>`).join(""),
-        est.map((x) => ({ x: X(x.i), y: Y(x.t), t: `<b>Pekan ${dm(weeks[x.i].k)}</b> · estimasi ${DL}: ${hm(x.t)}${tgt ? " (" + sgn(x.t - tgt) + " dari target)" : ""}` }))) +
-        `<div class="prg-leg"><span>Riegel dari lari tercepat 6 minggu terakhir. Perkiraan kasar, bukan jaminan hasil lomba.${tgt ? ' <span style="color:var(--yellow)">- - -</span> target' : ""}</span></div></div>`;
+        (tgt ? ` · target ${hm(tgt)}` : "") +
+        `</div>` +
+        chart(100, `${tline}<path d="${d}" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linejoin="round"/>` +
+          est.map((x) => `<circle cx="${X(x.i).toFixed(1)}" cy="${Y(x.t).toFixed(1)}" r="2.5" fill="var(--primary)"/>`).join(""),
+          epts, { yLabels: yL }) +
+        `<div class="prg-leg"><span>Riegel · 6 minggu bergulir${tgt ? ' · <span style="color:var(--yellow)">- - -</span> target' : ""}</span></div>` +
+        `<div class="prg-insight">${rInsight}</div></div>`;
+    } else if (totN > 0) {
+      h += `<div class="prg-card"><h4>Prediksi ${DL}</h4><div class="prg-empty" style="padding:12px 4px">Butuh minimal 3 minggu dengan lari 3–12 km agar prediksi muncul. Lanjutkan konsistensi — estimator memakai Riegel dari performa terkini.</div></div>`;
     }
 
-    /* 2. pace easy run pada HR yang sama */
+    /* Pace easy */
     const eff = [];
-    inR.forEach((x) => { let ty; try { ty = detectType(x).type; } catch (_) { return; } if (ty === "easy" && x[4] > 0 && x[3] >= 2) eff.push({ ms: x[0], hr: x[4], e: (x[3] * 1000 / x[2]) / x[4] }); });
+    inR.forEach((x) => {
+      let ty;
+      try { ty = detectType(x).type; } catch (_) { return; }
+      if (ty === "easy" && x[4] > 0 && x[3] >= 2) eff.push({ ms: x[0], hr: x[4], e: (x[3] * 1000 / x[2]) / x[4] });
+    });
     if (eff.length >= 4) {
       eff.sort((p, q) => p.ms - q.ms);
-      const ref = Math.round(cMed(eff.map((x) => x.hr))), pr0 = (x) => 1000 / (x.e * ref);   /* menit/km di HR acuan (kecepatan dianggap sebanding dengan HR) */
-      const ps = eff.map(pr0), half = Math.floor(eff.length / 2), a1 = cMed(ps.slice(0, half)), b1 = cMed(ps.slice(half)), dsec = (b1 - a1) * 60;
-      const lo = Math.min(...ps), hi = Math.max(...ps), rg = Math.max(0.01, hi - lo), Y = (v) => 8 + ((v - lo) / rg) * 76;
-      const X = (i) => (eff.length > 1 ? (i / (eff.length - 1)) * (W - 8) + 4 : W / 2);
+      const ref = Math.round(cMed(eff.map((x) => x.hr)));
+      const pr0 = (x) => 1000 / (x.e * ref);
+      const ps = eff.map(pr0);
+      const halfE = Math.floor(eff.length / 2);
+      const a1 = cMed(ps.slice(0, halfE)), b1 = cMed(ps.slice(halfE));
+      const dsec = (b1 - a1) * 60;
+      const lo = Math.min(...ps), hi = Math.max(...ps), rg = Math.max(0.01, hi - lo);
+      const Y = (v) => 10 + ((v - lo) / rg) * 72;
+      const X = (i) => LP + (eff.length > 1 ? (i / (eff.length - 1)) * plotW : plotW / 2);
       const roll = ps.map((_, i) => cMed(ps.slice(Math.max(0, i - 2), i + 3)));
-      h += `<div class="prg-card"><h4>Pace easy run di HR ${ref}</h4><div class="sub">Pace yang dinormalkan ke HR ${ref} bpm. Paruh akhir <b>${pace(b1, 1)} /km</b> ` +
-        (Math.abs(dsec) >= 1 ? `(<span class="${dsec < 0 ? "prg-up" : "prg-dn"}">${dsec < 0 ? "−" : "+"}${Math.round(Math.abs(dsec))} dtk/km</span> dibanding paruh awal, ${eff.length} lari)` : `(tidak berubah berarti, ${eff.length} lari)`) +
-        `</div>` + chart(92, ps.map((v, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.8" fill="var(--primary)" opacity=".4"/>`).join("") +
-        `<path d="${roll.map((v, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join(" ")}" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linejoin="round"/>`,
-        ps.map((v, i) => ({ x: X(i), y: Y(v), t: `<b>${dm(eff[i].ms)}</b> · ${pace(v, 1)} /km di HR ${ref} (HR aktual ${Math.round(eff[i].hr)}) · rata-rata bergerak ${pace(roll[i], 1)} /km` }))) +
-        `<div class="prg-leg"><span>Naik ke atas = lebih lambat. Titik: tiap lari, garis: rata-rata bergerak 5 lari.</span></div></div>`;
+      const yL = [
+        { t: pace(lo, 1), y: Y(lo) },
+        { t: pace((lo + hi) / 2, 1), y: Y((lo + hi) / 2) },
+        { t: pace(hi, 1), y: Y(hi) }
+      ];
+      const epts = ps.map((v, i) => ({
+        x: X(i), y: Y(v),
+        t: `<b>${dm(eff[i].ms)}</b> · ${pace(v, 1)} /km di HR ${ref} (HR aktual ${Math.round(eff[i].hr)}) · rata-rata bergerak ${pace(roll[i], 1)} /km`
+      }));
+      let eInsight = "";
+      if (dsec <= -8) eInsight = `Paruh akhir <b>${Math.round(-dsec)} dtk/km lebih cepat</b> di HR yang sama — efisiensi aerobik membaik.`;
+      else if (dsec >= 8) eInsight = `Paruh akhir <b>+${Math.round(dsec)} dtk/km lebih lambat</b> di HR yang sama. Bisa tanda lelah menumpuk atau easy yang terlalu kencang di awal rentang.`;
+      else eInsight = "Pace easy di HR acuan relatif stabil. Itu fondasi yang sehat.";
+      h += `<div class="prg-card"><h4>Pace easy di HR ${ref}</h4><div class="sub">Dinormalisasi ke HR ${ref} bpm. Paruh akhir <b>${pace(b1, 1)} /km</b> ` +
+        (Math.abs(dsec) >= 1 ? `(<span class="${dsec < 0 ? "prg-up" : "prg-dn"}">${dsec < 0 ? "−" : "+"}${Math.round(Math.abs(dsec))} dtk/km</span> vs paruh awal, ${eff.length} lari)` : `(stabil, ${eff.length} lari)`) +
+        `</div>` +
+        chart(96,
+          ps.map((v, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.8" fill="var(--primary)" opacity=".4"/>`).join("") +
+          `<path d="${roll.map((v, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join(" ")}" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linejoin="round"/>`,
+          epts, { yLabels: yL }) +
+        `<div class="prg-leg"><span>Naik = lebih lambat · titik: tiap lari · garis: median 5 lari</span></div>` +
+        `<div class="prg-insight">${eInsight}</div></div>`;
     }
 
-    /* 3. suhu & efisiensi pribadi */
+    /* Suhu */
     try {
       const PS = clPers();
       if (PS.ok) {
-        const bn = PS.bins, mxa = Math.max(2, ...bn.map((x) => Math.abs(x.med))), bw3 = W / bn.length, z = 44;
+        const bn = PS.bins, mxa = Math.max(2, ...bn.map((x) => Math.abs(x.med)));
+        const bw3 = plotW / bn.length, z = 44;
         let sv = ""; const tpts = [];
         bn.forEach((x, i) => {
-          const bh = (Math.abs(x.med) / mxa) * 38, xx = i * bw3 + bw3 * 0.12, isOpt = x.lo === PS.optLo;
-          tpts.push({ x: xx + bw3 * 0.38, y: x.med >= 0 ? z - bh : z + bh, t: `<b>${Math.round(x.lo)}–${Math.round(x.hi)}°C</b> · efisiensi ${x.med >= 0 ? "+" : "−"}${Math.abs(x.med).toFixed(1).replace(".", ",")}% dari lari sekitarnya · ${x.n} lari${x.lo === PS.optLo ? " · paling efisien" : ""}` });
+          const bh = (Math.abs(x.med) / mxa) * 38, xx = LP + i * bw3 + bw3 * 0.12, isOpt = x.lo === PS.optLo;
+          tpts.push({
+            x: xx + bw3 * 0.38, y: x.med >= 0 ? z - bh : z + bh,
+            t: `<b>${Math.round(x.lo)}–${Math.round(x.hi)}°C</b> · efisiensi ${x.med >= 0 ? "+" : "−"}${Math.abs(x.med).toFixed(1).replace(".", ",")}% dari lari sekitarnya · ${x.n} lari${x.lo === PS.optLo ? " · paling efisien" : ""}`
+          });
           sv += `<rect x="${xx.toFixed(1)}" y="${(x.med >= 0 ? z - bh : z).toFixed(1)}" width="${(bw3 * 0.76).toFixed(1)}" height="${Math.max(1.5, bh).toFixed(1)}" rx="3" fill="${isOpt ? "var(--primary)" : x.med >= 0 ? "var(--primary)" : "var(--yellow)"}" opacity="${isOpt ? 1 : 0.5}"/>` +
-            `<text x="${(xx + bw3 * 0.38).toFixed(1)}" y="100" text-anchor="middle" font-size="9" fill="var(--grey)">${Math.round(x.lo)}–${Math.round(x.hi)}°</text><text x="${(xx + bw3 * 0.38).toFixed(1)}" y="112" text-anchor="middle" font-size="8" fill="var(--grey)" opacity=".7">n=${x.n}</text>`;
+            `<text x="${(xx + bw3 * 0.38).toFixed(1)}" y="100" text-anchor="middle" font-size="9" fill="var(--grey)">${Math.round(x.lo)}–${Math.round(x.hi)}°</text>` +
+            `<text x="${(xx + bw3 * 0.38).toFixed(1)}" y="112" text-anchor="middle" font-size="8" fill="var(--grey)" opacity=".7">n=${x.n}</text>`;
         });
-        h += `<div class="prg-card"><h4>Suhu &amp; efisiensi</h4><div class="sub">Efisiensi easy run (dibanding lari sekitarnya) per rentang suhu efektif. Terbaik di <b>±${Math.round(PS.opt)}°C</b>.</div>` +
-          chart(116, `<line x1="0" x2="${W}" y1="${z}" y2="${z}" stroke="var(--card-border)" stroke-width="1.5"/>${sv}`, tpts) +
-          `<div class="prg-leg"><span>${clPersTxt()}</span></div></div>`;
-      } else h += `<div class="prg-card"><h4>Suhu &amp; efisiensi</h4><div class="sub" style="margin:0">${clPersTxt()} Cuaca tiap lari dicocokkan otomatis; grafik muncul begitu datanya cukup.</div></div>`;
+        h += `<div class="prg-card"><h4>Suhu &amp; efisiensi</h4><div class="sub">Efisiensi easy run per rentang suhu efektif. Terbaik di <b>±${Math.round(PS.opt)}°C</b>.</div>` +
+          chart(116, `<line x1="${LP}" x2="${W - RP}" y1="${z}" y2="${z}" stroke="var(--card-border)" stroke-width="1.5"/>${sv}`, tpts) +
+          `<div class="prg-leg"><span>${clPersTxt()}</span></div>` +
+          `<div class="prg-insight">Pakai suhu optimalmu saat menjadwalkan quality atau long. Di luar itu, ikut HR/RPE, bukan pace target.</div></div>`;
+      } else {
+        h += `<div class="prg-card"><h4>Suhu &amp; efisiensi</h4><div class="sub" style="margin:0">${clPersTxt()} Cuaca tiap lari dicocokkan otomatis; grafik muncul setelah cukup easy run tersebar di beberapa rentang suhu.</div></div>`;
+      }
     } catch (_) {}
 
-    /* pemulihan */
-    const wr = (state.wellness || []).filter((x) => x.restingHR > 0 || x.hrv > 0);
-    const avg = (arr) => arr.length ? arr.reduce((n, v) => n + v, 0) / arr.length : null;
-    const rec = wr.slice(-7), base = wr.slice(-35, -7);
-    const rows = [];
-    [["restingHR", "HR istirahat", "bpm", -1], ["hrv", "HRV", "ms", 1]].forEach(([k, lb, u, good]) => {
-      const r7 = avg(rec.filter((x) => x[k] > 0).map((x) => x[k])), r28 = avg(base.filter((x) => x[k] > 0).map((x) => x[k]));
-      if (r7 == null) return;
-      const d = r28 != null ? r7 - r28 : null, bet = d != null && d * good > 0.5;
-      rows.push(`<div class="prg-row"><span>${lb} (rata-rata 7 hari)</span><b>${Math.round(r7)} ${u}${d != null && Math.abs(d) >= 0.5 ? ` <small class="${bet ? "prg-up" : "prg-dn"}">${d > 0 ? "+" : ""}${Math.round(d)} vs 4 minggu sebelumnya</small>` : ""}</b></div>`);
-    });
-    if (rows.length) h += `<div class="prg-card"><h4>Pemulihan</h4>${rows.join("")}</div>`;
+    /* Pemulihan charts */
+    const wr = (state.wellness || [])
+      .filter((x) => (x.restingHR > 0 || x.hrv > 0) && new Date(x.id).getTime() >= w0 - (prgR - 1) * 7 * 864e5)
+      .sort((a, b) => a.id.localeCompare(b.id));
+    const avg = (arr) => (arr.length ? arr.reduce((n, v) => n + v, 0) / arr.length : null);
+    if (wr.length >= 5) {
+      const series = (key) => wr.filter((x) => x[key] > 0).map((x) => ({ ms: new Date(x.id).getTime(), v: +x[key] }));
+      const drawSeries = (key, color, unit, goodDir) => {
+        const s = series(key);
+        if (s.length < 4) return "";
+        const vals = s.map((x) => x.v);
+        const lo = Math.min(...vals), hi = Math.max(...vals), rg = Math.max(1, hi - lo);
+        const plotH = 88, padT = 8, padB = 16;
+        const Y = (v) => padT + (1 - (v - lo) / rg) * (plotH - padT - padB);
+        const X = (i) => LP + (s.length > 1 ? (i / (s.length - 1)) * plotW : plotW / 2);
+        const path = s.map((x, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(x.v).toFixed(1)).join(" ");
+        const pts = s.map((x, i) => ({
+          x: X(i), y: Y(x.v),
+          t: `<b>${dm(x.ms)}</b> · ${key === "hrv" ? "HRV" : "RHR"} ${Math.round(x.v)} ${unit}`
+        }));
+        const yL = [
+          { t: String(Math.round(hi)), y: Y(hi) },
+          { t: String(Math.round((hi + lo) / 2)), y: Y((hi + lo) / 2) },
+          { t: String(Math.round(lo)), y: Y(lo) }
+        ];
+        const r7 = avg(s.slice(-7).map((x) => x.v));
+        const r28 = avg(s.slice(0, -7).slice(-28).map((x) => x.v));
+        const d = r28 != null && r7 != null ? r7 - r28 : null;
+        const bet = d != null && d * goodDir > 0.5;
+        return `<div style="margin-top:${key === "hrv" ? "14" : "0"}px"><div class="sub" style="margin-bottom:6px">${key === "hrv" ? "HRV" : "HR istirahat"} · 7 hari <b>${r7 != null ? Math.round(r7) : "—"} ${unit}</b>` +
+          (d != null && Math.abs(d) >= 0.5 ? ` <span class="${bet ? "prg-up" : "prg-dn"}">${d > 0 ? "+" : ""}${Math.round(d)} vs baseline</span>` : "") +
+          `</div>${chart(plotH, `<path d="${path}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round"/>` +
+            s.map((x, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(x.v).toFixed(1)}" r="2.2" fill="${color}" opacity=".55"/>`).join(""),
+            pts, { yLabels: yL })}</div>`;
+      };
+      let recInsight = "";
+      const rhr7 = avg(series("restingHR").slice(-7).map((x) => x.v));
+      const rhrB = avg(series("restingHR").slice(0, -7).slice(-28).map((x) => x.v));
+      const hrv7 = avg(series("hrv").slice(-7).map((x) => x.v));
+      const hrvB = avg(series("hrv").slice(0, -7).slice(-28).map((x) => x.v));
+      if (rhr7 != null && rhrB != null && rhr7 - rhrB >= 3) recInsight = "RHR 7 hari di atas baseline — tubuh masih membayar utang recovery. Kurangi quality sampai kembali normal.";
+      else if (hrv7 != null && hrvB != null && hrv7 < hrvB * 0.92) recInsight = "HRV 7 hari di bawah baseline. Prioritaskan tidur dan easy sampai HRV pulih.";
+      else if ((rhr7 != null && rhrB != null && rhr7 <= rhrB) || (hrv7 != null && hrvB != null && hrv7 >= hrvB)) recInsight = "Sinyal pemulihan relatif baik dibanding baseline. Aman ikut rekomendasi harian.";
+      else recInsight = "Pantau tren, bukan satu malam saja. Lonjakan sesekali wajar setelah long atau tidur kurang.";
+      h += `<div class="prg-card"><h4>Pemulihan</h4>` +
+        drawSeries("restingHR", "var(--yellow)", "bpm", -1) +
+        drawSeries("hrv", "var(--primary)", "ms", 1) +
+        `<div class="prg-insight">${recInsight}</div></div>`;
+    } else {
+      const rec = (state.wellness || []).filter((x) => x.restingHR > 0 || x.hrv > 0).slice(-7);
+      const base = (state.wellness || []).filter((x) => x.restingHR > 0 || x.hrv > 0).slice(-35, -7);
+      const rows = [];
+      [["restingHR", "HR istirahat", "bpm", -1], ["hrv", "HRV", "ms", 1]].forEach(([k, lb, u, good]) => {
+        const r7 = avg(rec.filter((x) => x[k] > 0).map((x) => x[k]));
+        const r28 = avg(base.filter((x) => x[k] > 0).map((x) => x[k]));
+        if (r7 == null) return;
+        const d = r28 != null ? r7 - r28 : null, bet = d != null && d * good > 0.5;
+        rows.push(`<div class="prg-row"><span>${lb} (rata-rata 7 hari)</span><b>${Math.round(r7)} ${u}${d != null && Math.abs(d) >= 0.5 ? ` <small class="${bet ? "prg-up" : "prg-dn"}">${d > 0 ? "+" : ""}${Math.round(d)} vs 4 minggu sebelumnya</small>` : ""}</b></div>`);
+      });
+      if (rows.length) h += `<div class="prg-card"><h4>Pemulihan</h4>${rows.join("")}<div class="prg-insight">Grafik muncul setelah ada ≥5 hari data RHR/HRV di rentang ini.</div></div>`;
+    }
 
-    /* target & rekor */
+    /* Target & rekor */
     const all = runs, pr = [];
     const lg = all.reduce((m, x) => (x[3] > m[3] ? x : m), all[0]);
     pr.push(["Lari terpanjang", fmt1(lg[3]) + " km · " + dm(lg[0])]);
@@ -3048,29 +3326,71 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     const wAll = {}; all.forEach((x) => { const k = wkS(x[0]); wAll[k] = (wAll[k] || 0) + x[3]; });
     const bw2 = Object.keys(wAll).reduce((m, k) => (wAll[k] > (wAll[m] || 0) ? k : m), Object.keys(wAll)[0]);
     pr.push(["Minggu terjauh", fmt1(wAll[bw2]) + " km · minggu " + dm(+bw2)]);
-    const ks = Object.keys(wAll).map(Number).sort((p, q) => p - q); let best = 0, cur = 0, pk = null;
-    ks.forEach((k) => { const c = new Date(k); c.setDate(c.getDate() - 7); const ok = pk != null && c.getTime() === pk; cur = ok ? cur + 1 : 1; pk = k; if (cur > best) best = cur; });
+    const ks = Object.keys(wAll).map(Number).sort((p, q) => p - q);
+    let best = 0, curSt = 0, pk = null;
+    ks.forEach((k) => {
+      const c = new Date(k); c.setDate(c.getDate() - 7);
+      const ok = pk != null && c.getTime() === pk;
+      curSt = ok ? curSt + 1 : 1; pk = k;
+      if (curSt > best) best = curSt;
+    });
     pr.push(["Minggu beruntun berlari", best + " minggu"]);
+    const cut28 = Date.now() - 28 * 864e5;
+    const recentLong = all.filter((x) => x[0] >= cut28).reduce((m, x) => (!m || x[3] > m[3] ? x : m), null);
+    const olderLong = all.filter((x) => x[0] < cut28).reduce((m, x) => (!m || x[3] > m[3] ? x : m), null);
+    const highlights = [];
+    if (recentLong && (!olderLong || recentLong[3] > olderLong[3])) {
+      highlights.push(`Long terbaru ${fmt1(recentLong[3])} km adalah yang terjauh sejauh ini.`);
+    }
+    if (bw2 && +bw2 >= w0 - 14 * 864e5) {
+      highlights.push(`Minggu terjauhmu (${fmt1(wAll[bw2])} km) masih dalam 2 minggu terakhir.`);
+    }
+    if (best >= 4) highlights.push(`Streak ${best} minggu beruntun — konsistensi kuat.`);
     const ge = state.goalEst, tg = [];
     if (ge && ge.current && ge.current !== "—:—") tg.push(`<div class="prg-row"><span>Estimasi ${state.goal} sekarang</span><b>${ge.current}</b></div>`);
-    if (state.race) { const dl = Math.round((new Date(state.race + "T00:00") - Date.now()) / 864e5); if (dl >= 0) tg.push(`<div class="prg-row"><span>Hari lomba</span><b>${dl} hari lagi</b></div>`); }
-    h += `<div class="prg-card"><h4>Target &amp; rekor</h4>${tg.join("")}${pr.map(([l, v]) => `<div class="prg-row"><span>${l}</span><b>${v}</b></div>`).join("")}</div>`;
+    if (state.race) {
+      const dl = Math.round((new Date(state.race + "T00:00") - Date.now()) / 864e5);
+      if (dl >= 0) tg.push(`<div class="prg-row"><span>Hari lomba</span><b>${dl} hari lagi</b></div>`);
+    }
+    h += `<div class="prg-card"><h4>Target &amp; rekor</h4>${tg.join("")}${pr.map(([l, v]) => `<div class="prg-row"><span>${l}</span><b>${v}</b></div>`).join("")}` +
+      (highlights.length ? `<div class="prg-insight">${highlights.join(" ")}</div>` : "") +
+      `</div>`;
+
     el.innerHTML = h;
   }
   window.renderProgress = renderProgress;
+
   function prgTouch(e) {
-    if (e.type === "pointermove" && !e.buttons) return;
-    const svg = e.target.closest && e.target.closest("svg[data-c]"); if (!svg) return;
-    const pts = (window.PRG || {})[svg.id]; if (!pts || !pts.length) return;
-    const r = svg.getBoundingClientRect(), vx = ((e.clientX - r.left) / r.width) * svg.viewBox.baseVal.width;
-    let b = pts[0]; pts.forEach((q) => { if (Math.abs(q.x - vx) < Math.abs(b.x - vx)) b = q; });
-    const mk = svg.querySelector(".mk"); mk.style.display = "";
-    const ln = mk.querySelector("line"), c = mk.querySelector("circle");
-    ln.setAttribute("x1", b.x); ln.setAttribute("x2", b.x); c.setAttribute("cx", b.x); c.setAttribute("cy", b.y);
-    const rd = svg.parentNode.querySelector('.prg-read[data-for="' + svg.id + '"]'); if (rd) rd.innerHTML = b.t;
+    const svg = e.target && e.target.closest && e.target.closest("svg[data-c]");
+    if (!svg) {
+      if (e.type === "pointerdown" || e.type === "pointerup") {
+        document.querySelectorAll("svg[data-c] .mk").forEach((mk) => { mk.style.display = "none"; });
+      }
+      return;
+    }
+    if (e.type === "pointermove" && e.buttons === 0 && e.pointerType === "mouse") return;
+    const pts = (window.PRG || {})[svg.id];
+    if (!pts || !pts.length) return;
+    const r = svg.getBoundingClientRect();
+    const vb = svg.viewBox.baseVal;
+    const vx = ((e.clientX - r.left) / Math.max(1, r.width)) * vb.width;
+    let b = pts[0];
+    pts.forEach((q) => { if (Math.abs(q.x - vx) < Math.abs(b.x - vx)) b = q; });
+    const mk = svg.querySelector(".mk");
+    if (mk) {
+      mk.style.display = "";
+      const ln = mk.querySelector("line"), c = mk.querySelector("circle");
+      if (ln) { ln.setAttribute("x1", b.x); ln.setAttribute("x2", b.x); }
+      if (c) { c.setAttribute("cx", b.x); c.setAttribute("cy", b.y); }
+    }
+    const rd = svg.parentNode.querySelector('.prg-read[data-for="' + svg.id + '"]');
+    if (rd) rd.innerHTML = b.t;
   }
   document.addEventListener("pointerdown", prgTouch);
   document.addEventListener("pointermove", prgTouch);
+  document.addEventListener("pointerup", prgTouch);
+  document.addEventListener("pointercancel", prgTouch);
+
 
   /* Buka pengaturan.html (layar native) — tombolnya hanya tampil di APK */
   async function openPengaturan() {
