@@ -196,6 +196,31 @@ input::placeholder { color: var(--input-ph); }
 .ch.lg { background: rgba(139,108,240,.18); color: #a78bfa; }
 .ch.ok { background: var(--primary-dim); color: var(--primary); }
 
+
+/* ---------- Riwayat (rapi) ---------- */
+.fchips{overflow-x:auto;scrollbar-width:none}
+.fchips::-webkit-scrollbar{display:none}
+.fchip{flex:none;white-space:nowrap}
+.hist-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
+.hist-sum .hs{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:11px 4px;text-align:center}
+.hist-sum .hs b{display:block;font-size:16px;font-weight:800;letter-spacing:-.02em}
+.hist-sum .hs span{display:block;font-size:10.5px;color:var(--grey);margin-top:2px}
+.hist-grp{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--grey);margin:20px 4px 8px}
+.hist-grp i{font-style:normal;font-weight:600;text-transform:none;letter-spacing:0;font-size:12px}
+.hcard{background:var(--card);border:1px solid var(--card-border);border-radius:18px;padding:14px 14px 12px;margin-bottom:10px;cursor:pointer;position:relative;overflow:hidden}
+.hcard:active{background:var(--el)}
+.hcard::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--card-border)}
+.hcard.hd::before{background:var(--yellow)}.hcard.lg::before{background:#a78bfa}.hcard.ok::before{background:var(--primary)}
+.hcard-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.hcard-top .act-date{font-size:12px}
+.hcard-mid{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.hcard-mid .ch{margin:0;font-size:10.5px;padding:3px 8px}
+.hcard-mid .t{font-size:17px;font-weight:700}
+.hcard-st{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;border-top:1px solid var(--card-border);padding-top:10px}
+.hcard-st div{min-width:0}
+.hcard-st b{display:block;font-size:14.5px;font-weight:700;white-space:nowrap}
+.hcard-st span{display:block;font-size:10.5px;color:var(--grey);margin-top:1px}
+
 .bottom-nav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 430px; background: var(--bg);
@@ -538,6 +563,7 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     <div class="content">
       <div class="page-title">Riwayat</div>
       <div class="fchips" id="histChips"></div>
+      <div class="hist-sum" id="histSum"></div>
       <div id="historyList"></div>
     </div>
   </div>
@@ -602,6 +628,7 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
         </div>
         <button type="button" class="btn btn-outline sm" style="margin-top:12px" onclick="syncNow()">Sinkron ulang</button>
         <button type="button" class="btn btn-outline sm" data-native hidden style="margin-top:8px" onclick="openJam()">Jam &amp; koneksi</button>
+        <button type="button" class="btn btn-outline sm" data-native hidden style="margin-top:8px" onclick="openPengaturan()">Pengaturan jam &amp; aplikasi</button>
       </div>
 
       <div class="card">
@@ -2805,17 +2832,50 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
     let list = (state.activities || []).slice();
     if (histF === "week") list = list.filter((x) => d0(x.start) >= ws);
     else if (histF === "month") list = list.filter((x) => { const d = new Date(x.start); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); });
-    $("#historyList").innerHTML = list.length
-      ? list.map((act) => {
-          const ch = act.type === "vo2" || act.type === "thr" ? " hd" : act.type === "long" ? " lg" : act.confirmed ? " ok" : "";
-          return `<div class="activity-item" onclick="openAct(${act.start})"><div>` +
-            `<div class="act-date">${act.date}</div>` +
-            `<div class="act-title"><span class="ch${ch}">${VX_LB[act.type] || act.type}</span>${act.title}</div>` +
-            `<div class="act-meta">${act.meta}</div></div>` +
-            (act.load != null ? `<div class="tl-badge">TL ${act.load}</div>` : "") + `</div>`;
-        }).join("")
-      : '<p class="empty">Belum ada lari di rentang ini</p>';
+
+    const fmtDur = (min) => { const t = Math.round(min * 60), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sc = t % 60; return h ? h + ":" + String(m).padStart(2, "0") + ":" + String(sc).padStart(2, "0") : m + ":" + String(sc).padStart(2, "0"); };
+    const fmtPace = (min, km) => { if (!(km > 0) || !(min > 0)) return "—"; const p = min / km, m = Math.floor(p), sc = Math.round((p - m) * 60); return (sc === 60 ? m + 1 : m) + ":" + String(sc === 60 ? 0 : sc).padStart(2, "0"); };
+    const sumKm = list.reduce((n, x) => n + (+x.act[3] || 0), 0);
+    const sumMin = list.reduce((n, x) => n + (+x.act[2] || 0), 0);
+    const sumTl = list.reduce((n, x) => n + (x.load || 0), 0);
+    $("#histSum").innerHTML = list.length
+      ? [[list.length, "Sesi"], [f1(sumKm), "km"], [fmtDur(sumMin), "Waktu"], [Math.round(sumTl), "Total TL"]]
+          .map(([v, l]) => `<div class="hs"><b>${v}</b><span>${l}</span></div>`).join("")
+      : "";
+
+    if (!list.length) { $("#historyList").innerHTML = '<p class="empty">Belum ada lari di rentang ini</p>'; return; }
+
+    const wkStart = (ms) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); };
+    const thisWk = wkStart(Date.now()), dm = (ms) => new Date(ms).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    const card = (act) => {
+      const ch = act.type === "vo2" || act.type === "thr" ? " hd" : act.type === "long" ? " lg" : act.confirmed ? " ok" : "";
+      const km = +act.act[3] || 0, min = +act.act[2] || 0, hr = act.act[4] ? Math.round(act.act[4]) : null;
+      return `<div class="hcard${ch}" onclick="openAct(${act.start})">` +
+        `<div class="hcard-top"><span class="act-date">${act.date}</span>` + (act.load != null ? `<span class="tl-badge">TL ${act.load}</span>` : "") + `</div>` +
+        `<div class="hcard-mid"><span class="ch${ch}">${VX_LB[act.type] || act.type}</span><span class="t">${act.title}</span></div>` +
+        `<div class="hcard-st"><div><b>${f1(km)}</b><span>km</span></div><div><b>${fmtDur(min)}</b><span>waktu</span></div>` +
+        `<div><b>${fmtPace(min, km)}</b><span>/km</span></div><div><b>${hr != null ? hr : "—"}</b><span>HR</span></div></div></div>`;
+    };
+    if (histF === "week") { $("#historyList").innerHTML = list.map(card).join(""); return; }
+    const groups = [], idx = {};
+    list.forEach((x) => {
+      const k = wkStart(x.start);
+      if (!(k in idx)) { idx[k] = groups.length; groups.push({ k, items: [] }); }
+      groups[idx[k]].items.push(x);
+    });
+    $("#historyList").innerHTML = groups.map((g) => {
+      const gKm = g.items.reduce((n, x) => n + (+x.act[3] || 0), 0);
+      const label = g.k === thisWk ? "Minggu ini" : g.k === thisWk - 7 * 864e5 ? "Minggu lalu" : dm(g.k) + " – " + dm(g.k + 6 * 864e5);
+      return `<div class="hist-grp"><span>${label}</span><i>${g.items.length} sesi • ${f1(gKm)} km</i></div>` + g.items.map(card).join("");
+    }).join("");
   }
+
+  /* Buka pengaturan.html (layar native) — tombolnya hanya tampil di APK */
+  async function openPengaturan() {
+    try { await rn("openScreen", "/settings"); }
+    catch (e) { alert(noMethod(e) ? "APK ini belum bisa membuka layar pengaturan." : String((e && e.message) || e)); }
+  }
+  window.openPengaturan = openPengaturan;
 
   function renderMe(a, g) {
     g = g || state.goalEst || {};
