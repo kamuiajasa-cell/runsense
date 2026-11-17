@@ -2374,7 +2374,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
     }
     if (r.steps && (r.status === "rest" || r.tag === "RECOVERY") && !(fl && fl.lv === 2)) r.steps.push(["Kekuatan", "15 mnt, 2×/minggu: glute bridge 2×12, calf raise 2×15, plank 2×30 dtk, keseimbangan 1 kaki 2×30 dtk"]);
     if (r.steps && /^Easy (Run|terbatas)$/.test(r.title) && r.score > 65 && [2, 4].includes(new Date().getDay())) r.steps.push(["Opsional", "4× 20 dtk strides santai, jeda jalan 1 mnt"]);
-    if (r.steps && r.title === "Long Run" && parseInt(r.duration) >= 60) r.steps.push(["Nutrisi", "Karbo 30–60 g/jam mulai menit 45, minum 150–250 ml tiap 20 mnt"]);
+    if (r.steps && r.title === "Lari jarak jauh" && parseInt(r.duration) >= 60) r.steps.push(["Nutrisi", "Karbo 30–60 g/jam mulai menit 45, minum 150–250 ml tiap 20 mnt"]);
     if (r.steps && r.title === "Hari lomba" && (+state.raceDist || 0) >= 21) r.steps.push(["Nutrisi", "Karbo 40–60 g/jam sejak menit 40, minum di tiap pos"]);
     return r;
   }
