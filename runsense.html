@@ -48,8 +48,6 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { background: var(--bg); }
-/* Hindari kilatan onboarding saat sesi lokal yang valid sedang dipulihkan */
-html.rs-cached-session #screen-setup { display: none !important; }
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -753,10 +751,6 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 
 </style>
 </head>
-<script>
-/* Deteksi cache secara sinkron sebelum layar pertama digambar. */
-(function(){try{var d=JSON.parse(localStorage.getItem("runsense_auto_v2")||"null");var has=d&&((Array.isArray(d.acts)&&d.acts.length)||(Array.isArray(d.wellness)&&d.wellness.length));var known=!!localStorage.getItem("runsense_key")||localStorage.getItem("runsense_src")==="watch";if(has&&known)document.documentElement.classList.add("rs-cached-session");}catch(_){}})();
-</script>
 <body>
 <div class="app">
   <!-- SETUP -->
