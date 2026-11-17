@@ -772,6 +772,14 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 .home-hero .greeting{font-size:13px;color:var(--grey);font-weight:600}
 .home-date{font-size:11px;color:var(--grey);letter-spacing:.02em}
 
+
+/* Session analysis: charts, evidence and adaptation */
+.session-analysis{display:grid;gap:12px;margin:14px 0}
+.sa-card{background:var(--card);border:1px solid var(--card-border);border-radius:18px;padding:14px}
+.sa-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.sa-title{font-size:13px;font-weight:800}.sa-sub{font-size:10px;color:var(--grey);line-height:1.45}
+.sa-chart{width:100%;height:auto;display:block;overflow:visible}.sa-grid{stroke:var(--card-border);stroke-width:1;stroke-dasharray:3 4}.sa-line{fill:none;stroke:var(--primary);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.sa-line.hr{stroke:#f0a85a}.sa-axis{fill:var(--grey);font:9px system-ui}.sa-legend{display:flex;gap:14px;font-size:10px;color:var(--grey);margin-top:6px}.sa-legend span{display:flex;align-items:center;gap:5px}.sa-dot{width:7px;height:7px;border-radius:50%;background:var(--primary)}.sa-dot.hr{background:#f0a85a}
+.sa-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.sa-metric{background:var(--el);border-radius:12px;padding:10px}.sa-metric b{display:block;font-size:17px}.sa-metric small{font-size:10px;color:var(--grey)}.sa-note{font-size:12px;line-height:1.55;color:var(--light-grey);margin-top:9px}.sa-pill{font-size:9px;color:var(--grey);background:var(--el);padding:5px 8px;border-radius:20px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -2036,6 +2044,18 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       const pct = Math.round(((last - mid) / mid) * 100);
       if (pct >= 5) out.fade = { pct };
     }
+    // Simpan sampel ringkas untuk grafik; bukan stream mentah.
+    const stride = Math.max(1, Math.floor((time.length - 1) / 54));
+    const chart = [];
+    let prev = 0;
+    for (let i = stride; i < time.length; i += stride) {
+      const dt = time[i] - time[prev], dd = (dist[i] - dist[prev]) / 1000;
+      const p = dt > 0 && dd > 0 ? (dt / 60) / dd : 0;
+      const h = hr && hr.length === time.length ? Number(hr[i]) : 0;
+      if (p >= 2.5 && p <= 20 && time[i] > time[0]) chart.push([Math.round((time[i] - time[0]) / 60), Math.round(p * 100) / 100, h > 40 ? Math.round(h) : 0]);
+      prev = i;
+    }
+    if (chart.length >= 5) out.chart = chart;
     const T = time[time.length - 1] - time[0];
     if (hr && hr.length === time.length) {
       if (T >= 2400) {
@@ -2068,7 +2088,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     if (!a || !a[9] || !state.apiKey || state.apiKey === "demo") return;
     const id = String(a[9]);
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
-    if (state.sx[id] || sxBusy[id]) return;
+    if ((state.sx[id] && (state.sx[id].chart || state.sx[id].none)) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 20 || a[3] < 3) return;
     sxBusy[id] = 1;
     try {
@@ -3776,6 +3796,50 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     out.textContent = f1(vo2 / 3.5) + " (≈ VO₂max " + Math.round(vo2) + ")";
   }
 
+  function sessionChartHTML(act) {
+    const sx = act && act[9] ? state.sx[String(act[9])] : null;
+    const pts = sx && Array.isArray(sx.chart) ? sx.chart : [];
+    if (pts.length < 5) return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Grafik sesi</span><span class="sa-pill">Data belum tersedia</span></div><div class="sa-note">Grafik pace dan HR membutuhkan stream sensor dari sumber aktivitas. Ringkasan aktivitas tetap bisa dianalisis, tetapi titik per titik tidak tersedia untuk sesi ini.</div></div>`;
+    const W=320,H=126,L=28,R=8,T=12,B=20, pw=W-L-R, ph=H-T-B;
+    const xs=pts.map(x=>x[0]), ps=pts.map(x=>x[1]), hs=pts.map(x=>x[2]).filter(x=>x>0);
+    const pMin=Math.max(3,Math.floor(Math.min(...ps)-0.5)), pMax=Math.ceil(Math.max(...ps)+0.5);
+    const hMin=hs.length?Math.floor(Math.min(...hs)-5):0, hMax=hs.length?Math.ceil(Math.max(...hs)+5):1;
+    const x=(v)=>L+(v/Math.max(1,xs[xs.length-1]))*pw;
+    const yp=(v)=>T+(v-pMin)/Math.max(.1,pMax-pMin)*ph;
+    const yh=(v)=>T+(1-(v-hMin)/Math.max(1,hMax-hMin))*ph;
+    const line=(key,fn)=>pts.filter(q=>q[key]>0).map((q,i)=>`${i?"L":"M"}${x(q[0]).toFixed(1)},${fn(q[key]).toFixed(1)}`).join(" ");
+    const pPath=line(1, v=>H-B-(v-pMin)/Math.max(.1,pMax-pMin)*ph);
+    const hPath=line(2,yh);
+    const ticks=[0,.5,1].map(v=>`<line class="sa-grid" x1="${L}" x2="${W-R}" y1="${T+v*ph}" y2="${T+v*ph}"/>`).join("");
+    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Pace & detak jantung</span><span class="sa-pill">${pts.length} titik sampel</span></div><svg class="sa-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik pace dan detak jantung sepanjang aktivitas">${ticks}<path class="sa-line" d="${pPath}"/>${hs.length>4?`<path class="sa-line hr" d="${hPath}"/>`:""}<text class="sa-axis" x="${L}" y="${H-4}">0 mnt</text><text class="sa-axis" text-anchor="end" x="${W-R}" y="${H-4}">${Math.round(xs[xs.length-1])} mnt</text><text class="sa-axis" x="2" y="10">${mp(pMin)}</text><text class="sa-axis" x="2" y="${H-B+2}">${mp(pMax)}</text></svg><div class="sa-legend"><span><i class="sa-dot"></i>Pace (min/km)</span>${hs.length>4?'<span><i class="sa-dot hr"></i>HR (bpm)</span>':""}</div><div class="sa-sub">Pace memakai skala terbalik: garis lebih tinggi berarti lebih cepat. Grafik hanya ditampilkan bila stream tersedia.</div></div>`;
+  }
+
+  function sessionAdaptationHTML(act) {
+    if (!act || act[1] !== "run" || !(act[3]>0) || !(act[2]>0)) return "";
+    const type=detectType(act).type, pace=act[2]/act[3], hr=act[4]>0?act[4]:0;
+    const prev=(state.acts||[]).filter(a=>a!==act&&a[1]==="run"&&a[0]<act[0]&&a[0]>=act[0]-28*864e5&&a[3]>=3&&a[2]>0&&detectType(a).type===type);
+    const rows=prev.map(a=>({p:a[2]/a[3],h:a[4]>0?a[4]:0})).filter(x=>x.p>3&&x.p<12);
+    const median=a=>{const b=a.slice().sort((x,y)=>x-y);return b.length?b[Math.floor(b.length/2)]:null;};
+    let html='<div class="sa-card"><div class="sa-head"><span class="sa-title">Efisiensi & adaptasi</span><span class="sa-pill">Pembanding 28 hari</span></div>';
+    if(rows.length>=3){
+      const bp=median(rows.map(x=>x.p)), bh=median(rows.filter(x=>x.h>0).map(x=>x.h));
+      html+='<div class="sa-metrics"><div class="sa-metric"><b>'+mp(bp)+'/km</b><small>Median pace sesi sejenis</small></div><div class="sa-metric"><b>'+(bh?Math.round(bh)+' bpm':'—')+'</b><small>Median HR sesi sejenis</small></div></div>';
+      if(type==="easy"&&hr>0&&bh){
+        const dp=Math.round((pace-bp)*60), dh=Math.round(hr-bh);
+        html+='<div class="sa-note">'+(Math.abs(dp)<=25&&Math.abs(dh)<=4?'Pace dan HR masih dekat dengan baseline easy.':dp< -20&&dh<=4?'Pace lebih cepat dengan HR yang relatif sama: sinyal efisiensi membaik.':dp>25&&dh>=4?'Pace lebih lambat sekaligus HR lebih tinggi. Periksa cuaca, elevasi, tidur, hidrasi, dan kelelahan sebelum menyimpulkan kebugaran turun.':'Hasil belum menunjukkan perubahan efisiensi yang jelas; bandingkan beberapa sesi easy berikutnya.')+'</div>';
+      } else html+='<div class="sa-note">Ada '+rows.length+' sesi sejenis untuk pembanding. Interpretasi perubahan pace/HR paling bermakna pada sesi easy dengan kondisi dan rute yang mirip.</div>';
+    } else html+='<div class="sa-note">Belum ada minimal tiga sesi sejenis dalam 28 hari untuk membuat baseline personal. Analisis efisiensi ditahan agar tidak membuat kesimpulan dari sampel terlalu sedikit.</div>';
+    const W=state.wellness||[], after=W.filter(w=>{const d=Date.parse((w.id||"")+"T12:00:00");return d>=act[0]+864e5&&d<=act[0]+3*864e5&&(w.restingHR>0||w.hrv>0);});
+    const before=W.filter(w=>{const d=Date.parse((w.id||"")+"T12:00:00");return d<act[0]&&d>=act[0]-8*864e5;});
+    if(after.length&&before.length>=3){
+      const last=after[0], r0=median(before.filter(w=>w.restingHR>0).map(w=>w.restingHR)), h0=median(before.filter(w=>w.hrv>0&&!w.hrvSpot).map(w=>w.hrv));
+      if(last.restingHR>0&&r0!=null) html+='<div class="sa-note">Respons setelah sesi: RHR '+Math.round(last.restingHR)+' bpm ('+(last.restingHR-r0>=0?'+':'')+Math.round(last.restingHR-r0)+' dari median sebelum sesi).</div>';
+      if(last.hrv>0&&!last.hrvSpot&&h0!=null) html+='<div class="sa-note">HRV setelah sesi: '+Math.round(last.hrv)+' ms ('+(last.hrv-h0>=0?'+':'')+Math.round(last.hrv-h0)+' dari median sebelum sesi).</div>';
+      html+='<div class="sa-sub">Ini asosiasi waktu, bukan bukti bahwa satu sesi menyebabkan perubahan. Ketersediaan dan sumber data memengaruhi interpretasi.</div>';
+    } else html+='<div class="sa-sub" style="margin-top:8px">Respons RHR/HRV pascalatihan belum bisa dibandingkan: butuh data wellness sebelum dan 1–3 hari setelah sesi.</div>';
+    return html+'</div>';
+  }
+
   function openAct(ms) {
     const act = (state.acts || []).find((x) => x[0] === ms);
     if (!act) return;
@@ -3803,6 +3867,8 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       ).join("") +
       `</div>`;
 
+    body += sessionChartHTML(act);
+    body += sessionAdaptationHTML(act);
     body += renderReviewHTML(rev, null);
 
     const st = stage();
