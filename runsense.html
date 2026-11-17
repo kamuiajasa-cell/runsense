@@ -2013,13 +2013,14 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   const sxBusy = {};
   let curAct = 0;
   function summarizeStream(raw, a, minN) {
+    const src = raw && !Array.isArray(raw) && Array.isArray(raw.streams) ? raw.streams : raw;
     const get = (t) => {
-      if (Array.isArray(raw)) { const o = raw.find((x) => x && x.type === t); return o && Array.isArray(o.data) ? o.data : null; }
-      const o = raw && raw[t];
+      if (Array.isArray(src)) { const o = src.find((x) => x && (x.type === t || x.name === t)); return o && Array.isArray(o.data) ? o.data : null; }
+      const o = src && (src[t] || src[t + ".json"]);
       return Array.isArray(o) ? o : o && Array.isArray(o.data) ? o.data : null;
     };
     const time = get("time"), dist = get("distance"), hr = get("heartrate");
-    if (!time || !dist || time.length < (minN || 300) || time.length !== dist.length) return null;
+    if (!time || !dist || time.length < (minN || 30) || time.length !== dist.length) return null;
     const mean = (x) => x.reduce((p, q) => p + q, 0) / x.length;
     const med = (x) => { const b = x.slice().sort((p, q) => p - q); return b[Math.floor(b.length / 2)]; };
     const out = {};
@@ -2088,15 +2089,18 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     if (!a || !a[9] || !state.apiKey || state.apiKey === "demo") return;
     const id = String(a[9]);
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
-    if ((state.sx[id] && (state.sx[id].chart || state.sx[id].none)) || sxBusy[id]) return;
-    if (a[1] !== "run" || a[2] < 20 || a[3] < 3) return;
+    const cached = state.sx[id];
+    if ((cached && cached.chart) || (cached && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
-      const raw = await icuGet(`activity/${id}/streams?types=time,distance,heartrate`);
-      state.sx[id] = summarizeStream(raw, a) || { none: 1 };
+      // Endpoint Intervals.icu: singular /activity/ dan ekstensi .json.
+      const raw = await icuGet(`activity/${encodeURIComponent(id)}/streams.json?types=time,distance,heartrate`);
+      const summary = summarizeStream(raw, a, 30);
+      state.sx[id] = Object.assign(summary || { none: 1 }, { checkedAt: Date.now() });
     } catch (e) {
-      // 4xx = stream memang tidak ada (cache); jaringan/auth = coba lagi nanti
-      if (/HTTP 4\d\d/.test(String(e && e.message)) && !/ditolak/.test(String(e.message))) state.sx[id] = { none: 1 };
+      // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
+      if (/HTTP (404|422)/.test(String(e && e.message))) state.sx[id] = { none: 1, checkedAt: Date.now() };
     }
     delete sxBusy[id];
     if (state.sx[id]) {
@@ -4814,7 +4818,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     if (!id || /^hw/.test(id)) return (CL.gps[a[0]] = { none: 1 });
     if (!state.apiKey || state.apiKey === "demo") return null;
     try {
-      const raw = await icuGet("activity/" + id + "/streams?types=time,latlng");
+      const raw = await icuGet("activity/" + encodeURIComponent(id) + "/streams.json?types=time,latlng");
       const get = (t) => Array.isArray(raw) ? raw.find((x) => x && x.type === t) : raw && raw[t];
       const ll = get("latlng"), tm = get("time");
       let la = ll && ll.data, lo = ll && ll.data2;
