@@ -3808,7 +3808,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     const yp=(v)=>T+(v-pMin)/Math.max(.1,pMax-pMin)*ph;
     const yh=(v)=>T+(1-(v-hMin)/Math.max(1,hMax-hMin))*ph;
     const line=(key,fn)=>pts.filter(q=>q[key]>0).map((q,i)=>`${i?"L":"M"}${x(q[0]).toFixed(1)},${fn(q[key]).toFixed(1)}`).join(" ");
-    const pPath=line(1, v=>H-B-(v-pMin)/Math.max(.1,pMax-pMin)*ph);
+    const pPath=line(1,yp);
     const hPath=line(2,yh);
     const ticks=[0,.5,1].map(v=>`<line class="sa-grid" x1="${L}" x2="${W-R}" y1="${T+v*ph}" y2="${T+v*ph}"/>`).join("");
     return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Pace & detak jantung</span><span class="sa-pill">${pts.length} titik sampel</span></div><svg class="sa-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik pace dan detak jantung sepanjang aktivitas">${ticks}<path class="sa-line" d="${pPath}"/>${hs.length>4?`<path class="sa-line hr" d="${hPath}"/>`:""}<text class="sa-axis" x="${L}" y="${H-4}">0 mnt</text><text class="sa-axis" text-anchor="end" x="${W-R}" y="${H-4}">${Math.round(xs[xs.length-1])} mnt</text><text class="sa-axis" x="2" y="10">${mp(pMin)}</text><text class="sa-axis" x="2" y="${H-B+2}">${mp(pMax)}</text></svg><div class="sa-legend"><span><i class="sa-dot"></i>Pace (min/km)</span>${hs.length>4?'<span><i class="sa-dot hr"></i>HR (bpm)</span>':""}</div><div class="sa-sub">Pace memakai skala terbalik: garis lebih tinggi berarti lebih cepat. Grafik hanya ditampilkan bila stream tersedia.</div></div>`;
