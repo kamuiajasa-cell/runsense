@@ -1,5 +1,5 @@
 // RunSense service worker v2: selalu ambil versi terbaru dari server, cache hanya cadangan offline.
-const CACHE = "runsense-v2";
+const CACHE = "runsense-v3";
 const ASSETS = [
   "./runsense.html",
   "./manifest.webmanifest",
