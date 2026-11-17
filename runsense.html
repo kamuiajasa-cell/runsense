@@ -1635,7 +1635,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     }
 
     // Stage-specific
-    if (st.s <= 2) {
+    if (st.s > 0 && st.s <= 2) {
       push(S_ex, "g", "Tahap fondasi (T" + st.s + "): bangun kapasitas dulu. Label zona di jam sering tidak stabil — ikuti napas dan %METs.");
     } else if (st.s === 3 && M && pct != null && pct > 0.72 && det.type === "easy") {
       push(S_ex, "y", "Tahap 3: easy ideal ≤ ~70% kapasitas. Coba " + mp(paceOf(0.68 * M)) + "/km lain kali.");
