@@ -887,7 +887,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- PROGRES -->
   <div id="screen-progress" class="screen">
     <div class="content progress-layout">
-      <header class="page-hero progress-hero"><span class="eyebrow">PERFORMANCE INTELLIGENCE</span><div class="page-title">See how far<br><em>you've grown.</em></div><p>Progres bukan satu angka. Lihat volume, konsistensi, intensitas, dan adaptasi tubuh.</p></header>
+      <header class="page-hero progress-hero"><span class="eyebrow">PERFORMANCE INTELLIGENCE</span><div class="page-title">See how far<br><em>you've grown.</em></div><p>Empat sisi perkembangan: performa, efisiensi aerobik, kapasitas latihan, dan keberlanjutan.</p></header>
       <div class="filter-dock"><span>TIMEFRAME</span><div class="fchips" id="prgChips"></div></div>
       <div id="progressBody"></div>
     </div>
@@ -3307,7 +3307,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     runs.forEach(x => {
       const km=+x[3], min=+x[2], p=pace(min,km);
       if (!p) return;
-      const key = km >= 42 ? "Marathon" : km >= 21 : "Half marathon" : km >= 10 ? "10 km" : km >= 5 ? "5 km" : km >= 3 ? "3 km" : km >= 1 ? "1 km" : null;
+      const key = km >= 42 ? "Marathon" : km >= 21 ? "Half marathon" : km >= 10 ? "10 km" : km >= 5 ? "5 km" : km >= 3 ? "3 km" : km >= 1 ? "1 km" : null;
       if (key && (!best[key] || min/km < best[key].rate)) best[key]={rate:min/km,pace:p,km,date:x[0]};
     });
     const perf = Object.entries(best).map(([k,v]) => row("Aktivitas "+k, v.pace+"/km · "+fmt(v.km)+" km · "+date(v.date)));
@@ -3320,7 +3320,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     }).map(x => ({ms:x[0],hr:+x[4],speed:+x[3]*1000/(+x[2]*60),pace:+x[2]/+x[3]}));
     if (easy.length >= 4) {
       const ref = Math.round(med(easy.map(x=>x.hr)));
-      const normalized = easy.map(x=>({ ...x, secPerKm: 60000/(x.speed*ref/x.hr) }));
+      const normalized = easy.map(x=>({ ...x, secPerKm: 1000/(x.speed*ref/x.hr) }));
       const half=Math.floor(normalized.length/2);
       const first=med(normalized.slice(0,half).map(x=>x.secPerKm));
       const last=med(normalized.slice(half).map(x=>x.secPerKm));
