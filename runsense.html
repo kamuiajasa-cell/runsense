@@ -781,6 +781,226 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 .sa-chart{width:100%;height:auto;display:block;overflow:visible;margin:2px 0 8px}.sa-grid{stroke:var(--card-border);stroke-width:1.2;stroke-dasharray:2 3;opacity:.95}.sa-line{fill:none;stroke:var(--primary);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}.sa-line.hr{stroke:#e58a28;stroke-width:3.2}.sa-axis{fill:var(--tx);font:11px system-ui;font-weight:600}.sa-chart-label{font-size:12px;font-weight:800;color:var(--tx);margin:10px 0 0}.sa-chart-label span{font-size:10px;font-weight:500;color:var(--grey);margin-left:5px}.sa-split{grid-template-columns:34px minmax(0,1fr) minmax(0,1fr);gap:10px;padding:10px 4px;border-top:1px solid var(--nav-border);font-size:13px;color:var(--grey)}.sa-split b{color:var(--tx);font-weight:800}.sa-split span:nth-child(2){color:var(--tx);font-weight:800}
 .sa-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.sa-metric{background:var(--el);border-radius:12px;padding:10px}.sa-metric b{display:block;font-size:17px}.sa-metric small{font-size:10px;color:var(--grey)}.sa-note{font-size:12px;line-height:1.55;color:var(--light-grey);margin-top:9px}.sa-pill{font-size:9px;color:var(--grey);background:var(--el);padding:5px 8px;border-radius:20px;white-space:nowrap}
 .sa-split{display:grid;grid-template-columns:28px 1fr 1fr;gap:8px;padding:7px 2px;border-top:1px solid var(--nav-border);font-size:12px;color:var(--grey)}.sa-split b{color:var(--tx)}.sa-split span:nth-child(2){color:var(--tx);font-weight:700}
+
+/* Progres: ringkasan, pill, keyakinan */
+.prg-pill{display:inline-block;font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.prg-pill.up{background:var(--primary-dim);color:var(--primary)}
+.prg-pill.flat,.prg-pill.na{background:var(--el);color:var(--grey);border:1px solid var(--card-border)}
+.prg-pill.dn{background:rgba(255,200,60,.14);color:var(--yellow)}
+.prg-conf{font-size:10px;font-weight:600;color:var(--grey);white-space:nowrap}
+.prg-card h4 .prg-conf{margin-left:6px}
+.prg-sumrow{padding:11px 0;border-top:1px solid var(--card-border)}
+.prg-sumrow:first-of-type{border-top:0}
+.prg-sumrow .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:5px}
+.prg-sumrow .top b{font-size:13.5px}
+.prg-sumrow .nt{font-size:11.5px;line-height:1.5;color:var(--light-grey)}
+.prg-row small{font-weight:500;color:var(--grey);font-size:11px}
+.prg-row b small.prg-up,.prg-row b small.prg-dn{font-weight:700}
+.prg-note{font-size:12px;line-height:1.55;color:var(--grey);margin:6px 0 0}
+.prg-dq .sub{margin:0;line-height:1.55}
+.prg-leg span{display:inline-flex;align-items:center}
+
+/* ===== Ritme jarak seragam (skala 4/8/12/16/24) =====
+   Aturan lama saling menimpa (margin ganda, label vs hint vs chips). Blok ini yang berlaku. */
+:root{--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px}
+.content{padding:24px 20px 32px}
+/* Header halaman: eyebrow -> judul -> deskripsi -> konten */
+.page-hero{padding:4px 0 20px}
+.page-title{margin:12px 0 10px}
+.page-hero p,.setup-intro p{margin:0;line-height:1.6}
+.page-hero + .section-kicker{margin-top:0}
+.section-kicker{margin:24px 0 12px}
+.race-line{margin:0 0 12px;padding:0}
+/* Kartu: satu jarak antar kartu, padding dalam seragam */
+.card,.prg-card,.hero{margin:0 0 12px;padding:18px}
+.hero{padding:22px 20px 20px}
+.card.quiet{padding:16px 18px}
+.card>.label:first-child,.setup-panel>.label:first-child,.card>div>.label:first-child{margin-top:0}
+.card .rows .row:first-child{padding-top:0}
+.card .rows .row:last-child{padding-bottom:0}
+/* Label, hint, sub */
+.label{margin:22px 0 10px}
+.label+.chips,.label+.style-option,.label+.field,.label+input,.label+select{margin-top:0}
+.hint{margin:8px 0 0;line-height:1.5}
+.hint+.label,.chips+.label,.style-option+.label,.btn+.label{margin-top:22px}
+.chips{margin:0!important;gap:8px}
+.chips+.hint,.chips+.chips{margin-top:12px}
+.style-option{margin:8px 0}
+input[type=password],input[type=text]{margin:0}
+.status-line{margin:0 0 4px}
+/* Onboarding */
+.setup-layout{padding-top:20px}
+.setup-intro{padding:28px 0 24px}
+.setup-intro h1{margin:12px 0 14px}
+.setup-panel{padding:20px}
+.setup-panel .btn+.btn{margin-top:8px}
+/* Hari ini */
+#mainCard{margin:0 0 12px}
+#autoLine{margin:0 0 12px!important}
+.leg-row{margin:0 0 12px}
+.leg-note{margin-top:4px}
+.body-line{margin:10px 0 0!important}
+.week{margin-top:12px}
+.trend{margin:12px 0 0}
+.trend:empty{display:none}
+.sync-bar{margin-top:16px}
+.hero .btn+.btn{margin-top:8px}
+/* Riwayat */
+.filter-dock{margin:0 0 16px}
+.hist-sum{margin:0 0 8px}
+.hist-grp{margin:24px 2px 10px}
+.hcard{margin:0 0 10px}
+.hcard-top{margin-bottom:8px}
+.hcard-mid{margin-bottom:12px}
+/* Progres */
+.prg-card h4{margin:0 0 6px}
+.prg-card .sub{margin:0 0 12px;line-height:1.5}
+.prg-dq .sub{margin:0}
+.prg-card svg{margin-top:12px}
+.prg-mix{margin:12px 0 0}
+.prg-bar{margin:14px 0 0}
+.prg-leg{margin-top:8px}
+.prg-note{margin:8px 0 0}
+.prg-insight{margin:14px 0 0}
+.prg-sumrow{padding:12px 0}
+.prg-sumrow .top{margin-bottom:6px}
+.prg-read{padding-top:8px}
+/* Saya / Profil */
+.profile-layout .card{margin:0 0 12px}
+#screen-me .page-hero{padding-bottom:20px}
+.field{padding:10px 0}
+.field+.hint{margin:2px 0 6px}
+/* Modal & sheet */
+.modal h3,.sheet h3{margin:0 0 4px}
+.modal .sub,.sheet .sub{margin:0 0 16px;line-height:1.5}
+
+/* ===== v14 · Sistem jarak seragam + Pengaturan bergaya daftar berkelompok =====
+   Blok ini paling akhir dan menjadi acuan. Satu skala: 4 / 8 / 12 / 16 / 24.
+   Jarak antar blok diatur lewat `gap` induk, bukan margin tiap elemen, supaya tidak saling menimpa. */
+:root{--s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--s7:32px}
+
+/* Halaman: satu kolom, satu jarak antar blok */
+.content{display:flex;flex-direction:column;gap:var(--s3);padding:var(--s6) var(--s5) 40px}
+.content>*{margin:0!important}
+.race-line:empty,.trend:empty,.hist-sum:empty,#historyList:empty,#mainCard:empty,.leg-note:empty,.watch-status:empty,.srow-hint:empty{display:none}
+
+/* Header halaman: eyebrow → judul → deskripsi */
+.page-hero,.home-hero{padding:var(--s1) 0 var(--s3)}
+.eyebrow{display:block;margin:0}
+.page-hero .page-title,.home-hero .page-title{margin:var(--s3) 0 var(--s3);line-height:1.02;text-wrap:balance}
+.page-hero p,.setup-intro p{margin:0;line-height:1.6;max-width:34ch}
+.home-hero p{gap:var(--s1)}
+.section-kicker{padding-top:var(--s3)}
+
+/* Daftar & kartu yang dirender JS: gap, bukan margin */
+#mainCard,#historyList,#progressBody{display:flex;flex-direction:column;gap:var(--s3)}
+#mainCard>*,#historyList>*,#progressBody>*{margin:0!important}
+#historyList{gap:var(--s2)}
+#historyList>.hist-grp{padding-top:var(--s3)}
+#historyList>.hist-grp:first-child{padding-top:0}
+.hist-sum{gap:var(--s2)}
+.filter-dock{padding:var(--s3)}
+
+/* Isi kartu: satu tumpukan dengan jarak 12 */
+.card>*+*{margin-top:var(--s3)}
+.card>.label{margin-bottom:0}
+.card>.label+*{margin-top:10px}
+.card .body-line{margin:var(--s3) 0 0!important}
+.card .week{margin-top:var(--s3)}
+.card .rows .row:first-child{padding-top:0}
+.card .rows .row:last-child{padding-bottom:0;border-bottom:0}
+.leg-row{padding:var(--s3) 0;margin:0}
+.hint{margin:var(--s2) 0 0;line-height:1.5}
+.label{margin:0 0 10px}
+
+/* Onboarding */
+.setup-layout{gap:0}
+.setup-brand{padding-bottom:var(--s1)}
+.setup-intro{padding:var(--s7) 0 var(--s6)}
+.setup-intro h1{margin:var(--s3) 0 var(--s4);text-wrap:balance;font-size:clamp(38px,12vw,48px)}
+.setup-panel{display:flex;flex-direction:column;gap:var(--s6);padding:var(--s5)}
+.setup-panel>*{margin:0!important}
+.fgroup{display:flex;flex-direction:column}
+.fgroup .label{margin:0 0 10px}
+.fgroup .hint{margin:var(--s2) 0 0}
+.fgroup .chips{margin:0!important}
+.style-list{display:flex;flex-direction:column;gap:var(--s2)}
+.style-list .style-option{margin:0}
+.actions{display:flex;flex-direction:column;gap:10px}
+.actions .btn{margin:0}
+.actions .hint{margin:2px 0 0}
+.style-option{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);padding:14px var(--s4)}
+.style-option .sub{margin-top:2px;line-height:1.4}
+.style-option .check{display:grid!important;place-items:center;flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--card-border);font-size:12px;line-height:1;color:transparent}
+.style-option.active .check{background:var(--primary);border-color:var(--primary);color:#07152d}
+
+/* ---------- Pengaturan ---------- */
+.me-id{display:flex;align-items:center;gap:var(--s4);padding:var(--s4);background:linear-gradient(145deg,rgba(88,232,59,.08),transparent 72%),var(--card);border:1px solid var(--card-border);border-radius:22px}
+.me-id .avatar-mark{position:static;flex:none}
+.me-id b{display:block;font-size:16px;font-weight:800;letter-spacing:-.02em}
+.me-id span{display:block;font-size:12.5px;color:var(--grey);line-height:1.45;margin-top:2px}
+.me-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2)}
+.me-stat{display:flex;flex-direction:column;gap:var(--s1);min-width:0;padding:var(--s4) var(--s3);background:var(--card);border:1px solid var(--card-border);border-radius:18px}
+.me-stat small{font-size:11.5px;font-weight:600;color:var(--grey);line-height:1.3}
+.me-stat b{font-size:19px;font-weight:850;letter-spacing:-.04em;line-height:1.15;overflow-wrap:anywhere}
+.me-stat.hl b{color:var(--primary)}
+
+.sg{display:flex;flex-direction:column;gap:var(--s2)}
+.sg-t{padding:0 var(--s1);font-size:13px;font-weight:700;color:var(--grey);letter-spacing:-.005em}
+.sgroup{background:var(--card);border:1px solid var(--card-border);border-radius:22px;padding:0 var(--s4);box-shadow:0 10px 28px rgba(0,0,0,.08)}
+.sgroup>*+*{border-top:1px solid var(--card-border)}
+.sgroup>.srow-hint-wrap,.sgroup>.sactions{border-top:0}
+
+.srow{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3);min-height:60px;padding:var(--s3) 0}
+.srow.has-hint{padding-bottom:var(--s2)}
+.srow-t{flex:1 1 0;min-width:0;font-size:14.5px;font-weight:600;line-height:1.3;color:var(--tx)}
+.srow-s{display:block;margin-top:2px;font-size:12px;font-weight:400;color:var(--grey);line-height:1.4}
+.srow-v{flex:none;font-size:14px;font-weight:700;color:var(--tx);text-align:right}
+.srow-hint{flex:1 0 100%;order:5;margin:0;padding:0 0 2px 44px;font-size:12px;line-height:1.5;color:var(--grey)}
+.sic{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--primary-dim);color:var(--primary)}
+.sic svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sic.y{background:color-mix(in srgb,var(--yellow) 15%,transparent);color:var(--yellow)}
+.sic.r{background:color-mix(in srgb,var(--red) 15%,transparent);color:var(--red)}
+.sic.n{background:var(--el);color:var(--light-grey)}
+
+#screen-me .srow input:not([type=checkbox]){flex:none;width:104px!important;min-height:40px!important;padding:8px 10px!important;text-align:right;margin:0!important}
+.sfield{display:flex;flex-direction:column;gap:10px;padding:14px 0}
+.sfield .srow-t{flex:none}
+#screen-me .sfield input,#screen-me .sfield select{display:block;width:100%!important;max-width:none!important;min-height:46px!important;margin:0!important;text-align:left}
+.sfield .chips{margin:0!important}
+.sfield .style-list{margin-top:2px}
+.srow-check{display:flex;align-items:center;gap:var(--s3)}
+.srow-check span{font-size:14.5px;font-weight:600;line-height:1.35}
+.sfield .plan-warn{margin:0;line-height:1.5}
+.sfield .plan-warn:empty{display:none}
+#screen-me .plan-row{display:grid;grid-template-columns:44px minmax(0,1fr) 76px;gap:var(--s2);align-items:center;margin:0;padding:3px 0}
+#screen-me .plan-row b{width:auto;font-size:13px;font-weight:700;color:var(--grey)}
+#screen-me .plan-row select,#screen-me .plan-row input{width:100%!important;min-height:42px!important;padding:8px 10px!important;margin:0!important;border-radius:12px!important;font-size:14px}
+#planGrid{display:flex;flex-direction:column;gap:var(--s1);margin:0!important}
+
+.seg{display:inline-flex;gap:2px;padding:3px;margin:0!important;background:var(--el);border:1px solid var(--card-border);border-radius:13px}
+.seg .chip{min-height:0;padding:7px var(--s3);border:0!important;background:transparent!important;border-radius:10px;font-size:12.5px}
+.seg .chip.active{background:var(--primary-dim)!important;color:var(--primary)!important;border:0!important}
+
+.sactions{display:flex;flex-direction:column;gap:var(--s2);padding:var(--s1) 0 var(--s4)}
+.sactions .btn,.sgroup .btn{margin:0}
+.srow-btn{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);width:100%;min-height:56px;padding:var(--s3) 0;background:none;border:0;color:var(--tx);font:inherit;font-size:14.5px;font-weight:600;text-align:left;cursor:pointer}
+.srow-btn::after{content:"›";color:var(--grey);font-size:22px;line-height:1}
+.srow-body{padding:var(--s4) 0}
+.srow-body p{font-size:13.5px;line-height:1.6;color:var(--light-grey);margin:0}
+#screen-me .btn.btn-danger{background:transparent!important;color:var(--red)!important;border:1px solid color-mix(in srgb,var(--red) 38%,transparent)!important}
+#advBox .sgroup .insight{margin:0 0 var(--s3)}
+#advBox .sgroup .lowconf{margin:0 0 var(--s3)}
+#advBox .sgroup>.sblock{padding:var(--s4) 0}
+#advBox .zone-list{margin:0}
+#advBox .zone-row{margin:0;padding:var(--s2) 0;gap:var(--s3)}
+#advBox .zone-row span:last-child{text-align:right}
+
+@media(max-width:370px){
+  .content{padding-left:var(--s4);padding-right:var(--s4)}
+  .me-stats{gap:6px}.me-stat{padding:var(--s3) 10px}.me-stat b{font-size:17px}
+  .setup-panel{padding:var(--s4)}
+}
 </style>
 </head>
 <body>
@@ -789,53 +1009,59 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <div id="screen-setup" class="screen active">
     <div class="content setup-layout">
       <header class="setup-brand"><div class="brand-mark"><img src="icons/icon-192.png" alt="RunSense"></div><div><div class="brand">RunSense</div><div class="subtitle">Your running, understood.</div></div></header>
-      <section class="setup-intro"><span class="eyebrow">PERSONAL RUNNING COACH</span><h1>Build your<br><em>stronger self.</em></h1><p>Hubungkan data latihanmu. RunSense mengubah aktivitas menjadi arahan yang bisa kamu jalani.</p></section>
+      <section class="setup-intro"><span class="eyebrow">PERSONAL RUNNING COACH</span><h1>Build your<br><em>stronger self.</em></h1><p data-hero-sub>Hubungkan data latihanmu. RunSense mengubah aktivitas menjadi arahan yang bisa kamu jalani.</p></section>
       <div class="setup-panel">
 
-      <div id="connStatus" class="status-line">Koneksi langsung ke Intervals.icu (tanpa server lokal)</div>
+        <div id="connStatus" class="status-line">Koneksi langsung ke Intervals.icu (tanpa server lokal)</div>
 
-      <div class="label">API Key Intervals.icu</div>
-      <input type="password" id="apiKey" placeholder="Paste API key di sini" autocomplete="off" />
-      <div class="hint">
-        Ambil di Intervals.icu → Settings → Developer Settings → API key.<br>
-        Key hanya disimpan di perangkat ini.
-      </div>
+        <div class="fgroup">
+          <div class="label">API Key Intervals.icu</div>
+          <input type="password" id="apiKey" placeholder="Paste API key di sini" autocomplete="off" />
+          <div class="hint">Ambil di Intervals.icu → Settings → Developer Settings → API key. Key hanya disimpan di perangkat ini.</div>
+        </div>
 
-      <div class="label">Target utama</div>
-      <div class="chips" id="goalChips">
-        <button class="chip active" data-goal="5K">5K</button>
-        <button class="chip" data-goal="10K">10K</button>
-        <button class="chip" data-goal="Half">Half</button>
-        <button class="chip" data-goal="Marathon">Marathon</button>
-        <button class="chip" data-goal="Umum">Umum</button>
-      </div>
+        <div class="fgroup">
+          <div class="label">Target utama</div>
+          <div class="chips" id="goalChips">
+            <button class="chip active" data-goal="5K">5K</button>
+            <button class="chip" data-goal="10K">10K</button>
+            <button class="chip" data-goal="Half">Half</button>
+            <button class="chip" data-goal="Marathon">Marathon</button>
+            <button class="chip" data-goal="Umum">Umum</button>
+          </div>
+        </div>
 
-      <div class="label">Gaya coaching</div>
-      <div class="style-option active" data-style="moderate" onclick="selectStyle(this)">
-        <div><div class="title">Moderat</div><div class="sub">Seimbang (disarankan)</div></div>
-        <div class="check">✓</div>
-      </div>
-      <div class="style-option" data-style="conservative" onclick="selectStyle(this)">
-        <div><div class="title">Konservatif</div><div class="sub">Lebih banyak recovery</div></div>
-        <div class="check">✓</div>
-      </div>
-      <div class="style-option" data-style="aggressive" onclick="selectStyle(this)">
-        <div><div class="title">Agresif</div><div class="sub">Lebih banyak quality session</div></div>
-        <div class="check">✓</div>
-      </div>
+        <div class="fgroup">
+          <div class="label">Gaya coaching</div>
+          <div class="style-list">
+            <div class="style-option active" data-style="moderate" onclick="selectStyle(this)">
+              <div><div class="title">Moderat</div><div class="sub">Seimbang (disarankan)</div></div>
+              <div class="check">✓</div>
+            </div>
+            <div class="style-option" data-style="conservative" onclick="selectStyle(this)">
+              <div><div class="title">Konservatif</div><div class="sub">Lebih banyak recovery</div></div>
+              <div class="check">✓</div>
+            </div>
+            <div class="style-option" data-style="aggressive" onclick="selectStyle(this)">
+              <div><div class="title">Agresif</div><div class="sub">Lebih banyak quality session</div></div>
+              <div class="check">✓</div>
+            </div>
+          </div>
+        </div>
 
-      <div style="margin-top:28px">
-        <button class="btn btn-primary" id="btnConnect" onclick="connect()">Hubungkan & Mulai</button>
-      </div>
-      <div style="margin-top:10px">
-        <button class="btn btn-outline" onclick="enterDemo()">Coba Demo</button>
-      </div>
-      <div id="nativeSetup" data-native hidden style="margin-top:22px">
-        <div class="label">Dari jam (aplikasi RunSense)</div>
-        <button class="btn btn-outline" type="button" onclick="openJam()">Atur jam</button>
-        <button class="btn btn-outline" type="button" style="margin-top:8px" onclick="enterWatchMode()">Pakai data jam saja</button>
-        <div class="hint">Tanpa Intervals.icu: tidak ada CTL/TSB dan workout tidak bisa dikirim ke kalender Intervals. Workout tetap bisa dikirim langsung ke jam.</div>
-      </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="btnConnect" onclick="connect()">Hubungkan &amp; Mulai</button>
+          <button class="btn btn-outline" onclick="enterDemo()">Coba Demo</button>
+        </div>
+
+        <div id="nativeSetup" data-native hidden class="fgroup">
+          <div class="label">Dari jam (aplikasi RunSense)</div>
+          <div class="actions">
+            <button class="btn btn-outline" type="button" onclick="openJam()">Atur jam</button>
+            <button class="btn btn-outline" type="button" onclick="enterWatchMode()">Pakai data jam saja</button>
+            <div class="hint">Tanpa Intervals.icu: tidak ada CTL/TSB dan workout tidak bisa dikirim ke kalender Intervals. Workout tetap bisa dikirim langsung ke jam.</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -843,11 +1069,11 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- HARI INI -->
   <div id="screen-home" class="screen">
     <div class="content home-layout">
-      <header class="page-hero home-hero"><div class="home-hero-top"><span class="eyebrow">YOUR DAILY RUNNING BRIEF</span><div class="avatar-mark"><img src="icons/icon-192.png" alt="RunSense"></div></div><div class="page-title">Run with<br><em>your rhythm.</em></div><p><span class="greeting" id="greeting">Selamat pagi</span><span class="home-date" id="tdDate"></span></p></header>
+      <header class="page-hero home-hero" data-hero="home"><div class="home-hero-top"><span class="eyebrow">YOUR DAILY RUNNING BRIEF</span><div class="avatar-mark"><img src="icons/icon-192.png" alt="RunSense"></div></div><div class="page-title">Run with<br><em>your rhythm.</em></div><p><span class="greeting" id="greeting">Selamat pagi</span><span class="home-date" id="tdDate"></span></p></header>
       <div class="race-line" id="raceLine"></div>
       <div class="section-kicker"><span>YOUR TRAINING</span><i></i><span>01</span></div>
       <div id="mainCard"></div>
-      <div class="insight" id="autoLine" style="display:none;margin-bottom:14px"></div>
+      <div class="insight" id="autoLine" style="display:none"></div>
       <div class="leg-row" id="legRow">
         <span class="lg-l">Kaki</span>
         <button class="chip" type="button" data-lv="0" onclick="setFlag(0)">OK</button>
@@ -866,7 +1092,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
           <div class="row"><span>Kesiapan</span><b id="rdy">—</b></div>
           <div class="row"><span>Minggu ini</span><b id="wkTxt">—</b></div>
         </div>
-        <div class="body-line" id="bodyLine" style="display:none;margin-top:10px"></div>
+        <div class="body-line" id="bodyLine" style="display:none"></div>
         <div class="week" id="weekDays"></div>
         <p class="trend" id="trendTxt"></p>
       </div>
@@ -877,7 +1103,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- RIWAYAT -->
   <div id="screen-history" class="screen">
     <div class="content history-layout">
-      <header class="page-hero"><span class="eyebrow">YOUR ACTIVITY LOG</span><div class="page-title">Every run<br><em>has a story.</em></div><p>Jejak latihan, ritme, dan konsistensimu.</p></header>
+      <header class="page-hero" data-hero="history"><span class="eyebrow">YOUR ACTIVITY LOG</span><div class="page-title">Every run<br><em>has a story.</em></div><p data-hero-sub>Jejak latihan, ritme, dan konsistensimu.</p></header>
       <div class="filter-dock"><span>FILTER</span><div class="fchips" id="histChips"></div></div>
       <div class="hist-sum" id="histSum"></div>
       <div id="historyList"></div>
@@ -887,7 +1113,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- PROGRES -->
   <div id="screen-progress" class="screen">
     <div class="content progress-layout">
-      <header class="page-hero progress-hero"><span class="eyebrow">PERFORMANCE INTELLIGENCE</span><div class="page-title">See how far<br><em>you've grown.</em></div><p>Empat sisi perkembangan: performa, efisiensi aerobik, kapasitas latihan, dan keberlanjutan.</p></header>
+      <header class="page-hero progress-hero" data-hero="progress"><span class="eyebrow">PERFORMANCE INTELLIGENCE</span><div class="page-title">See how far<br><em>you've grown.</em></div><p data-hero-sub>Lima sisi dinilai terpisah: performa, aerobik, durability, kapasitas latihan, dan keberlanjutan. Setiap kesimpulan menyertakan tingkat keyakinan.</p></header>
       <div class="filter-dock"><span>TIMEFRAME</span><div class="fchips" id="prgChips"></div></div>
       <div id="progressBody"></div>
     </div>
@@ -896,105 +1122,164 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- SAYA -->
   <div id="screen-me" class="screen">
     <div class="content profile-layout">
-      <header class="page-hero"><span class="eyebrow">ATHLETE SETTINGS</span><div class="page-title">Your<br><em>profile.</em></div><p>Atur data tubuh, sasaran lari, jadwal latihan, dan sumber data yang terhubung.</p></header>
-      <div class="section-kicker"><span>DATA TUBUH &amp; DETAK</span><i></i><span>01</span></div>
+      <header class="page-hero" data-hero="me"><span class="eyebrow">ATHLETE SETTINGS</span><div class="page-title">Your<br><em>profile.</em></div><p data-hero-sub>Atur data tubuh, sasaran lari, jadwal latihan, dan sumber data yang terhubung.</p></header>
 
-      <div class="card">
-        <div class="label">Parameter tubuh</div>
-        <div class="field"><span>Usia</span><input type="number" inputmode="numeric" id="inAge" placeholder="—" oninput="saveProfile()"></div>
-        <div class="field"><span>Detak istirahat (28 hari)</span><input type="number" inputmode="numeric" id="inRest" placeholder="—" oninput="saveProfile()"></div>
-        <div class="hint" id="inRestHint" style="margin:0 0 6px"></div>
-        <div class="field"><span>Detak maksimal</span><input type="number" inputmode="numeric" id="inMax" placeholder="—" oninput="saveProfile()"></div>
-        <div class="field"><span>LTHR custom (bpm)</span><input type="number" inputmode="numeric" id="inLthr" placeholder="auto" oninput="saveProfile()"></div>
-        <div class="hint" id="autoLthr" style="margin:0 0 6px"></div>
-        <div class="field"><span>LTPace custom (mnt/km)</span><input type="text" inputmode="numeric" id="inLtp" placeholder="mis. 8:30" oninput="saveProfile()"></div>
-        <div class="hint" id="autoLtp" style="margin:0 0 6px"></div>
-        <div class="hint" style="margin:10px 0 0">Data otomatis diambil dari Intervals.icu jika tersedia. Isi nilai custom hanya bila ingin menimpa hasil otomatis.</div>
+      <div class="me-id">
+        <div class="avatar-mark"><img src="icons/icon-192.png" alt="RunSense"></div>
+        <div><b>Pengaturan pelari</b><span>Perubahan tersimpan otomatis di perangkat ini.</span></div>
       </div>
 
-      <div class="card">
-        <div class="label">Target &amp; gaya coaching</div>
-        <div class="chips" id="setGoalChips" style="margin-bottom:12px">
-          <button type="button" class="chip" data-goal="5K">5K</button>
-          <button type="button" class="chip" data-goal="10K">10K</button>
-          <button type="button" class="chip" data-goal="Half">Half</button>
-          <button type="button" class="chip" data-goal="Marathon">Marathon</button>
-          <button type="button" class="chip" data-goal="Umum">Umum</button>
+      <div class="me-stats">
+        <div class="me-stat hl"><small>Estimasi <span id="meGoal">5K</span></small><b id="meEst">—:—</b></div>
+        <div class="me-stat"><small>Target bagus</small><b id="meGood">—</b></div>
+        <div class="me-stat"><small>Keyakinan</small><b id="meProj">—</b></div>
+      </div>
+
+      <div class="sg">
+        <div class="sg-t">Data tubuh &amp; detak</div>
+        <div class="sgroup">
+          <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><span class="srow-t">Usia</span><input type="number" inputmode="numeric" id="inAge" placeholder="—" oninput="saveProfile()"></div>
+          <div class="srow has-hint"><span class="sic y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z"/></svg></span><span class="srow-t">Detak istirahat<span class="srow-s">Rata-rata 28 hari</span></span><input type="number" inputmode="numeric" id="inRest" placeholder="—" oninput="saveProfile()"><div class="srow-hint" id="inRestHint"></div></div>
+          <div class="srow"><span class="sic r"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="srow-t">Detak maksimal</span><input type="number" inputmode="numeric" id="inMax" placeholder="—" oninput="saveProfile()"></div>
+          <div class="srow has-hint"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span><span class="srow-t">LTHR custom<span class="srow-s">bpm</span></span><input type="number" inputmode="numeric" id="inLthr" placeholder="auto" oninput="saveProfile()"><div class="srow-hint" id="autoLthr"></div></div>
+          <div class="srow has-hint"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg></span><span class="srow-t">LTPace custom<span class="srow-s">menit per km</span></span><input type="text" inputmode="numeric" id="inLtp" placeholder="8:30" oninput="saveProfile()"><div class="srow-hint" id="autoLtp"></div></div>
         </div>
-        <div class="rows" style="margin-bottom:14px"><div class="row"><span>Estimasi <span id="meGoal">5K</span> saat ini</span><b id="meEst">—:—</b></div>
-          <div class="row"><span>Target bagus</span><b id="meGood">—</b></div>
-          <div class="row"><span>Keyakinan</span><b id="meProj">—</b></div></div>
-        <div class="style-option" data-style="moderate" onclick="pickStyle('moderate')"><div><div class="title">Moderat</div><div class="sub">Seimbang (disarankan)</div></div><div class="check">✓</div></div>
-        <div class="style-option" data-style="conservative" onclick="pickStyle('conservative')"><div><div class="title">Konservatif</div><div class="sub">Lebih banyak recovery</div></div><div class="check">✓</div></div>
-        <div class="style-option" data-style="aggressive" onclick="pickStyle('aggressive')"><div><div class="title">Agresif</div><div class="sub">Lebih banyak sesi kualitas</div></div><div class="check">✓</div></div>
+        <div class="hint" style="padding:0 4px">Data otomatis diambil dari Intervals.icu jika tersedia. Isi nilai custom hanya bila ingin menimpa hasil otomatis.</div>
       </div>
 
-      <div class="card">
-        <div class="label">Jadwal latihan &amp; lomba</div>
-        <div class="hint" style="margin-top:0">Atur jenis latihan dan jarak setiap hari. Pilih Auto agar coach yang menentukan.</div>
-        <div id="planGrid"></div>
-        <div class="plan-warn" id="planWarn"></div>
-        <div class="label" style="margin-top:18px">Tanggal lomba</div>
-        <input type="date" id="raceDate" onchange="setRace(this.value)" />
-        <button type="button" class="btn btn-outline sm" style="margin-top:8px" onclick="setRace('')">Hapus tanggal race</button>
-        <div class="label" style="margin-top:18px">Jarak lomba &amp; target waktu</div>
-        <select id="raceDist" onchange="setRaceX()"><option value="">Pilih jarak</option><option value="5">5K</option><option value="10">10K</option><option value="21.1">Half marathon</option><option value="42.2">Maraton</option></select>
-        <input type="text" id="raceGoal" placeholder="Target, mis. 1:05:00 atau 55:00" onchange="setRaceX()" />
-        <div class="label" style="margin-top:18px">Pola lari–jalan</div>
-        <label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="rwOn" onchange="setRw()"> Pakai run-walk di semua tahap</label>
-        <input type="text" id="rwRun" placeholder="Durasi lari, mm:ss (3:45)" onchange="setRw()" />
-        <input type="text" id="rwWalk" placeholder="Durasi jalan, mm:ss (0:30)" onchange="setRw()" />
-      </div>
-
-      <div class="card">
-        <div class="label">Koneksi data</div>
-        <div class="rows">
-          <div class="row"><span>Intervals.icu</span><b id="meSync">—</b></div>
-          <div class="row"><span>Jam</span><b>Lewat Intervals.icu</b></div>
-        </div>
-        <button type="button" class="btn btn-outline sm" style="margin-top:12px" onclick="syncNow()">Sinkron ulang</button>
-        <button type="button" class="btn btn-outline sm" data-native hidden style="margin-top:8px" onclick="openJam()">Jam &amp; koneksi</button>
-        <button type="button" class="btn btn-outline sm" data-native hidden style="margin-top:8px" onclick="openPengaturan()">Pengaturan jam &amp; aplikasi</button>
-      </div>
-
-      <div class="card">
-        <div class="label">Tema aplikasi</div>
-        <div class="chips" id="setThemeChips" style="margin-bottom:0">
-          <button type="button" class="chip" data-theme="dark" onclick="setTheme('dark')">Gelap</button>
-          <button type="button" class="chip" data-theme="light" onclick="setTheme('light')">Terang</button>
+      <div class="sg">
+        <div class="sg-t">Target &amp; gaya coaching</div>
+        <div class="sgroup">
+          <div class="sfield">
+            <span class="srow-t">Target utama</span>
+            <div class="chips" id="setGoalChips">
+              <button type="button" class="chip" data-goal="5K">5K</button>
+              <button type="button" class="chip" data-goal="10K">10K</button>
+              <button type="button" class="chip" data-goal="Half">Half</button>
+              <button type="button" class="chip" data-goal="Marathon">Marathon</button>
+              <button type="button" class="chip" data-goal="Umum">Umum</button>
+            </div>
+          </div>
+          <div class="sfield">
+            <span class="srow-t">Gaya coaching</span>
+            <div class="style-list">
+              <div class="style-option" data-style="moderate" onclick="pickStyle('moderate')"><div><div class="title">Moderat</div><div class="sub">Seimbang (disarankan)</div></div><div class="check">✓</div></div>
+              <div class="style-option" data-style="conservative" onclick="pickStyle('conservative')"><div><div class="title">Konservatif</div><div class="sub">Lebih banyak recovery</div></div><div class="check">✓</div></div>
+              <div class="style-option" data-style="aggressive" onclick="pickStyle('aggressive')"><div><div class="title">Agresif</div><div class="sub">Lebih banyak sesi kualitas</div></div><div class="check">✓</div></div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="label">Cara kerja coach</div>
-        <p class="reason" style="margin-top:0">Coach membaca lari, detak, dan beban latihanmu dari Intervals.icu, lalu memilih sesi hari ini: lari, run-walk, jalan, atau istirahat. Semua hitungan tetap jalan di belakang layar.</p>
-        <button type="button" class="btn btn-outline sm" id="advBtn" style="margin-top:12px" onclick="toggleAdv()">Mode lanjutan: mati</button>
+      <div class="sg">
+        <div class="sg-t">Jadwal latihan</div>
+        <div class="sgroup">
+          <div class="sfield">
+            <span class="srow-t">Rencana mingguan<span class="srow-s">Pilih jenis latihan dan jarak tiap hari. Auto berarti coach yang menentukan.</span></span>
+            <div id="planGrid"></div>
+            <div class="plan-warn" id="planWarn"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sg">
+        <div class="sg-t">Lomba</div>
+        <div class="sgroup">
+          <div class="sfield">
+            <span class="srow-t">Tanggal lomba</span>
+            <input type="date" id="raceDate" onchange="setRace(this.value)" />
+            <button type="button" class="btn btn-outline sm" onclick="setRace('')">Hapus tanggal lomba</button>
+          </div>
+          <div class="sfield">
+            <span class="srow-t">Jarak &amp; target waktu</span>
+            <select id="raceDist" onchange="setRaceX()"><option value="">Pilih jarak</option><option value="5">5K</option><option value="10">10K</option><option value="21.1">Half marathon</option><option value="42.2">Maraton</option></select>
+            <input type="text" id="raceGoal" placeholder="Target, mis. 1:05:00 atau 55:00" onchange="setRaceX()" />
+          </div>
+        </div>
+      </div>
+
+      <div class="sg">
+        <div class="sg-t">Pola lari–jalan</div>
+        <div class="sgroup">
+          <div class="sfield">
+            <label class="srow-check"><input type="checkbox" id="rwOn" onchange="setRw()"><span>Pakai run-walk di semua tahap</span></label>
+            <input type="text" id="rwRun" placeholder="Durasi lari, mm:ss (3:45)" onchange="setRw()" />
+            <input type="text" id="rwWalk" placeholder="Durasi jalan, mm:ss (0:30)" onchange="setRw()" />
+          </div>
+        </div>
+      </div>
+
+      <div class="sg">
+        <div class="sg-t">Koneksi data</div>
+        <div class="sgroup">
+          <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1"/><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/></svg></span><span class="srow-t">Intervals.icu</span><b class="srow-v" id="meSync">—</b></div>
+          <div class="srow"><span class="sic n"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.7-3h4.6l.7 3M9 18l.7 3h4.6l.7-3"/></svg></span><span class="srow-t">Jam</span><span class="srow-v">Lewat Intervals.icu</span></div>
+          <div class="sactions">
+            <button type="button" class="btn btn-outline sm" onclick="syncNow()">Sinkron ulang</button>
+            <button type="button" class="btn btn-outline sm" data-native hidden onclick="openJam()">Jam &amp; koneksi</button>
+            <button type="button" class="btn btn-outline sm" data-native hidden onclick="openPengaturan()">Pengaturan jam &amp; aplikasi</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sg">
+        <div class="sg-t">Tampilan</div>
+        <div class="sgroup">
+          <div class="srow"><span class="sic n"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></span><span class="srow-t">Tema aplikasi</span>
+            <div class="chips seg" id="setThemeChips">
+              <button type="button" class="chip" data-theme="dark" onclick="setTheme('dark')">Gelap</button>
+              <button type="button" class="chip" data-theme="light" onclick="setTheme('light')">Terang</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sg">
+        <div class="sg-t">Cara kerja coach</div>
+        <div class="sgroup">
+          <div class="srow-body"><p>Coach membaca lari, detak, dan beban latihanmu dari Intervals.icu, lalu memilih sesi hari ini: lari, run-walk, jalan, atau istirahat. Semua hitungan tetap jalan di belakang layar.</p></div>
+          <button type="button" class="srow-btn" id="advBtn" onclick="toggleAdv()">Mode lanjutan: mati</button>
+        </div>
       </div>
 
       <div id="advBox" style="display:none">
-        <div class="card">
-          <div class="label">Mode lanjutan</div>
-          <div class="rows">
-            <div class="row"><span>Max METs</span><b id="afMets">—</b></div>
-            <div class="row"><span>Kategori</span><b id="afBand">—</b></div>
-            <div class="row"><span>Tahap</span><b id="afStage">—</b></div>
-            <div class="row"><span>CTL / ATL / TSB</span><b id="advLoad">—</b></div>
-            <div class="row"><span>LTHR · LTPace</span><b id="advLt">—</b></div>
+        <div class="content-stack" style="display:flex;flex-direction:column;gap:12px">
+          <div class="sg">
+            <div class="sg-t">Mode lanjutan</div>
+            <div class="sgroup">
+              <div class="sblock rows" style="padding:4px 0">
+                <div class="row"><span>Max METs</span><b id="afMets">—</b></div>
+                <div class="row"><span>Kategori</span><b id="afBand">—</b></div>
+                <div class="row"><span>Tahap</span><b id="afStage">—</b></div>
+                <div class="row"><span>CTL / ATL / TSB</span><b id="advLoad">—</b></div>
+                <div class="row"><span>LTHR · LTPace</span><b id="advLt">—</b></div>
+              </div>
+              <div class="sblock">
+                <div class="insight" id="afTip">—</div>
+                <div class="lowconf" id="lowConf" style="display:none"></div>
+                <div class="insight" id="insightBox" style="margin-bottom:0">—</div>
+              </div>
+            </div>
           </div>
-          <div class="insight" id="afTip">—</div>
-          <div class="lowconf" id="lowConf" style="display:none"></div>
-          <div class="insight" id="insightBox" style="margin-top:10px">—</div>
-          <div class="label" style="margin-top:16px">Tes lapangan 12 menit (Cooper)</div>
-          <div class="hint" style="margin:0 0 8px">Lari sekuat mampu 12 menit di lintasan datar, lalu isi jarak totalnya. Hasilnya pembanding untuk estimasi di atas.</div>
-          <div class="field"><span>Jarak (meter)</span><input type="number" inputmode="numeric" id="inCooper" placeholder="mis. 2200" oninput="cooperCalc()"></div>
-          <div class="row" style="margin-top:6px"><span>Estimasi Max METs</span><b id="cooperOut">—</b></div>
-          <div class="label" style="margin-top:16px">Referensi intensitas</div>
-          <div id="refList" class="zone-list"></div>
-          <button type="button" class="btn btn-outline sm" style="margin-top:8px" onclick="runBacktest()">Uji estimator Max METs</button>
+          <div class="sg">
+            <div class="sg-t">Tes lapangan 12 menit (Cooper)</div>
+            <div class="sgroup">
+              <div class="sblock"><div class="hint" style="margin:0">Lari sekuat mampu 12 menit di lintasan datar, lalu isi jarak totalnya. Hasilnya pembanding untuk estimasi di atas.</div></div>
+              <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l4-4 3 3 5-6 4 4"/></svg></span><span class="srow-t">Jarak<span class="srow-s">meter</span></span><input type="number" inputmode="numeric" id="inCooper" placeholder="2200" oninput="cooperCalc()"></div>
+              <div class="srow"><span class="sic n"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></span><span class="srow-t">Estimasi Max METs</span><b class="srow-v" id="cooperOut">—</b></div>
+            </div>
+          </div>
+          <div class="sg">
+            <div class="sg-t">Referensi intensitas</div>
+            <div class="sgroup">
+              <div class="sblock"><div id="refList" class="zone-list"></div></div>
+              <div class="sactions"><button type="button" class="btn btn-outline sm" onclick="runBacktest()">Uji estimator Max METs</button></div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <button type="button" class="btn btn-outline" style="margin-top:6px" onclick="if(confirm('Hapus data lokal dan keluar?'))logout()">Reset data &amp; logout</button>
+      <button type="button" class="btn btn-outline btn-danger" onclick="if(confirm('Hapus data lokal dan keluar?'))logout()">Reset data &amp; logout</button>
     </div>
   </div>
 
@@ -1847,11 +2132,83 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   }
 
   /* ---------- UI helpers ---------- */
+
+  /* ---------- Judul besar: berganti tiap tab dibuka ---------- */
+  const HERO_POOL = {
+    setup: [
+      ["PERSONAL RUNNING COACH", "Build your", "stronger self.", "Hubungkan data latihanmu. RunSense mengubah aktivitas menjadi arahan yang bisa kamu jalani."],
+      ["WELCOME", "Let's find", "your pace.", "Sekali hubungkan, coach langsung membaca lari dan kondisimu."],
+      ["GET STARTED", "Connect once,", "run smarter.", "Data dari Intervals.icu jadi arahan latihan harian yang jelas."],
+      ["FIRST STEPS", "Your data,", "your coach.", "Pilih target dan gaya latihan, sisanya biar coach yang hitung."],
+      ["READY WHEN YOU ARE", "Every run", "starts here.", "Mulai dari data yang sudah kamu punya, tanpa ribet."],
+      ["NEW HERE?", "Start where", "you are.", "Belum punya data? Coba demo dulu untuk melihat cara kerjanya."]
+    ],
+    home: [
+      ["YOUR DAILY RUNNING BRIEF", "Run with", "your rhythm."],
+      ["TODAY'S CALL", "Today's plan,", "made for you."],
+      ["READY CHECK", "Listen to", "your legs."],
+      ["ONE RUN AT A TIME", "Just show up,", "we'll pace it."],
+      ["COACH NOTE", "Smart miles", "start here."],
+      ["GOOD DAY TO MOVE", "Your body", "has the answer."],
+      ["TODAY, SIMPLIFIED", "Lace up,", "we'll do the rest."],
+      ["EASY OR HARD", "Know which", "day it is."]
+    ],
+    history: [
+      ["YOUR ACTIVITY LOG", "Every run", "has a story.", "Jejak latihan, ritme, dan konsistensimu."],
+      ["LOGBOOK", "Miles you", "earned.", "Semua lari yang sudah kamu selesaikan."],
+      ["LOOKING BACK", "Proof of", "showing up.", "Setiap sesi tercatat, sekecil apa pun."],
+      ["THE LONG VIEW", "Small runs,", "big picture.", "Lihat pola latihanmu dari waktu ke waktu."],
+      ["RUN DIARY", "Where your", "legs have been.", "Jarak, durasi, dan detak dari tiap lari."],
+      ["STREAK WATCH", "Keep the", "chain going.", "Cek konsistensi latihanmu minggu demi minggu."],
+      ["EVERY STEP COUNTS", "Nothing you ran", "is wasted.", "Riwayat lengkap, tinggal dibuka dan disaring."]
+    ],
+    progress: [
+      ["PERFORMANCE INTELLIGENCE", "See how far", "you've grown.", "Lima sisi dinilai terpisah: performa, aerobik, durability, kapasitas latihan, dan keberlanjutan. Setiap kesimpulan menyertakan tingkat keyakinan."],
+      ["THE TREND", "Slow gains,", "real gains.", "Kemajuan terlihat dari tren beberapa minggu, bukan satu hari lari."],
+      ["FITNESS CHECK", "Stronger than", "last month?", "Bandingkan performa, daya tahan, dan beban latihan."],
+      ["WHAT'S WORKING", "Numbers that", "tell the truth.", "Setiap kesimpulan disertai tingkat keyakinan datanya."],
+      ["BUILDING BLOCKS", "Base first,", "speed later.", "Lihat fondasi aerobikmu tumbuh dari periode ke periode."],
+      ["LEVEL UP", "Fitter by", "the week.", "Pantau kapasitas latihan dan seberapa konsisten kamu menjaganya."]
+    ],
+    me: [
+      ["ATHLETE SETTINGS", "Your", "profile.", "Atur data tubuh, sasaran lari, jadwal latihan, dan sumber data yang terhubung."],
+      ["TUNE YOUR COACH", "Make it", "fit you.", "Makin lengkap datamu, makin pas arahan harian dari coach."],
+      ["YOUR SETUP", "Set it once,", "run easy.", "Isi sekali, coach memakainya di setiap sesi."],
+      ["YOU SET THE RULES", "Your pace,", "your plan.", "Jadwal, target lomba, dan gaya latihan ada di tanganmu."],
+      ["BUILT AROUND YOU", "Dial in", "your numbers.", "Detak, LTHR, dan pace ambang untuk saran yang lebih akurat."]
+    ]
+  };
+  function rotateHero(name) {
+    const pool = HERO_POOL[name];
+    if (!pool) return;
+    const key = "runsense_hero_" + name;
+    let last = -1;
+    try { const v = parseInt(localStorage.getItem(key), 10); if (!isNaN(v)) last = v; } catch (e) {}
+    let i = 0;
+    if (pool.length > 1) { do { i = Math.floor(Math.random() * pool.length); } while (i === last); }
+    try { localStorage.setItem(key, String(i)); } catch (e) {}
+    const root = name === "setup" ? document.querySelector(".setup-intro") : document.querySelector('[data-hero="' + name + '"]');
+    if (!root) return;
+    const [eb, l1, l2, sub] = pool[i];
+    const e = root.querySelector(".eyebrow");
+    if (e) e.textContent = eb;
+    const t = root.querySelector(name === "setup" ? "h1" : ".page-title");
+    if (t) {
+      t.textContent = "";
+      const em = document.createElement("em");
+      em.textContent = l2;
+      t.append(document.createTextNode(l1), document.createElement("br"), em);
+    }
+    const p = root.querySelector("[data-hero-sub]");
+    if (p && sub) p.textContent = sub;
+  }
+
   function showScreen(name) {
     document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
     $("#screen-" + name).classList.add("active");
     document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.screen === name));
     window.scrollTo(0, 0);
+    rotateHero(name);
     if (name === "progress" && window.renderProgress) renderProgress();
   }
 
@@ -2076,6 +2433,30 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       }
     }
     if (splits.length) out.splits = splits;
+    // Durability: sepertiga akhir vs sepertiga tengah menurut jarak (bukan jumlah km), supaya lari 5 km tetap cukup stabil.
+    {
+      const d0 = Number(dist[0]), D = Number(dist[dist.length - 1]) - d0;
+      if (D >= 4000 && Number(time[time.length - 1]) - Number(time[0]) >= 1500) {
+        const idxAt = (m) => { for (let i = 0; i < dist.length; i++) if (Number(dist[i]) - d0 >= m) return i; return dist.length - 1; };
+        const seg = (fa, fb) => {
+          const i0 = idxAt(D * fa), i1 = idxAt(D * fb);
+          const dt = Number(time[i1]) - Number(time[i0]), dd = Number(dist[i1]) - Number(dist[i0]);
+          if (!(dt > 60 && dd > 300)) return null;
+          const h = hr && hr.length === time.length ? hr.slice(i0, i1 + 1).map(Number).filter((v) => v > 40 && Number.isFinite(v)) : [];
+          return { pace: (dt / 60) / (dd / 1000), hr: h.length >= (i1 - i0 + 1) * 0.7 ? mean(h) : null };
+        };
+        const mid = seg(1 / 3, 2 / 3), end = seg(2 / 3, 1);
+        if (mid && end) {
+          const d = { km: Math.round(D / 100) / 10, paceDrift: Math.round(((end.pace - mid.pace) / mid.pace) * 1000) / 10 };
+          if (mid.hr && end.hr) {
+            d.hrDrift = Math.round((end.hr - mid.hr) * 10) / 10;
+            const e1 = (1000 / (mid.pace * 60)) / mid.hr, e2 = (1000 / (end.pace * 60)) / end.hr;
+            d.effDrop = Math.round(((e1 - e2) / e1) * 1000) / 10;
+          }
+          out.dur = d;
+        }
+      }
+    }
     if (sp.length >= 4) {
       const p12 = (sp[0] + sp[1]) / 2, md = med(sp.slice(2));
       const pct = Math.round(((md - p12) / md) * 100);
@@ -2135,27 +2516,41 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
     const cached = state.sx[id];
     // Cache lama hanya menyimpan pace hasil distance/time; ambil ulang untuk memakai velocity stream.
-    if ((cached && cached.streamVersion >= 2 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 2 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if ((cached && cached.streamVersion >= 3 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 3 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
       // Endpoint Intervals.icu: singular /activity/ dan ekstensi .json.
       const raw = await icuGet(`activity/${encodeURIComponent(id)}/streams.json?types=time,distance,heartrate,velocity_smooth`);
       const summary = summarizeStream(raw, a, 30);
-      state.sx[id] = Object.assign(summary || { none: 1 }, { streamVersion: 2, checkedAt: Date.now() });
+      state.sx[id] = Object.assign(summary || { none: 1 }, { streamVersion: 3, checkedAt: Date.now() });
     } catch (e) {
       // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
-      if (/HTTP (404|422)/.test(String(e && e.message))) state.sx[id] = { none: 1, checkedAt: Date.now() };
+      if (/HTTP (404|422)/.test(String(e && e.message))) state.sx[id] = { none: 1, streamVersion: 3, checkedAt: Date.now() };
     }
     delete sxBusy[id];
     if (state.sx[id]) {
       const ks = Object.keys(state.sx);
-      if (ks.length > 60) ks.slice(0, ks.length - 60).forEach((x) => delete state.sx[x]);
+      if (ks.length > 90) ks.slice(0, ks.length - 90).forEach((x) => delete state.sx[x]);
       persist();
       if (state.athlete) renderAll();
       const mo = $("#actModal");
       if (mo && mo.classList.contains("show") && curAct === a[0]) openAct(a[0]);
     }
+  }
+
+  /* Isi durability: ambil stream lari panjang (>= 5 km atau >= 40 menit) yang belum punya ringkasan, paling banyak 6 per putaran, berurutan. */
+  let durBusy = false;
+  const durTried = {};
+  async function backfillDurability(list) {
+    if (durBusy || !state.apiKey || state.apiKey === "demo" || !Array.isArray(list)) return;
+    const todo = list.filter((a) => a && a[9] && !/^hw/.test(String(a[9])) && a[1] === "run" && (a[3] >= 5 || a[2] >= 40)
+      && !durTried[String(a[9])]
+      && !(state.sx[String(a[9])] && (state.sx[String(a[9])].streamVersion >= 3 || state.sx[String(a[9])].dur))).slice(-6);
+    if (!todo.length) return;
+    durBusy = true;
+    try { for (const a of todo) { durTried[String(a[9])] = 1; await ensureStream(a); } } catch (_) {}
+    durBusy = false;
   }
 
   function kind(t) {
@@ -3269,107 +3664,299 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 
 
   /* ================= PROGRES ================= */
+  /* Empat lapisan terpisah (tanpa skor gabungan): performa, aerobik, kapasitas latihan, keberlanjutan.
+     Setiap kesimpulan membawa tingkat keyakinan. Aktivitas dengan pace/HR tak wajar dikeluarkan. */
   let prgR = 8;
   function setPrg(n) { prgR = n; renderProgress(); }
   window.setPrg = setPrg;
   function renderProgress() {
     const el = $("#progressBody"); if (!el) return;
-    $("#prgChips").innerHTML = [[8, "8 minggu"], [26, "6 bulan"], [52, "1 tahun"]]
+    $("#prgChips").innerHTML = [[8, "8 minggu"], [12, "12 minggu"], [26, "6 bulan"], [52, "1 tahun"]]
       .map(([n, t]) => `<button type="button" class="fchip${prgR === n ? " active" : ""}" onclick="setPrg(${n})">${t}</button>`).join("");
 
-    const allRuns = (state.acts || []).filter(x => x[1] === "run" && Number(x[2]) > 0 && Number(x[3]) > 0);
-    const now = Date.now(), from = now - prgR * 7 * 864e5;
-    const runs = allRuns.filter(x => x[0] >= from && x[0] <= now).sort((a,b) => a[0]-b[0]);
+    const DAY = 864e5;
+    const wkStart = ms => { const d = new Date(ms); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); };
+    const now = Date.now(), thisWk = wkStart(now);
+    const from = thisWk - (prgR - 1) * 7 * DAY, prevFrom = from - prgR * 7 * DAY;
+
+    /* ---- kualitas data ---- */
+    const rawRuns = (state.acts || []).filter(x => x[1] === "run");
+    const okRun = x => { const min = +x[2], km = +x[3]; if (!(min >= 5 && km >= 1)) return false; const p = min / km; return p >= 2.5 && p <= 12; };
+    const validAll = rawRuns.filter(okRun).sort((a, b) => a[0] - b[0]);
+    const runs = validAll.filter(x => x[0] >= from && x[0] <= now);
+    const prevRuns = validAll.filter(x => x[0] >= prevFrom && x[0] < from);
+    const rawInRange = rawRuns.filter(x => x[0] >= from && x[0] <= now && +x[2] > 0 && +x[3] > 0).length;
     if (!runs.length) {
-      el.innerHTML = '<div class="prg-empty"><b>Belum ada data lari pada periode ini</b>Sinkronkan aktivitas untuk mulai melihat perkembangan.</div>';
+      el.innerHTML = '<div class="prg-empty"><b>Belum ada data lari pada periode ini</b>' +
+        (validAll.length ? "Coba rentang yang lebih panjang; ada " + validAll.length + " lari di luar periode ini." : "Sinkronkan aktivitas untuk mulai melihat perkembangan.") + '</div>';
       return;
     }
 
+    /* ---- helper ---- */
     const fmt = n => (Math.round(n * 10) / 10).toString().replace(".", ",");
-    const pace = (minutes, km) => {
-      if (!(minutes > 0 && km > 0)) return null;
-      const sec = Math.round(minutes * 60 / km), m = Math.floor(sec / 60);
-      return m + ":" + String(sec % 60).padStart(2,"0");
+    const fmtP = sec => { const n = Math.round(sec); return Math.floor(n / 60) + ":" + String(n % 60).padStart(2, "0"); };
+    const dm = ms => new Date(ms).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    const dmy = ms => new Date(ms).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+    const med = a => { const v = a.filter(Number.isFinite).slice().sort((x, y) => x - y); if (!v.length) return null; const m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
+    const avg = a => a.length ? a.reduce((n, v) => n + v, 0) / a.length : null;
+    const sgn = (n, d) => (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(+n.toFixed(d || 0)).toString().replace(".", ",");
+    const spanDays = list => list.length > 1 ? (list[list.length - 1][0] - list[0][0]) / DAY : 0;
+    const confOf = (n, span) => n >= 12 && span >= 56 ? "tinggi" : n >= 6 && span >= 28 ? "sedang" : "rendah";
+    const pill = (v, c) => '<span class="prg-pill ' + ({ up: "up", flat: "flat", dn: "dn", na: "na" }[v]) + '">' + c + '</span>';
+    const row = (label, value) => '<div class="prg-row"><span>' + label + '</span><b>' + value + '</b></div>';
+    const card = (title, subtitle, body, insight, conf) =>
+      '<section class="prg-card"><h4>' + title + (conf ? ' <span class="prg-conf">keyakinan ' + conf + '</span>' : '') + '</h4>' +
+      (subtitle ? '<div class="sub">' + subtitle + '</div>' : '') + body +
+      (insight ? '<div class="prg-insight">' + insight + '</div>' : '') + '</section>';
+    const typeOf = x => { try { return detectType(x).type || "easy"; } catch (_) { return "easy"; } };
+    const hrMaxOk = (+state.max > 0 ? +state.max + 5 : 215);
+    const hrOk = x => +x[4] >= 70 && +x[4] <= hrMaxOk;
+
+    /* ---- grafik ---- */
+    window.PRG = {};
+    const W = 320, H = 128, PL = 34, PR = 8, PT = 10, PB = 20;
+    const regress = pts => {
+      const n = pts.length; if (n < 3) return null;
+      const mx = avg(pts.map(p => p.x)), my = avg(pts.map(p => p.y));
+      let nu = 0, de = 0; pts.forEach(p => { nu += (p.x - mx) * (p.y - my); de += (p.x - mx) ** 2; });
+      if (!de) return null; const b = nu / de; return { b, a: my - b * mx };
     };
-    const date = ms => new Date(ms).toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"});
-    const med = a => { const v=a.filter(Number.isFinite).slice().sort((x,y)=>x-y); return v.length ? v[Math.floor(v.length/2)] : null; };
-    const avg = a => a.length ? a.reduce((n,v)=>n+v,0)/a.length : null;
-    const card = (title, subtitle, body, insight="") =>
-      '<section class="prg-card"><h4>'+title+'</h4>' +
-      (subtitle ? '<div class="sub">'+subtitle+'</div>' : '') + body +
-      (insight ? '<div class="prg-insight">'+insight+'</div>' : '') + '</section>';
-    const row = (label,value) => '<div class="prg-row"><span>'+label+'</span><b>'+value+'</b></div>';
-    const weekStart = ms => { const d=new Date(ms); d.setHours(0,0,0,0); d.setDate(d.getDate()-((d.getDay()+6)%7)); return d.getTime(); };
+    const axisMk = '<g class="mk" style="display:none"><line y1="' + PT + '" y2="' + (H - PB) + '" style="stroke:var(--grey);stroke-width:1;stroke-dasharray:3 3"/><circle r="5" style="fill:var(--primary);stroke:var(--card);stroke-width:2"/></g>';
+    function lineChart(id, items, yfmt, invert, unitLbl) {
+      /* items: [{ms, v, t}] */
+      if (items.length < 2) return "";
+      const t0 = items[0].ms, t1 = items[items.length - 1].ms || t0 + 1;
+      let lo = Math.min(...items.map(i => i.v)), hi = Math.max(...items.map(i => i.v));
+      const pad = (hi - lo || 1) * 0.15; lo -= pad; hi += pad;
+      const X = ms => PL + (t1 === t0 ? 0.5 : (ms - t0) / (t1 - t0)) * (W - PL - PR);
+      const Y = v => { const f = (v - lo) / (hi - lo); return PT + (invert ? f : 1 - f) * (H - PT - PB); };
+      const pts = items.map(i => ({ x: X(i.ms), y: Y(i.v), t: i.t, v: i.v }));
+      window.PRG[id] = pts;
+      const rg = regress(items.map(i => ({ x: i.ms, y: i.v })));
+      const trend = rg ? '<line x1="' + X(t0) + '" x2="' + X(t1) + '" y1="' + Y(rg.a + rg.b * t0) + '" y2="' + Y(rg.a + rg.b * t1) + '" style="stroke:var(--grey);stroke-width:1.4;stroke-dasharray:5 4"/>' : "";
+      const path = pts.map((p, i) => (i ? "L" : "M") + p.x.toFixed(1) + " " + p.y.toFixed(1)).join(" ");
+      const dots = pts.map(p => '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="2.6" style="fill:var(--primary)"/>').join("");
+      const yTop = invert ? lo : hi, yBot = invert ? hi : lo;
+      return '<svg id="' + id + '" data-c="1" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + unitLbl + '">' +
+        '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + PT + '" y2="' + PT + '" style="stroke:var(--card-border)"/>' +
+        '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + (H - PB) + '" y2="' + (H - PB) + '" style="stroke:var(--card-border)"/>' +
+        '<text class="prg-yax" x="' + (PL - 5) + '" y="' + (PT + 3) + '" text-anchor="end">' + yfmt(yTop) + '</text>' +
+        '<text class="prg-yax" x="' + (PL - 5) + '" y="' + (H - PB + 3) + '" text-anchor="end">' + yfmt(yBot) + '</text>' +
+        '<text class="prg-yax" x="' + PL + '" y="' + (H - 5) + '">' + dm(t0) + '</text>' +
+        '<text class="prg-yax" x="' + (W - PR) + '" y="' + (H - 5) + '" text-anchor="end">' + dm(t1) + '</text>' +
+        trend + '<path d="' + path + '" style="fill:none;stroke:var(--primary);stroke-width:1.6;opacity:.55"/>' + dots + axisMk + '</svg>' +
+        '<div class="prg-read" data-for="' + id + '">Sentuh grafik untuk melihat tiap sesi. Garis putus-putus = arah tren.</div>';
+    }
+    function barChart(id, items) {
+      /* items: [{label, v, t, partial}] */
+      const hi = Math.max(1, ...items.map(i => i.v)) * 1.1;
+      const n = items.length, bw = (W - PL - PR) / n, gap = Math.min(4, bw * 0.25);
+      const pts = [];
+      const bars = items.map((i, k) => {
+        const h = (i.v / hi) * (H - PT - PB), x = PL + k * bw + gap / 2, y = H - PB - h;
+        pts.push({ x: x + (bw - gap) / 2, y: y, t: i.t });
+        return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + Math.max(1, bw - gap).toFixed(1) + '" height="' + Math.max(i.v > 0 ? 1.5 : 0, h).toFixed(1) + '" rx="2" style="fill:var(--primary);opacity:' + (i.partial ? 0.38 : 0.85) + '"/>';
+      }).join("");
+      window.PRG[id] = pts;
+      return '<svg id="' + id + '" data-c="1" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Jarak per minggu">' +
+        '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + (H - PB) + '" y2="' + (H - PB) + '" style="stroke:var(--card-border)"/>' +
+        '<text class="prg-yax" x="' + (PL - 5) + '" y="' + (PT + 3) + '" text-anchor="end">' + fmt(hi / 1.1) + ' km</text>' +
+        '<text class="prg-yax" x="' + (PL - 5) + '" y="' + (H - PB + 3) + '" text-anchor="end">0</text>' +
+        '<text class="prg-yax" x="' + PL + '" y="' + (H - 5) + '">' + items[0].label + '</text>' +
+        '<text class="prg-yax" x="' + (W - PR) + '" y="' + (H - 5) + '" text-anchor="end">' + items[n - 1].label + '</text>' +
+        bars + axisMk + '</svg>' +
+        '<div class="prg-read" data-for="' + id + '">Sentuh batang untuk melihat detail minggu. Batang pucat = minggu berjalan.</div>';
+    }
 
-    let html = '';
-    // 1. PERFORMANCE: tampilkan hasil aktual yang benar-benar tercatat, bukan prediksi.
-    const best = {};
-    runs.forEach(x => {
-      const km=+x[3], min=+x[2], p=pace(min,km);
-      if (!p) return;
-      const key = km >= 42 ? "≥42 km" : km >= 21 ? "≥21 km" : km >= 10 ? "≥10 km" : km >= 5 ? "≥5 km" : km >= 3 ? "≥3 km" : km >= 1 ? "≥1 km" : null;
-      if (key && (!best[key] || min/km < best[key].rate)) best[key]={rate:min/km,pace:p,km,date:x[0]};
+    /* =============== 1. PERFORMA =============== */
+    const BK = [["3–5 km", 3, 5], ["5–10 km", 5, 10], ["10–21 km", 10, 21.0975], ["≥ 21 km", 21.0975, 999]];
+    const bestOf = (list, lo, hi) => { let b = null; list.forEach(x => { const km = +x[3]; if (km >= lo && km < hi) { const r = +x[2] / km; if (!b || r < b.r) b = { r, km, ms: x[0], sec: r * 60 }; } }); return b; };
+    const perfRows = [], perfDeltas = [];
+    BK.forEach(([lbl, lo, hi]) => {
+      const c = bestOf(runs, lo, hi); if (!c) return;
+      const p = bestOf(prevRuns, lo, hi);
+      let dtxt = "";
+      if (p) { const d = Math.round(c.sec - p.sec); perfDeltas.push(d); dtxt = ' <small class="' + (d < 0 ? "prg-up" : d > 0 ? "prg-dn" : "") + '">' + (d === 0 ? "sama" : sgn(d) + " dtk") + '</small>'; }
+      perfRows.push(row(lbl, fmtP(c.sec) + "/km" + dtxt + ' <small>· ' + fmt(c.km) + ' km · ' + dm(c.ms) + '</small>'));
     });
-    const perf = Object.entries(best).map(([k,v]) => row("Aktivitas "+k, v.pace+"/km · "+fmt(v.km)+" km · "+date(v.date)));
-    if (perf.length) html += card("Performa aktual","Pace rata-rata terbaik dari aktivitas yang memenuhi jarak minimum kategori. Bukan split atau catatan lomba.",perf.join(""),"Perbandingan performa paling kuat bila rute, kondisi, dan usaha serupa.");
-    
-    // 2. AEROBIC DEVELOPMENT: hanya easy run dengan HR valid dan jarak cukup.
-    const easy = runs.filter(x => {
-      if (!(+x[4] > 0) || +x[3] < 2) return false;
-      try { return detectType(x).type === "easy"; } catch (_) { return false; }
-    }).map(x => ({ms:x[0],hr:+x[4],speed:+x[3]*1000/(+x[2]*60),pace:+x[2]/+x[3]}));
+    const g = state.goalEst || {};
+    const estRow = g.current && g.current !== "—:—" ? row("Estimasi " + (state.goal || "5K") + " (algoritma)", g.current) : "";
+    let perfV = "na", perfNote = "Belum ada periode pembanding yang sebanding.", perfConf = "rendah";
+    if (perfDeltas.length) {
+      const d = med(perfDeltas);
+      perfV = d <= -5 ? "up" : d >= 5 ? "dn" : "flat";
+      perfNote = perfV === "up" ? "Pace terbaik lebih cepat dibanding " + prgR + " minggu sebelumnya (median " + Math.abs(Math.round(d)) + " dtk/km)."
+        : perfV === "dn" ? "Pace terbaik lebih lambat dibanding periode sebelumnya (median " + Math.round(d) + " dtk/km). Bisa saja karena tidak ada sesi cepat, bukan kemunduran."
+        : "Pace terbaik relatif sama dengan periode sebelumnya.";
+      perfConf = perfDeltas.length >= 3 ? "sedang" : "rendah";
+    }
+    const perfHtml = perfRows.length ? card("Performa", "Pace rata-rata terbaik per kelompok jarak, dibanding " + prgR + " minggu sebelumnya. Hasil aktual aktivitas, bukan split atau catatan lomba.",
+      perfRows.join("") + estRow, "Perbandingan paling kuat bila rute, cuaca, dan usaha serupa. Satu sesi cepat bisa mengubah angka ini.", perfConf) : "";
+
+    /* =============== 2. AEROBIK =============== */
+    const easy = runs.filter(x => hrOk(x) && +x[3] >= 2 && +x[2] >= 12 && typeOf(x) === "easy")
+      .map(x => ({ ms: x[0], hr: +x[4], pace: +x[2] / +x[3] }));
+    let aeroV = "na", aeroNote = "Butuh minimal 4 easy run ≥ 2 km dengan HR valid.", aeroConf = "rendah", aeroHtml = "";
     if (easy.length >= 4) {
-      const ref = Math.round(med(easy.map(x=>x.hr)));
-      const normalized = easy.map(x=>({ ...x, secPerKm: 1000/(x.speed*ref/x.hr) }));
-      const half=Math.floor(normalized.length/2);
-      const first=med(normalized.slice(0,half).map(x=>x.secPerKm));
-      const last=med(normalized.slice(half).map(x=>x.secPerKm));
-      const delta=Math.round(first-last);
-      const fmtP = sec => { const n=Math.round(sec); return Math.floor(n/60)+":"+String(n%60).padStart(2,"0"); };
-      const direction = Math.abs(delta)>=8 ? (delta>0 ? "lebih cepat" : "lebih lambat") : "relatif stabil";
-      const insight = Math.abs(delta)>=8
-        ? "Pada HR acuan yang sama, paruh akhir "+Math.abs(delta)+" detik/km "+direction+". Ini indikasi efisiensi aerobik, bukan bukti tunggal adaptasi."
-        : "Pace ternormalisasi pada HR acuan relatif stabil. Lanjutkan pengamatan pada kondisi lari yang sebanding.";
-      html += card("Efisiensi aerobik","Easy run ≥2 km dengan HR tercatat · HR acuan "+ref+" bpm · "+easy.length+" aktivitas",
-        row("Paruh awal",fmtP(first)+"/km")+row("Paruh akhir",fmtP(last)+"/km")+row("Perubahan",(delta>0?"+":"")+delta+" detik/km"),insight);
-    }
-    const hrRuns = runs.filter(x => +x[4] > 0 && +x[3] >= 2);
-    if (hrRuns.length >= 4) {
-      const refPace=med(hrRuns.map(x=>+x[2]/+x[3]));
-      const matched=hrRuns.filter(x=>Math.abs((+x[2]/+x[3])-refPace)<=0.35);
+      const ref = Math.round(med(easy.map(x => x.hr)));
+      const norm = easy.map(x => { const sp = 1000 / (x.pace * 60); return { ms: x.ms, hr: x.hr, sec: 1000 / (sp * ref / x.hr), pace: x.pace }; });
+      const half = Math.floor(norm.length / 2);
+      const first = med(norm.slice(0, half).map(x => x.sec)), last = med(norm.slice(half).map(x => x.sec));
+      const delta = Math.round(first - last);
+      const thr = Math.max(8, first * 0.03);
+      aeroV = Math.abs(delta) >= thr ? (delta > 0 ? "up" : "dn") : "flat";
+      aeroConf = confOf(norm.length, norm[norm.length - 1].ms > norm[0].ms ? (norm[norm.length - 1].ms - norm[0].ms) / DAY : 0);
+      /* HR pada pace sebanding (easy run saja) */
+      let hrRows = "", hrNote = "";
+      const refP = med(norm.map(x => x.pace));
+      const matched = norm.filter(x => Math.abs(x.pace - refP) <= 0.35);
       if (matched.length >= 4) {
-        const h1=med(matched.slice(0,Math.floor(matched.length/2)).map(x=>+x[4]));
-        const h2=med(matched.slice(Math.floor(matched.length/2)).map(x=>+x[4]));
-        html += card("Respons HR pada pace sebanding","Aktivitas ≥2 km dengan pace dalam ±21 detik/km dari median kelompok.",
-          row("HR median awal",Math.round(h1)+" bpm")+row("HR median akhir",Math.round(h2)+" bpm")+row("Selisih",(Math.round(h2-h1)>0?"+":"")+Math.round(h2-h1)+" bpm"),
-          "HR yang lebih rendah dapat mengindikasikan beban internal lebih ringan. Suhu, elevasi, hidrasi, dan kelelahan tetap perlu dipertimbangkan.");
+        const h = Math.floor(matched.length / 2);
+        const h1 = med(matched.slice(0, h).map(x => x.hr)), h2 = med(matched.slice(h).map(x => x.hr));
+        const dh = Math.round(h2 - h1);
+        hrRows = row("HR pada pace ±" + 21 + " dtk dari " + fmtP(refP * 60) + "/km", Math.round(h1) + " → " + Math.round(h2) + " bpm");
+        hrNote = dh <= -3 ? " HR pada pace yang sebanding juga turun " + Math.abs(dh) + " bpm, sejalan dengan efisiensi lebih baik." : dh >= 3 ? " Namun HR pada pace sebanding naik " + dh + " bpm; jangan simpulkan dulu, cek suhu dan kelelahan." : " HR pada pace sebanding relatif sama.";
       }
+      aeroNote = (aeroV === "up" ? "Pada HR acuan " + ref + " bpm, paruh akhir " + Math.abs(delta) + " dtk/km lebih cepat."
+        : aeroV === "dn" ? "Pada HR acuan " + ref + " bpm, paruh akhir " + Math.abs(delta) + " dtk/km lebih lambat."
+        : "Pace pada HR acuan relatif stabil.") + hrNote;
+      const items = norm.map(x => ({ ms: x.ms, v: x.sec, t: "<b>" + dm(x.ms) + "</b> · " + fmtP(x.sec) + "/km pada " + ref + " bpm (asli " + fmtP(x.pace * 60) + "/km, HR " + Math.round(x.hr) + ")" }));
+      aeroHtml = card("Efisiensi aerobik", "Easy run ≥ 2 km, HR valid · " + norm.length + " sesi · pace dinormalisasi ke HR " + ref + " bpm (perkiraan linear)",
+        lineChart("prgAero", items, v => fmtP(v), true, "Pace ternormalisasi pada HR acuan") +
+        row("Paruh awal", fmtP(first) + "/km") + row("Paruh akhir", fmtP(last) + "/km") +
+        row("Perubahan pace", '<span class="' + (delta > 0 ? "prg-up" : delta < 0 ? "prg-dn" : "") + '">' + (delta === 0 ? "0" : sgn(-delta)) + ' dtk/km</span>') + hrRows,
+        aeroNote + " Ini indikasi efisiensi, bukan bukti tunggal adaptasi. Suhu, elevasi, dan hidrasi belum dikontrol.", aeroConf);
+    } else {
+      aeroHtml = card("Efisiensi aerobik", "Easy run ≥ 2 km dengan HR valid", '<p class="prg-note">Baru ' + easy.length + ' sesi memenuhi syarat. Butuh minimal 4 untuk membandingkan pace pada HR yang sama.</p>', "", "");
     }
 
-    // 3. TRAINING CAPACITY: volume, durasi, frekuensi; tidak mengisi minggu kosong sebagai rekomendasi.
-    const buckets={};
-    runs.forEach(x=>{const k=weekStart(x[0]);const w=buckets[k]||(buckets[k]={km:0,min:0,n:0});w.km+=+x[3];w.min+=+x[2];w.n++;});
-    const wk=Object.keys(buckets).map(Number).sort((a,b)=>a-b);
-    const totalKm=runs.reduce((n,x)=>n+(+x[3]),0), totalMin=runs.reduce((n,x)=>n+(+x[2]),0);
-    const capacity = row("Total jarak",fmt(totalKm)+" km")+row("Total durasi",Math.round(totalMin)+" menit")+row("Jumlah sesi",runs.length+" lari")+row("Rata-rata per minggu aktif",fmt(totalKm/Math.max(1,wk.length))+" km");
-    const weekRows=wk.slice(-8).reverse().map(k=>row(date(k),fmt(buckets[k].km)+" km · "+buckets[k].n+" sesi")).join("");
-    html += card("Kapasitas latihan","Beban eksternal yang benar-benar dilakukan pada periode terpilih.",capacity+weekRows,
-      wk.length>=4 ? "Perkembangan kapasitas dinilai dari tren beberapa minggu, bukan satu lonjakan volume." : "Riwayat mingguan masih singkat; belum cukup untuk menyimpulkan tren kapasitas.");
-    
-    // 4. RESILIENCE: hanya wellness yang benar-benar tersedia. Tidak menyimpulkan cedera tanpa data.
-    const wellness=(state.wellness||[]).filter(x=>new Date(x.id).getTime()>=from && new Date(x.id).getTime()<=now);
-    const wellnessRows=[];
-    for (const [key,label,unit] of [["restingHR","HR istirahat","bpm"],["hrv","HRV","ms"]]) {
-      const vals=wellness.filter(x=>+x[key]>0).map(x=>+x[key]);
-      if(vals.length) wellnessRows.push(row(label+" · rata-rata",Math.round(avg(vals))+" "+unit));
+    /* =============== 3. KAPASITAS LATIHAN =============== */
+    const weeks = [];
+    for (let k = 0; k < prgR; k++) weeks.push({ ms: from + k * 7 * DAY, km: 0, min: 0, n: 0, tl: 0 });
+    runs.forEach(x => { const i = Math.round((wkStart(x[0]) - from) / (7 * DAY)); const w = weeks[i]; if (w) { w.km += +x[3]; w.min += +x[2]; w.n++; w.tl += loadOf(x); } });
+    const done = weeks.slice(0, -1);
+    const firstActive = weeks.findIndex(w => w.n > 0);
+    const evalWeeks = done.slice(Math.max(0, firstActive)); /* abaikan minggu kosong sebelum data pertama */
+    let capV = "na", capNote = "Riwayat minggu selesai masih kurang dari 4; belum cukup untuk menyimpulkan tren.", capConf = "rendah", volRows = "";
+    if (evalWeeks.length >= 4) {
+      const h = Math.floor(evalWeeks.length / 2);
+      const a1 = avg(evalWeeks.slice(0, h).map(w => w.km)), a2 = avg(evalWeeks.slice(h).map(w => w.km));
+      const ch = a1 > 0 ? (a2 - a1) / a1 : (a2 > 0 ? 1 : 0);
+      capV = ch >= 0.1 ? "up" : ch <= -0.1 ? "dn" : "flat";
+      volRows = row("Rata-rata jarak per minggu", fmt(a1) + " → " + fmt(a2) + " km");
+      capNote = capV === "up" ? "Volume mingguan naik " + Math.round(ch * 100) + "% antara paruh awal dan akhir. Pastikan kenaikannya bertahap dan pemulihan ikut terjaga."
+        : capV === "dn" ? "Volume mingguan turun " + Math.abs(Math.round(ch * 100)) + "%. Wajar bila disengaja (taper/pemulihan); perlu dicek bila tidak."
+        : "Volume mingguan stabil. Perkembangan kapasitas dinilai dari tren beberapa minggu, bukan satu lonjakan.";
+      capConf = confOf(runs.length, spanDays(runs));
     }
-    const activeWeeks=wk.length, consistency = row("Minggu dengan aktivitas",activeWeeks+" minggu")+row("Sesi per minggu aktif",fmt(runs.length/Math.max(1,activeWeeks))+" sesi");
-    let resilienceBody=consistency+wellnessRows.join("");
-    let resilienceNote="Konsistensi dihitung dari aktivitas yang tercatat. Data nyeri, cedera, dan sakit tidak tersedia pada sumber ini sehingga tidak dibuat kesimpulan kesehatan.";
-    if(wellnessRows.length) resilienceNote+=" HR istirahat/HRV adalah sinyal pendukung dan perlu dibandingkan dengan baseline pribadi.";
-    html += card("Konsistensi & pemulihan","Indikator keberlanjutan latihan yang tersedia.",resilienceBody,resilienceNote);
+    const totKm = runs.reduce((n, x) => n + (+x[3]), 0), totMin = runs.reduce((n, x) => n + (+x[2]), 0);
+    const longest = runs.reduce((m, x) => Math.max(m, +x[3]), 0);
+    const inRange = weeks.slice(Math.max(0, firstActive));
+    const avgSes = avg(inRange.map(w => w.n));
+    const tiles = '<div class="prg-mix">' + [[fmt(totKm), "km total"], [runs.length, "sesi"], [fmt(longest), "km terpanjang"]]
+      .map(([v, l]) => '<div class="pm"><b>' + v + '</b><span>' + l + '</span></div>').join("") + '</div>';
+    const barItems = weeks.map((w, k) => ({ label: dm(w.ms), v: w.km, partial: k === weeks.length - 1,
+      t: "<b>" + dm(w.ms) + " – " + dm(w.ms + 6 * DAY) + (k === weeks.length - 1 ? " (berjalan)" : "") + "</b> · " + fmt(w.km) + " km · " + w.n + " sesi" + (w.n ? " · " + Math.round(w.min) + " menit" : "") }));
+    /* distribusi intensitas (berdasarkan menit) */
+    const dist = { easy: 0, long: 0, mid: 0, hard: 0 };
+    runs.forEach(x => { const t = typeOf(x), m = +x[2]; if (t === "easy") dist.easy += m; else if (t === "long") dist.long += m; else if (t === "thr") dist.mid += m; else dist.hard += m; });
+    const dTot = dist.easy + dist.long + dist.mid + dist.hard;
+    const pc = v => Math.round(v / dTot * 100);
+    const distHtml = dTot > 0 ? '<div class="prg-bar"><i style="width:' + pc(dist.easy) + '%;background:var(--primary)"></i><i style="width:' + pc(dist.long) + '%;background:var(--primary);opacity:.55"></i><i style="width:' + pc(dist.mid) + '%;background:var(--yellow)"></i><i style="width:' + Math.max(0, 100 - pc(dist.easy) - pc(dist.long) - pc(dist.mid)) + '%;background:var(--red)"></i></div>' +
+      '<div class="prg-leg"><span><i style="background:var(--primary)"></i>Easy ' + pc(dist.easy) + '%</span><span><i style="background:var(--primary);opacity:.55"></i>Long ' + pc(dist.long) + '%</span><span><i style="background:var(--yellow)"></i>Threshold ' + pc(dist.mid) + '%</span><span><i style="background:var(--red)"></i>VO2max/lomba ' + pc(dist.hard) + '%</span></div>' : "";
+    /* beban internal: CTL dari wellness bila ada */
+    const wellAll = (state.wellness || []).filter(w => w && w.id);
+    const wTs = w => Date.parse(w.id + "T12:00:00");
+    const wellIn = wellAll.filter(w => wTs(w) >= from && wTs(w) <= now);
+    const ctls = wellIn.filter(w => +w.ctl > 0);
+    const ctlRow = ctls.length >= 7 ? row("Kebugaran (CTL)", fmt(+ctls[0].ctl) + " → " + fmt(+ctls[ctls.length - 1].ctl)) : "";
+    const capHtml = card("Kapasitas latihan", "Beban eksternal yang dilakukan, per minggu kalender (minggu kosong dihitung).",
+      tiles + barChart("prgCap", barItems) + volRows + row("Sesi per minggu", fmt(avgSes || 0)) + row("Total durasi", Math.round(totMin) + " menit") + ctlRow + distHtml,
+      capNote, capConf);
 
-    el.innerHTML = html;
+    /* =============== 4. KEBERLANJUTAN =============== */
+    const doneActive = evalWeeks.filter(w => w.n > 0).length;
+    const consRate = evalWeeks.length ? doneActive / evalWeeks.length : null;
+    let maxGap = 0, prev = runs[0][0];
+    runs.slice(1).forEach(x => { maxGap = Math.max(maxGap, (x[0] - prev) / DAY); prev = x[0]; });
+    maxGap = Math.max(maxGap, (now - prev) / DAY);
+    const consRows = (consRate != null ? row("Minggu berlatih", doneActive + " dari " + evalWeeks.length + " minggu (" + Math.round(consRate * 100) + "%)") : "") +
+      row("Jeda terlama tanpa lari", Math.round(maxGap) + " hari");
+    /* wellness: 7 hari terakhir vs baseline periode */
+    const mean = (key, list) => { const v = list.filter(w => +w[key] > 0).map(w => +w[key]); return v.length ? { m: avg(v), n: v.length } : null; };
+    const w7 = wellIn.filter(w => wTs(w) >= now - 7 * DAY), wBase = wellIn.filter(w => wTs(w) < now - 7 * DAY);
+    const wRows = []; let flags = 0, wOk = 0;
+    [["restingHR", "HR istirahat", "bpm", 1], ["hrv", "HRV", "ms", -1]].forEach(([k, lbl, u, badDir]) => {
+      const a = mean(k, w7), b = mean(k, wBase);
+      if (!a || !b || a.n < 3 || b.n < 7) return;
+      wOk++;
+      const d = a.m - b.m, rel = d / b.m, bad = badDir > 0 ? d >= 3 : rel <= -0.1;
+      if (bad) flags++;
+      wRows.push(row(lbl + " 7 hari vs baseline", Math.round(b.m) + " → <span class=\"" + (bad ? "prg-dn" : "") + "\">" + Math.round(a.m) + " " + u + "</span>"));
+    });
+    const sl = mean("sleepSecs", wellIn);
+    if (sl && sl.n >= 5) wRows.push(row("Tidur rata-rata", fmt(sl.m / 3600) + " jam"));
+    let susV = "na", susNote = "Data nyeri, cedera, dan sakit tidak ada di sumber data, jadi tidak ada kesimpulan kesehatan.", susConf = "rendah";
+    if (consRate != null && evalWeeks.length >= 4) {
+      susV = flags > 0 ? "dn" : consRate >= 0.75 ? "up" : consRate >= 0.5 ? "flat" : "dn";
+      susConf = wOk ? "sedang" : "rendah";
+      susNote = (flags > 0 ? "Sinyal pemulihan 7 hari terakhir menyimpang dari baseline-mu (HR istirahat naik atau HRV turun). Satu minggu belum berarti masalah, tapi pantau dan pertimbangkan sesi lebih ringan. "
+        : consRate >= 0.75 ? "Latihan berjalan konsisten tanpa sinyal pemulihan yang menyimpang. "
+        : "Latihan sering terputus, ini menahan adaptasi. ") + "Data nyeri, cedera, dan sakit tidak tersedia, jadi tidak disimpulkan.";
+    }
+    /* =============== 5. DURABILITY =============== */
+    const durRuns = runs.filter(x => (+x[3] >= 5 || +x[2] >= 40) && ["easy", "long"].indexOf(typeOf(x)) >= 0)
+      .map(x => ({ x, d: (state.sx && x[9] && state.sx[String(x[9])] || {}).dur })).filter(o => o.d && Number.isFinite(o.d.paceDrift));
+    const durPending = runs.filter(x => (+x[3] >= 5 || +x[2] >= 40) && x[9] && !/^hw/.test(String(x[9])) && !(state.sx && state.sx[String(x[9])] && (state.sx[String(x[9])].dur || state.sx[String(x[9])].streamVersion >= 3))).length;
+    let durV = "na", durLbl = "Belum cukup data", durNote = "Butuh minimal 3 lari panjang (≥ 5 km atau ≥ 40 menit, easy atau long) dengan data stream." + (durPending && state.apiKey ? " " + durPending + " lari sedang diambil dari Intervals.icu." : ""), durConf = "rendah", durHtml = "";
+    if (durRuns.length >= 3) {
+      const effs = durRuns.map(o => o.d.effDrop).filter(Number.isFinite), hrs = durRuns.map(o => o.d.hrDrift).filter(Number.isFinite);
+      const pd = med(durRuns.map(o => o.d.paceDrift)), ed = effs.length >= 3 ? med(effs) : null, hd = hrs.length >= 3 ? med(hrs) : null;
+      const lvl = ed != null ? ed : pd;
+      durV = lvl < 3 ? "up" : lvl < 6 ? "flat" : "dn";
+      durLbl = durV === "up" ? "Stabil" : durV === "flat" ? "Mulai turun" : "Turun cepat";
+      durConf = confOf(durRuns.length, spanDays(durRuns.map(o => o.x)));
+      let trend = "", trendRow = "";
+      if (durRuns.length >= 6 && ed != null) {
+        const h = Math.floor(durRuns.length / 2), key = o => o.d.effDrop;
+        const a1 = med(durRuns.slice(0, h).map(key)), a2 = med(durRuns.slice(h).map(key));
+        if (Number.isFinite(a1) && Number.isFinite(a2)) {
+          trendRow = row("Penurunan efisiensi, paruh awal → akhir", fmt(a1) + "% → " + fmt(a2) + "%");
+          trend = a2 <= a1 - 1.5 ? " Penurunan efisiensi di akhir lari mengecil dibanding paruh awal periode." : a2 >= a1 + 1.5 ? " Penurunan efisiensi di akhir lari membesar dibanding paruh awal periode." : "";
+        }
+      }
+      const items = durRuns.map(o => ({ ms: o.x[0], v: o.d.effDrop != null ? o.d.effDrop : o.d.paceDrift,
+        t: "<b>" + dm(o.x[0]) + "</b> · " + fmt(o.x[3]) + " km · pace " + sgn(o.d.paceDrift, 1) + "%" + (o.d.hrDrift != null ? ", HR " + sgn(o.d.hrDrift, 1) + " bpm" : "") + (o.d.effDrop != null ? ", efisiensi " + sgn(-o.d.effDrop, 1) + "%" : "") }));
+      durNote = (durV === "up" ? "Pace dan detak jantung cenderung bertahan sampai sepertiga akhir lari panjang." : durV === "flat" ? "Ada penurunan efisiensi moderat di sepertiga akhir; wajar bila lari panjangnya bertambah jauh." : "Efisiensi turun cukup besar di sepertiga akhir. Bisa berarti start terlalu cepat, asupan energi kurang, atau panas.") + trend +
+        " Pace dan HR dibanding sepertiga tengah lari, bukan sepertiga awal, supaya pemanasan tidak ikut terhitung.";
+      durHtml = card("Durability", "Kestabilan di sepertiga akhir lari panjang · " + durRuns.length + " sesi easy/long ≥ 5 km atau ≥ 40 menit",
+        lineChart("prgDur", items, v => fmt(v) + "%", true, "Penurunan efisiensi akhir vs tengah (%)") +
+        row("Perubahan pace (median)", sgn(pd, 1) + "%") + (hd != null ? row("Perubahan HR (median)", sgn(hd, 1) + " bpm") : "") + (ed != null ? row("Penurunan efisiensi (median)", fmt(ed) + "%") : "") + trendRow,
+        durNote + " Elevasi, suhu, dan konsumsi gel belum dikontrol.", durConf);
+    } else {
+      durHtml = card("Durability", "Kestabilan pace dan HR di sepertiga akhir lari panjang", '<p class="prg-note">' + durRuns.length + ' sesi memenuhi syarat dari minimal 3. Lari interval, tempo, dan lomba tidak dipakai karena pace-nya memang bervariasi.</p>', "", "");
+    }
+
+    const susHtml = card("Keberlanjutan", "Konsistensi dan sinyal pemulihan dibanding baseline pribadi.", consRows + wRows.join(""), susNote, susConf);
+
+    /* =============== RINGKASAN =============== */
+    const sumRow = (name, v, label, note, c) => '<div class="prg-sumrow"><div class="top"><b>' + name + '</b>' + pill(v, label) + '</div><div class="nt">' + note + ' <span class="prg-conf">keyakinan ' + c + '</span></div></div>';
+    const L = { up: "Membaik", flat: "Stabil", dn: "Perlu perhatian", na: "Belum cukup data" };
+    const summary = '<section class="prg-card"><h4>Ringkasan progres</h4><div class="sub">Lima sisi dinilai terpisah, tanpa skor gabungan. Periode: ' + dm(from) + ' – ' + dm(now) + '.</div>' +
+      sumRow("Performa", perfV, perfV === "dn" ? "Lebih lambat" : L[perfV], perfNote, perfConf) +
+      sumRow("Aerobik", aeroV, aeroV === "dn" ? "Menurun" : L[aeroV], aeroV === "na" ? "Butuh minimal 4 easy run dengan HR valid." : aeroNote.split(". ")[0] + ".", aeroConf) +
+      sumRow("Durability", durV, durLbl, durNote.split(". ")[0] + ".", durConf) +
+      sumRow("Kapasitas latihan", capV, capV === "dn" ? "Menurun" : L[capV], capNote.split(". ")[0] + ".", capConf) +
+      sumRow("Keberlanjutan", susV, L[susV], susNote.split(". ")[0] + ".", susConf) +
+      '</section>';
+
+    /* =============== KUALITAS DATA =============== */
+    const excl = rawInRange - runs.length, withHr = runs.filter(hrOk).length;
+    const dq = '<section class="prg-card prg-dq"><h4>Kualitas data</h4><div class="sub">' + runs.length + ' lari dipakai' + (excl > 0 ? ', ' + excl + ' dikecualikan (durasi &lt; 5 menit, jarak &lt; 1 km, atau pace tak wajar)' : '') + '. HR valid di ' + withHr + ' lari.' +
+      ' Durability dihitung dari stream tiap lari panjang, bukan dari ringkasan aktivitas.</div></section>';
+
+    el.innerHTML = summary + perfHtml + aeroHtml + durHtml + capHtml + susHtml + dq;
+    backfillDurability(runs);
   }
   window.renderProgress = renderProgress;
 
@@ -3943,7 +4530,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     state.acts.sort((a, b) => a[0] - b[0]);
     if (state.acts.length > 500) state.acts = state.acts.slice(-500);
     const ks = Object.keys(state.sx);
-    if (ks.length > 60) ks.slice(0, ks.length - 60).forEach((x) => delete state.sx[x]);
+    if (ks.length > 90) ks.slice(0, ks.length - 90).forEach((x) => delete state.sx[x]);
 
     state.hwLast = Date.now();
     persist();
@@ -4290,6 +4877,8 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   /* ---------- init ---------- */
   (async function init() {
     applyTheme();
+    rotateHero("setup");
+    rotateHero("home");
     setGreeting();
     restore();
     setTimeout(autoHeat, 3000);
