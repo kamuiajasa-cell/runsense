@@ -780,6 +780,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 .sa-title{font-size:13px;font-weight:800}.sa-sub{font-size:10px;color:var(--grey);line-height:1.45}
 .sa-chart{width:100%;height:auto;display:block;overflow:visible}.sa-grid{stroke:var(--card-border);stroke-width:1;stroke-dasharray:3 4}.sa-line{fill:none;stroke:var(--primary);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.sa-line.hr{stroke:#f0a85a}.sa-axis{fill:var(--grey);font:9px system-ui}.sa-legend{display:flex;gap:14px;font-size:10px;color:var(--grey);margin-top:6px}.sa-legend span{display:flex;align-items:center;gap:5px}.sa-dot{width:7px;height:7px;border-radius:50%;background:var(--primary)}.sa-dot.hr{background:#f0a85a}
 .sa-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.sa-metric{background:var(--el);border-radius:12px;padding:10px}.sa-metric b{display:block;font-size:17px}.sa-metric small{font-size:10px;color:var(--grey)}.sa-note{font-size:12px;line-height:1.55;color:var(--light-grey);margin-top:9px}.sa-pill{font-size:9px;color:var(--grey);background:var(--el);padding:5px 8px;border-radius:20px;white-space:nowrap}
+.sa-split{display:grid;grid-template-columns:28px 1fr 1fr;gap:8px;padding:7px 2px;border-top:1px solid var(--nav-border);font-size:12px;color:var(--grey)}.sa-split b{color:var(--tx)}.sa-split span:nth-child(2){color:var(--tx);font-weight:700}
 </style>
 </head>
 <body>
@@ -3826,6 +3827,8 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   function sessionChartHTML(act) {
     const sx = act && act[9] ? state.sx[String(act[9])] : null;
     const pts = sx && Array.isArray(sx.chart) ? sx.chart : [];
+    const splits = sx && Array.isArray(sx.splits) ? sx.splits : [];
+    const splitHtml = splits.length ? '<div class="sa-head" style="margin-top:12px"><span class="sa-title">Split per kilometer</span></div>' + splits.map(q => '<div class="sa-split"><b>' + q.km + '</b><span>' + mp(q.pace) + ' /km</span><span>' + (q.hr ? Math.round(q.hr) + ' bpm' : 'HR —') + '</span></div>').join('') : '';
     if (pts.length < 5) return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Grafik sesi</span><span class="sa-pill">Data belum tersedia</span></div><div class="sa-note">Grafik pace dan HR membutuhkan stream sensor dari sumber aktivitas. Ringkasan aktivitas tetap bisa dianalisis, tetapi titik per titik tidak tersedia untuk sesi ini.</div></div>`;
     const W=320,H=126,L=28,R=8,T=12,B=20, pw=W-L-R, ph=H-T-B;
     const xs=pts.map(x=>x[0]), ps=pts.map(x=>x[1]), hs=pts.map(x=>x[2]).filter(x=>x>0);
@@ -3838,7 +3841,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     const pPath=line(1,yp);
     const hPath=line(2,yh);
     const ticks=[0,.5,1].map(v=>`<line class="sa-grid" x1="${L}" x2="${W-R}" y1="${T+v*ph}" y2="${T+v*ph}"/>`).join("");
-    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Pace & detak jantung</span><span class="sa-pill">${pts.length} titik sampel</span></div><svg class="sa-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik pace dan detak jantung sepanjang aktivitas">${ticks}<path class="sa-line" d="${pPath}"/>${hs.length>4?`<path class="sa-line hr" d="${hPath}"/>`:""}<text class="sa-axis" x="${L}" y="${H-4}">0 mnt</text><text class="sa-axis" text-anchor="end" x="${W-R}" y="${H-4}">${Math.round(xs[xs.length-1])} mnt</text><text class="sa-axis" x="2" y="10">${mp(pMin)}</text><text class="sa-axis" x="2" y="${H-B+2}">${mp(pMax)}</text></svg><div class="sa-legend"><span><i class="sa-dot"></i>Pace (min/km)</span>${hs.length>4?'<span><i class="sa-dot hr"></i>HR (bpm)</span>':""}</div><div class="sa-sub">Pace memakai skala terbalik: garis lebih tinggi berarti lebih cepat. Grafik hanya ditampilkan bila stream tersedia.</div></div>`;
+    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Pace & detak jantung</span><span class="sa-pill">${pts.length} titik sampel</span></div><svg class="sa-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik pace dan detak jantung sepanjang aktivitas">${ticks}<path class="sa-line" d="${pPath}"/>${hs.length>4?`<path class="sa-line hr" d="${hPath}"/>`:""}<text class="sa-axis" x="${L}" y="${H-4}">0 mnt</text><text class="sa-axis" text-anchor="end" x="${W-R}" y="${H-4}">${Math.round(xs[xs.length-1])} mnt</text><text class="sa-axis" x="2" y="10">${mp(pMin)}</text><text class="sa-axis" x="2" y="${H-B+2}">${mp(pMax)}</text></svg><div class="sa-legend"><span><i class="sa-dot"></i>Pace (min/km)</span>${hs.length>4?'<span><i class="sa-dot hr"></i>HR (bpm)</span>':""}</div><div class="sa-sub">Pace memakai skala terbalik: garis lebih tinggi berarti lebih cepat. Sampel grafik dipadatkan; split dihitung dari stream penuh.</div>${splitHtml}</div>`;
   }
 
   function sessionAdaptationHTML(act) {
