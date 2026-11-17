@@ -734,7 +734,8 @@ button:disabled{opacity:.48;cursor:not-allowed}
 .profile-layout>.card>.label:after{content:"⌄";margin-left:auto;color:var(--grey);font-size:18px}
 .profile-layout>.card>.label{cursor:pointer}
 .profile-subhead{font-size:10px;font-weight:850;letter-spacing:.11em;text-transform:uppercase;color:var(--primary);padding:14px 14px 0;margin:0 0 2px}
-.profile-layout>.card .profile-subhead~.field{margin-left:14px;margin-right:14px}
+.profile-layout>.card .profile-subhead{display:block;margin:0;padding:15px 14px 5px;font-size:10px;font-weight:850;letter-spacing:.11em;text-transform:uppercase;color:var(--primary)}
+.profile-layout>.card .profile-subhead+.field{margin:8px 14px 12px}
 .profile-privacy{margin:16px 0 8px;padding:14px;background:var(--card);border:1px solid var(--card-border);border-radius:14px}
 .profile-privacy b{display:block;font-size:13px;margin-bottom:5px}.profile-privacy p{font-size:12px;color:var(--grey);line-height:1.45;margin-bottom:10px}
 .profile-layout>.card.profile-collapsed>.label:after{content:"›"}
@@ -4955,9 +4956,24 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   if(adv){const host=cards[5];if(host&&adv.parentElement!==host)host.appendChild(adv)}
   const hero=root.querySelector('.page-hero');
   if(hero){hero.innerHTML='<span class="eyebrow">AKUN & PENGATURAN</span><div class="page-title">Profil atlet</div><p>Kelola parameter, sasaran, dan cara RunSense mendampingi latihanmu.</p>'}
-  const heading=(id,title)=>{const el=document.getElementById(id);if(el&&!el.dataset.groupHeading){el.insertAdjacentHTML('beforebegin','<div class="profile-subhead">'+title+'</div>');el.dataset.groupHeading='1'}};
-  heading('inAge','Data atlet');heading('inLthr','Ambang & zona latihan');
-  heading('setGoalChips','Sasaran utama');
+  // Subjudul harus menjadi saudara .field, bukan anak input/.field.
+  root.querySelectorAll('.profile-subhead').forEach(el=>el.remove());
+  root.querySelectorAll('[data-group-heading]').forEach(el=>delete el.dataset.groupHeading);
+  const headingBeforeField=(id,title)=>{
+   const input=document.getElementById(id),field=input&&input.closest('.field');
+   if(field&&!field.previousElementSibling?.classList.contains('profile-subhead')){
+    const h=document.createElement('div');h.className='profile-subhead';h.textContent=title;field.parentNode.insertBefore(h,field);
+   }
+  };
+  const heading=(id,title)=>{
+   const el=document.getElementById(id);
+   if(el&&!el.previousElementSibling?.classList.contains('profile-subhead')){
+    const h=document.createElement('div');h.className='profile-subhead';h.textContent=title;el.parentNode.insertBefore(h,el);
+   }
+  };
+  headingBeforeField('inAge','DATA ATLET');
+  headingBeforeField('inLthr','AMBANG & ZONA LATIHAN');
+  heading('setGoalChips','SASARAN UTAMA');
   const styles=root.querySelectorAll('.style-option');
   if(styles.length&&!styles[0].dataset.groupHeading){styles[0].insertAdjacentHTML('beforebegin','<div class="profile-subhead">Preferensi pendampingan</div>');styles[0].dataset.groupHeading='1'}
   heading('planGrid','Rencana mingguan');heading('raceDate','Target lomba');heading('rwOn','Pola lari-jalan');
