@@ -711,6 +711,49 @@ button:disabled{opacity:.48;cursor:not-allowed}
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
 
+
+/* RunSense IA redesign — refined sport-tech visual system */
+:root{--primary:#b7f36b;--primary-dim:rgba(183,243,107,.13);--bg:#10130f;--card:#191e18;--card-border:rgba(230,245,220,.09);--el:rgba(230,245,220,.055);--nav-border:rgba(230,245,220,.1)}
+:root[data-theme="light"]{--primary:#477d18;--primary-dim:rgba(71,125,24,.12);--bg:#f3f5ef;--card:#fff;--card-border:rgba(26,40,18,.1);--el:rgba(26,40,18,.045);--nav-border:rgba(26,40,18,.12)}
+.app{max-width:480px} .content{padding:18px 18px 30px}
+.screen{padding-bottom:calc(82px + env(safe-area-inset-bottom,0))}
+.bottom-nav{max-width:480px;padding:9px 8px calc(10px + env(safe-area-inset-bottom,0));background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(18px)}
+.nav-item{min-width:64px;min-height:48px;gap:4px;padding:5px 10px;font-size:11px}.nav-item svg{width:23px;height:23px}
+.nav-item.active{color:var(--primary)}.nav-item.active:after{content:"";width:16px;height:3px;border-radius:9px;background:var(--primary);position:absolute;transform:translateY(29px)}
+.card,.prg-card,.hcard,.activity-item{border-radius:16px;box-shadow:none}.card{padding:17px;margin-bottom:12px}
+.page-title{font-size:25px;margin-bottom:12px}.compact-page-head{margin:5px 0 20px}
+.compact-page-head .eyebrow{font-size:10px;letter-spacing:.13em;color:var(--primary);font-weight:800}
+.compact-page-head h1{font-size:27px;letter-spacing:-.045em;line-height:1.08;margin:7px 0 5px}
+.compact-page-head p{font-size:13px;color:var(--grey);line-height:1.45}
+.hist-sum{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hist-sum .hs{padding:12px;border-radius:13px;text-align:left}.hist-sum .hs b{font-size:19px}
+.profile-layout>.page-hero{margin-bottom:14px}.profile-layout>.page-hero .page-title{font-size:27px;margin:5px 0}
+.profile-layout>.page-hero p{font-size:13px;line-height:1.45}
+.profile-layout>.section-kicker{display:none}
+.profile-layout>.card{padding:0;overflow:hidden;border-radius:16px;margin:9px 0}
+.profile-layout>.card>.label{display:flex;align-items:center;min-height:66px;padding:0 15px;margin:0;border-bottom:1px solid var(--card-border);font-size:13px;letter-spacing:0;color:var(--tx);text-transform:none}
+.profile-layout>.card>.label:after{content:"⌄";margin-left:auto;color:var(--grey);font-size:18px}
+.profile-layout>.card>.label{cursor:pointer}
+.profile-layout>.card.profile-collapsed>.label:after{content:"›"}
+.profile-layout>.card.profile-collapsed>:not(.label){display:none!important}
+.profile-layout>.card>.label~*{margin-left:14px;margin-right:14px}
+.profile-layout>.card .field{margin-top:12px}
+.profile-layout input:not([type=checkbox]),.profile-layout select{min-height:44px;border-radius:11px;background:var(--el);border:1px solid var(--card-border);padding:10px 12px;color:var(--tx);font:inherit}
+.profile-layout .chips{margin:12px 14px 16px}
+.profile-layout .chip{padding:9px 12px;font-size:12px}
+.profile-layout .style-option{margin:8px 14px;padding:13px;border:1px solid var(--card-border);border-radius:12px}
+.profile-layout .style-option.active{border-color:var(--primary);background:var(--primary-dim)}
+.profile-layout .rows{margin:12px 14px}
+.profile-layout .btn{margin-left:14px;margin-right:14px;width:calc(100% - 28px)}
+.profile-layout #advBox{padding:0 14px 14px}
+.profile-layout #advBox .rows{margin:0}
+.profile-layout>.btn{margin-top:14px;min-height:46px}
+.profile-layout .hint{padding:0 14px}
+#screen-home .screen-top{margin-bottom:15px}#screen-home .race-line{margin-bottom:12px}
+button,.chip,.activity-item,.hcard{-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+@media(min-width:520px){.app{box-shadow:0 0 0 1px var(--card-border)}}
+@media(max-width:360px){.content{padding-left:14px;padding-right:14px}.hist-sum{gap:6px}}
+
 </style>
 </head>
 <body>
@@ -773,7 +816,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
   <!-- HARI INI -->
   <div id="screen-home" class="screen">
     <div class="content home-layout">
-      <header class="screen-top"><div><span class="eyebrow">RUNSENSE / RINGKASAN HARIAN</span><div class="greeting" id="greeting">Selamat pagi</div><div class="td-date" id="tdDate"></div></div><div class="avatar-mark">RS</div></header>
+      <header class="screen-top"><div><span class="eyebrow">RUNSENSE · HARI INI</span><div class="greeting" id="greeting">Selamat pagi</div><div class="td-date" id="tdDate"></div></div><div class="avatar-mark">RS</div></header>
       <div class="race-line" id="raceLine"></div>
       <div class="section-kicker"><span>LATIHANMU</span><i></i><span>01</span></div>
       <div id="mainCard"></div>
@@ -807,7 +850,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
   <!-- RIWAYAT -->
   <div id="screen-history" class="screen">
     <div class="content history-layout">
-      <header class="page-hero"><span class="eyebrow">CATATAN AKTIVITAS</span><div class="page-title">Setiap lari<br><em>punya cerita.</em></div><p>Jejak latihan, ritme, dan konsistensimu.</p></header>
+      <header class="compact-page-head"><span class="eyebrow">ARSIP LATIHAN</span><h1>Riwayat aktivitas</h1><p>Semua sesi dari jam dan sumber terhubung.</p></header>
       <div class="filter-dock"><span>SARINGAN</span><div class="fchips" id="histChips"></div></div>
       <div class="hist-sum" id="histSum"></div>
       <div id="historyList"></div>
@@ -817,7 +860,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
   <!-- PROGRES -->
   <div id="screen-progress" class="screen">
     <div class="content progress-layout">
-      <header class="page-hero progress-hero"><span class="eyebrow">ANALISIS PERFORMA</span><div class="page-title">Lihat sejauh mana<br><em>kamu berkembang.</em></div><p>Progres bukan satu angka. Lihat volume, konsistensi, intensitas, dan adaptasi tubuh.</p></header>
+      <header class="compact-page-head"><span class="eyebrow">PERFORMA &amp; ADAPTASI</span><h1>Analisis latihan</h1><p>Pahami beban, intensitas, konsistensi, dan perkembanganmu.</p></header>
       <div class="filter-dock"><span>RENTANG WAKTU</span><div class="fchips" id="prgChips"></div></div>
       <div id="progressBody"></div>
     </div>
@@ -939,11 +982,11 @@ button:disabled{opacity:.48;cursor:not-allowed}
     </button>
     <button class="nav-item" data-screen="progress" onclick="showScreen('progress')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17l6-6 4 4 8-8v4h2V4h-7v2h4l-7 7-4-4-8 8z"/></svg>
-      Progres
+      Analisis
     </button>
     <button class="nav-item" data-screen="me" onclick="showScreen('me')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.33 0-8 1.67-8 5v1h16v-1c0-3.33-4.67-5-8-5z"/></svg>
-      Saya
+      Profil
     </button>
   </nav>
 </div>
@@ -4887,5 +4930,33 @@ button:disabled{opacity:.48;cursor:not-allowed}
   };
 })();
 </script>
+
+<script>
+/* Profile information architecture: preserve all existing form IDs and handlers. */
+(function(){
+ function enhanceProfile(){
+  const root=document.querySelector('#screen-me .profile-layout'); if(!root||root.dataset.iaReady)return;
+  root.dataset.iaReady='1';
+  const cards=[...root.querySelectorAll(':scope > .card')];
+  const labels=['Data atlet & ambang latihan','Sasaran & gaya pendampingan','Rencana mingguan & strategi lomba','Perangkat & sinkronisasi','Tampilan & aksesibilitas','Tentang RunSense & laboratorium'];
+  cards.forEach((card,i)=>{
+   const label=card.querySelector(':scope > .label'); if(!label)return;
+   label.textContent=labels[i]||label.textContent;
+   label.setAttribute('role','button');label.setAttribute('tabindex','0');label.setAttribute('aria-expanded',i<2?'true':'false');
+   if(i>1)card.classList.add('profile-collapsed');
+   const toggle=()=>{card.classList.toggle('profile-collapsed');label.setAttribute('aria-expanded',String(!card.classList.contains('profile-collapsed')))};
+   label.addEventListener('click',toggle);label.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});
+  });
+  const adv=document.querySelector('#advBox');
+  if(adv){const host=cards[5];if(host&&adv.parentElement!==host)host.appendChild(adv)}
+  const hero=root.querySelector('.page-hero');
+  if(hero){hero.innerHTML='<span class="eyebrow">AKUN & PENGATURAN</span><div class="page-title">Profil atlet</div><p>Kelola parameter, sasaran, dan cara RunSense mendampingi latihanmu.</p>'}
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',enhanceProfile);else enhanceProfile();
+ const oldShow=window.showScreen;
+ if(typeof oldShow==='function'){window.showScreen=function(name){const r=oldShow.apply(this,arguments);if(name==='me')enhanceProfile();return r}}
+})();
+</script>
+
 </body>
 </html>
