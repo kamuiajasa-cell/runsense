@@ -753,6 +753,26 @@ button:disabled{opacity:.48;cursor:not-allowed}
 .profile-layout #advBox .rows{margin:0}
 .profile-layout>.btn{margin-top:14px;min-height:46px}
 .profile-layout .hint{padding:0 14px}
+.profile-layout .profile-plan-section{margin:0 14px;padding:15px 0;border-top:1px solid var(--card-border)}
+.profile-layout .profile-plan-section:first-of-type{border-top:0;padding-top:4px}
+.profile-layout .profile-plan-section .profile-subhead{display:block;margin:0 0 8px;padding:0;color:var(--grey);font-size:10.5px;font-weight:800;letter-spacing:1px;line-height:1.4}
+.profile-layout .profile-section-hint{font-size:12px;line-height:1.5;color:var(--grey);margin:0 0 12px}
+.profile-layout .profile-control-label{display:block;margin:12px 0 6px;color:var(--grey);font-size:12px;font-weight:600}
+.profile-layout .profile-plan-section>input:not([type=checkbox]),.profile-layout .profile-plan-section>select{display:block;width:100%;margin:0}
+.profile-layout .profile-plan-section .profile-inline-btn{width:100%;margin:8px 0 2px}
+.profile-layout .profile-check{display:flex;align-items:flex-start;gap:9px;margin:2px 0 12px;font-size:13px;line-height:1.45;color:var(--light-grey)}
+.profile-layout .profile-check input{width:18px;height:18px;flex:none;margin:0;accent-color:var(--primary)}
+.profile-layout .profile-runwalk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.profile-layout .profile-runwalk-grid label{min-width:0;color:var(--grey);font-size:11.5px;font-weight:600}
+.profile-layout .profile-runwalk-grid input{display:block;width:100%;margin-top:6px}
+.profile-layout #planGrid{margin:0}
+.profile-layout .plan-row{gap:8px;margin:0 0 8px}
+.profile-layout .plan-row b{width:34px;flex:none}
+.profile-layout .plan-row select{min-width:0;flex:1}
+.profile-layout .plan-row input{width:64px;flex:none}
+.profile-layout .plan-warn{margin:8px 0 0;font-size:12px;line-height:1.45}
+@media(max-width:360px){.profile-layout .profile-runwalk-grid{grid-template-columns:1fr}.profile-layout .profile-runwalk-grid label{display:block}}
+
 #screen-home .screen-top{margin-bottom:15px}#screen-home .race-line{margin-bottom:12px}
 button,.chip,.activity-item,.hcard{-webkit-tap-highlight-color:transparent}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
@@ -908,20 +928,31 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       </div>
 
       <div class="card">
-        <div class="label">Rencana minggu</div>
-        <div class="hint" style="margin-top:0">Jenis + km per hari. "Otomatis" = RunSense yang menentukan.</div>
-        <div id="planGrid"></div>
-        <div class="plan-warn" id="planWarn"></div>
-        <div class="label" style="margin-top:14px">Tanggal lomba</div>
-        <input type="date" id="raceDate" onchange="setRace(this.value)" />
-        <button type="button" class="btn btn-outline sm" style="margin-top:8px" onclick="setRace('')">Hapus tanggal race</button>
-        <div class="label" style="margin-top:14px">Jarak lomba dan target waktu</div>
-        <select id="raceDist" onchange="setRaceX()"><option value="">Pilih jarak lomba</option><option value="5">5K</option><option value="10">10K</option><option value="21.1">Half marathon</option><option value="42.2">Maraton</option></select>
-        <input type="text" id="raceGoal" placeholder="Target, mis. 1:05:00 atau 55:00" onchange="setRaceX()" />
-        <div class="label" style="margin-top:14px">Pola lari-jalan</div>
-        <label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="rwOn" onchange="setRw()"> Gunakan pola lari-jalan di semua tahap</label>
-        <input type="text" id="rwRun" placeholder="Durasi lari, menit:detik (3:45)" onchange="setRw()" />
-        <input type="text" id="rwWalk" placeholder="Durasi jalan, menit:detik (0:30)" onchange="setRw()" />
+        <div class="profile-plan-section">
+          <div class="profile-subhead">RENCANA MINGGUAN</div>
+          <p class="profile-section-hint">Atur jenis sesi dan jarak tiap hari. “Otomatis” berarti RunSense menyesuaikan dengan kondisi latihan.</p>
+          <div id="planGrid"></div>
+          <div class="plan-warn" id="planWarn"></div>
+        </div>
+        <div class="profile-plan-section">
+          <div class="profile-subhead">STRATEGI LOMBA</div>
+          <p class="profile-section-hint">Masukkan tanggal, jarak, dan target waktu agar fase persiapan dapat disesuaikan.</p>
+          <label class="profile-control-label" for="raceDate">Tanggal lomba</label>
+          <input type="date" id="raceDate" onchange="setRace(this.value)" />
+          <button type="button" class="btn btn-outline sm profile-inline-btn" onclick="setRace('')">Hapus tanggal lomba</button>
+          <label class="profile-control-label" for="raceDist">Jarak lomba</label>
+          <select id="raceDist" onchange="setRaceX()"><option value="">Pilih jarak lomba</option><option value="5">5K</option><option value="10">10K</option><option value="21.1">Half marathon</option><option value="42.2">Maraton</option></select>
+          <label class="profile-control-label" for="raceGoal">Target waktu</label>
+          <input type="text" id="raceGoal" placeholder="Mis. 1:05:00 atau 55:00" onchange="setRaceX()" />
+        </div>
+        <div class="profile-plan-section profile-runwalk-section">
+          <div class="profile-subhead">POLA LARI-JALAN</div>
+          <label class="profile-check" for="rwOn"><input type="checkbox" id="rwOn" onchange="setRw()"> Gunakan pola lari-jalan di semua tahap</label>
+          <div class="profile-runwalk-grid">
+            <label for="rwRun">Durasi lari<input type="text" id="rwRun" placeholder="Menit:detik (3:45)" onchange="setRw()" /></label>
+            <label for="rwWalk">Durasi jalan<input type="text" id="rwWalk" placeholder="Menit:detik (0:30)" onchange="setRw()" /></label>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -4976,7 +5007,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   heading('setGoalChips','SASARAN UTAMA');
   const styles=root.querySelectorAll('.style-option');
   if(styles.length&&!styles[0].dataset.groupHeading){styles[0].insertAdjacentHTML('beforebegin','<div class="profile-subhead">Preferensi pendampingan</div>');styles[0].dataset.groupHeading='1'}
-  heading('planGrid','Rencana mingguan');heading('raceDate','Target lomba');heading('rwOn','Pola lari-jalan');
+  // Judul dan pengelompokan rencana/lomba sudah ditata langsung di markup agar tidak terduplikasi.
   const reset=root.querySelector(':scope > .btn');
   if(reset&&!reset.dataset.privacy){reset.insertAdjacentHTML('beforebegin','<div class="profile-privacy"><b>Data & privasi</b><p>Data latihan dan preferensi tersimpan di perangkat ini. Reset akan menghapus data lokal dan mengeluarkan akun dari aplikasi pada perangkat ini.</p></div>');reset.dataset.privacy='1'}
  }
