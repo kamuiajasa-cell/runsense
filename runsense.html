@@ -2115,7 +2115,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     const id = String(a[9]);
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
     const cached = state.sx[id];
-    if ((cached && cached.chart) || (cached && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if ((cached && cached.chart && cached.splits) || (cached && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
