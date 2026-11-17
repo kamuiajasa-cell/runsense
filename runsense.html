@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>RunSense</title>
-<meta name="theme-color" content="#0A0A0A">
+<meta name="theme-color" content="#090B09">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -14,8 +14,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root, :root[data-theme="dark"] {
-  --primary: #00C853;
-  --primary-dim: rgba(0,200,83,.15);
+  --primary: #C6FF38;
+  --primary-dim: rgba(198,255,56,.14);
   --bg: #0A0A0A;
   --card: #1E1E1E;
   --grey: #9E9E9E;
@@ -31,8 +31,8 @@
   color-scheme: dark;
 }
 :root[data-theme="light"] {
-  --primary: #00A844;
-  --primary-dim: rgba(0,168,68,.12);
+  --primary: #A9D92E;
+  --primary-dim: rgba(169,217,46,.14);
   --bg: #F4F5F0;
   --card: #FFFFFF;
   --grey: #6B7369;
@@ -137,7 +137,7 @@ input::placeholder { color: var(--input-ph); }
 .form-badge .dot { width: 7px; height: 7px; border-radius: 50%; }
 .form-sedang { background: rgba(255,179,0,.14); color: var(--yellow); border: 1px solid rgba(255,179,0,.28); }
 .form-sedang .dot { background: var(--yellow); }
-.form-baik { background: var(--primary-dim); color: var(--primary); border: 1px solid rgba(0,200,83,.28); }
+.form-baik { background: var(--primary-dim); color: var(--primary); border: 1px solid rgba(198,255,56,.28); }
 .form-baik .dot { background: var(--primary); }
 .form-lelah { background: rgba(255,82,82,.14); color: var(--red); border: 1px solid rgba(255,82,82,.28); }
 .form-lelah .dot { background: var(--red); }
@@ -704,6 +704,42 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   font-size:12px;
   line-height:1.4;
 }
+
+/* RunSense brand system: icon-led lime on deep graphite */
+.brand-mark,.avatar-mark{
+  overflow:hidden;
+  background:#090B09!important;
+  border:1px solid rgba(198,255,56,.28)!important;
+  box-shadow:0 0 0 4px rgba(198,255,56,.06);
+}
+.brand-mark img,.avatar-mark img{
+  display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit;
+}
+:root, :root[data-theme="dark"]{
+  --primary:#C6FF38;
+  --primary-dim:rgba(198,255,56,.14);
+  --bg:#090B09;
+  --card:#171B15;
+  --grey:#A0A69A;
+  --light-grey:#DDE5D5;
+  --tx:#F4F7EF;
+  --nav-border:rgba(198,255,56,.12);
+  --card-border:rgba(198,255,56,.09);
+  --el:rgba(198,255,56,.045);
+}
+:root[data-theme="light"]{
+  --primary:#719D12;
+  --primary-dim:rgba(113,157,18,.12);
+  --bg:#F3F6EC;
+  --card:#FFFFFF;
+  --grey:#68715E;
+  --light-grey:#394333;
+  --tx:#171D12;
+  --nav-border:rgba(45,65,20,.12);
+  --card-border:rgba(45,65,20,.09);
+  --el:rgba(45,65,20,.045);
+}
+
 </style>
 </head>
 <body>
@@ -711,7 +747,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- SETUP -->
   <div id="screen-setup" class="screen active">
     <div class="content setup-layout">
-      <header class="setup-brand"><div class="brand-mark">R<span>↗</span></div><div><div class="brand">RunSense</div><div class="subtitle">Your running, understood.</div></div></header>
+      <header class="setup-brand"><div class="brand-mark"><img src="icons/icon-192.png" alt="RunSense"></div><div><div class="brand">RunSense</div><div class="subtitle">Your running, understood.</div></div></header>
       <section class="setup-intro"><span class="eyebrow">PERSONAL RUNNING COACH</span><h1>Build your<br><em>stronger self.</em></h1><p>Hubungkan data latihanmu. RunSense mengubah aktivitas menjadi arahan yang bisa kamu jalani.</p></section>
       <div class="setup-panel">
 
@@ -766,7 +802,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- HARI INI -->
   <div id="screen-home" class="screen">
     <div class="content home-layout">
-      <header class="screen-top"><div><span class="eyebrow">RUNSENSE / DAILY BRIEF</span><div class="greeting" id="greeting">Selamat pagi</div><div class="td-date" id="tdDate"></div></div><div class="avatar-mark">RS</div></header>
+      <header class="screen-top"><div><span class="eyebrow">RUNSENSE / DAILY BRIEF</span><div class="greeting" id="greeting">Selamat pagi</div><div class="td-date" id="tdDate"></div></div><div class="avatar-mark"><img src="icons/icon-192.png" alt="RunSense"></div></header>
       <div class="race-line" id="raceLine"></div>
       <div class="section-kicker"><span>YOUR TRAINING</span><i></i><span>01</span></div>
       <div id="mainCard"></div>
