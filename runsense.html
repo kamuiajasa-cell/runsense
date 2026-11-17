@@ -2068,6 +2068,19 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       prev = i;
     }
     if (chart.length >= 5) out.chart = chart;
+    // Split kilometer dari stream penuh; grafik hanya memakai sampel yang dipadatkan.
+    const splits = []; let splitIndex = 1, splitStart = 0, splitTime = time[0], splitDist = dist[0];
+    for (let i = 1; i < time.length; i++) {
+      if ((dist[i] - dist[0]) / 1000 >= splitIndex) {
+        const dk = (dist[i] - splitDist) / 1000, dt = time[i] - splitTime;
+        if (dk > 0 && dt > 0) {
+          const sh = hr && hr.length === time.length ? hr.slice(splitStart, i + 1).filter(v => v > 40) : [];
+          splits.push({ km: splitIndex, pace: dt / 60 / dk, hr: sh.length ? mean(sh) : null });
+        }
+        splitStart = i; splitTime = time[i]; splitDist = dist[i]; splitIndex++;
+      }
+    }
+    if (splits.length) out.splits = splits;
     const T = time[time.length - 1] - time[0];
     if (hr && hr.length === time.length) {
       if (T >= 2400) {
