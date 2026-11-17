@@ -991,9 +991,9 @@ button:disabled{opacity:.48;cursor:not-allowed}
   "use strict";
 
   const KEY_STORE = "runsense_auto_v2";
-  const SN = ["", "Fondasi: jalan cepat", "Run-walk (White Plan)", "Easy terbatas", "Terstruktur"];
-  const VX_LB = { easy: "Easy", long: "Long", thr: "Threshold", vo2: "VO2max", race: "Lomba" };
-  const VX_TY = [["easy","Easy"],["long","Long"],["thr","Threshold"],["vo2","VO2max"],["race","Lomba"]];
+  const SN = ["", "Fondasi: jalan cepat", "Lari-jalan (pola dasar)", "Easy terbatas", "Terstruktur"];
+  const VX_LB = { easy: "Santai", long: "Jarak jauh", thr: "Ambang", vo2: "VO2maks", race: "Lomba" };
+  const VX_TY = [["easy","Santai"],["long","Jarak jauh"],["thr","Ambang"],["vo2","VO2maks"],["race","Lomba"]];
 
   let state = {
     goal: "5K",
@@ -1936,7 +1936,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
     setWatchStatus(ok ? "Tersalin." : "Gagal menyalin otomatis. Teks sudah terpilih, tekan lama lalu Salin.", !ok);
   }
   async function shareWatch() {
-    try { await navigator.share({ title: "Workout hari ini", text: $("#watchText").value }); }
+    try { await navigator.share({ title: "Latihan hari ini", text: $("#watchText").value }); }
     catch (e) { if (e && e.name !== "AbortError") setWatchStatus("Bagikan gagal. Pakai Salin teks.", true); }
   }
 
@@ -2169,7 +2169,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
 
   /* ---------- Rencana minggu + race ---------- */
   const PLAN_DAYS = [[1,"Sen"],[2,"Sel"],[3,"Rab"],[4,"Kam"],[5,"Jum"],[6,"Sab"],[0,"Min"]];
-  const PLAN_TY = [["auto","Auto"],["easy","Easy"],["quality","Quality"],["long","Long"],["rest","Rest"]];
+  const PLAN_TY = [["auto","Otomatis"],["easy","Santai"],["quality","Kualitas"],["long","Jarak jauh"],["rest","Istirahat"]];
   function loadPlan() {
     try { state.plan = JSON.parse(localStorage.getItem("runsense_plan") || "{}") || {}; } catch (_) { state.plan = {}; }
     state.race = localStorage.getItem("runsense_race") || "";
@@ -2366,7 +2366,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
       });
     }
     if (a.ltPace && r.pace === "Mendekati LTPace") r.pace = a.ltPace + " /km (LTPace)";
-    const RW = ["Easy Run", "Easy terbatas", "Easy recovery", "Long Run", "Easy taper", "Long dipotong", "Recovery Run"];
+    const RW = ["Lari santai", "Lari santai terbatas", "Lari pemulihan", "Lari jarak jauh", "Lari santai jelang lomba", "Jarak jauh dipangkas", "Lari pemulihan"];
     if (rwOn() && r.status === "train" && stage().s >= 3 && RW.includes(r.title)) {
       const cyc = (state.rw.run + state.rw.walk) / 60, n = Math.max(4, Math.round(((parseInt(r.duration) || 40) - 10) / cyc));
       r.steps = [["Pemanasan", "5 mnt jalan"], ["Inti", n + "× (" + rwT(state.rw.run) + " lari + " + rwT(state.rw.walk) + " jalan)" + (/\d/.test(r.pace) ? ", lari @ " + r.pace.replace(" /km", "") : "")], ["Pendinginan", "5 mnt jalan"]];
@@ -2535,7 +2535,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
           steps: [["Inti", "15 mnt jog santai"], ["Akhir", "3 × 20 dtk strides, jeda penuh"]], score, stage: st.s, tag: "TAPER" };
       }
       if (pl && pl.t === "quality" && d >= 8 && !au.lock && !fl && !yHard && !yLong && score >= 65 && qualityCount < 1) {
-        return { k: "wn", status: "train", title: "Sharpener singkat", duration: "30 menit total", hr: "Zone 3–4", pace: "Mendekati LTPace",
+        return { k: "wn", status: "train", title: "Sharpener singkat", duration: "30 menit total", hr: "Zona 3–4", pace: "Mendekati LTPace",
           reason: `H-${d}. Quality terakhir sebelum race, volumenya dipotong. Rasa tajam, bukan capek.`,
           steps: [["Pemanasan", "10 mnt easy + strides"], ["Inti", "2×5 mnt threshold, jeda 2 mnt"], ["Pendinginan", "8 mnt easy"]],
           score, stage: st.s, tag: "TAPER" };
@@ -2545,7 +2545,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
       if (longCut) mins = d > 7 ? 60 : 40;
       else if (pl && pl.km > 0) mins = Math.min(mins, Math.max(20, Math.round(pl.km * (lo + hi) / 2)));
       if (fl) mins = Math.max(15, Math.round(mins * 0.7));
-      return { k: "ok", status: "train", title: longCut ? "Long dipotong" : "Easy taper", duration: mins + " menit", hr: "Zone 2", pace: mp(lo) + "–" + mp(hi) + " /km",
+      return { k: "ok", status: "train", title: longCut ? "Long dipotong" : "Easy taper", duration: mins + " menit", hr: "Zona 2", pace: mp(lo) + "–" + mp(hi) + " /km",
         reason: `H-${d}. ` + (longCut ? "Long dipotong jadi " + mins + " menit." : "Volume turun, intensitas dijaga.") + (pl && pl.t === "quality" ? " Quality di rencana ditahan, terlalu dekat race atau kondisi belum cukup." : ""),
         steps: [["Pemanasan", "5 mnt jog"], ["Inti", Math.max(10, mins - 10) + " mnt @ " + mp(lo) + "–" + mp(hi)], ["Pendinginan", "5 mnt easy"]],
         score, stage: st.s, tag: "TAPER" };
@@ -2574,7 +2574,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
       return {
         k: "wn",
         status: "train",
-        title: "Recovery Run",
+        title: "Lari pemulihan",
         duration: "30–45 menit",
         hr: "Zone 1–2",
         pace: "Sangat mudah",
@@ -2653,7 +2653,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
       const mins0 = pl.km > 0 ? clamp(Math.round(pl.km * (lo + hi) / 2), 50, 150) : 75;
       const mins = cut ? Math.max(40, Math.round(mins0 * 0.7)) : mins0;
       const over = wk > 0 && pl.km > 0.3 * wk;
-      return { k: "wn", status: "train", title: "Long Run", duration: mins + " menit", hr: "Zone 2", pace: mp(lo) + "–" + mp(hi * 1.05) + " /km",
+      return { k: "wn", status: "train", title: "Lari jarak jauh", duration: mins + " menit", hr: "Zona 2", pace: mp(lo) + "–" + mp(hi * 1.05) + " /km",
         reason: "Long sesuai rencana. Pace easy plus sedikit, bukan race pace." + (pl.km ? ` Target ${cut ? Math.round(pl.km * 0.7) : pl.km} km.` : "") +
           (cut ? " Cutback: 3 minggu long tanpa turun, minggu ini dipangkas ~30%. Saran, boleh diabaikan." : "") +
           (over ? ` Long ${Math.round((pl.km / wk) * 100)}% volume minggu, di atas batas ~30%.` : ""),
@@ -2694,13 +2694,13 @@ button:disabled{opacity:.48;cursor:not-allowed}
       let q;
       if (kindQ === "racepace") {
         const D = +state.raceDist || 10, w = D >= 21 ? 10 : D >= 10 ? 8 : 5, r = (D >= 21 ? [2, 3, 3, 4] : [3, 4, 4, 5])[lv];
-        q = { title: "Race-pace intervals", dur: 18 + r * (w + 2) - 2, hr: "Zone 3–4", pace: mp(gp) + " /km (target race)",
+        q = { title: "Interval pace lomba", dur: 18 + r * (w + 2) - 2, hr: "Zona 3–4", pace: mp(gp) + " /km (target race)",
           core: r + "×" + w + " mnt di pace target, jeda 2 mnt jog",
           wl: ["Warmup", "- 10m Z2 HR", "", r + "x", "- " + w + "m Z4 HR", "- 2m Z1 HR", "", "Cooldown", "- 8m Z1 HR"],
           why: "Race-pace " + r + "×" + w + " mnt: melatih tubuh memegang pace target." };
       } else if (kindQ === "tempo") {
         const w = [20, 23, 26, 30][lv];
-        q = { title: "Tempo continuous", dur: w + 18, hr: "Zone 3–4", pace: "Mendekati LTPace",
+        q = { title: "Tempo continuous", dur: w + 18, hr: "Zona 3–4", pace: "Mendekati LTPace",
           core: w + " mnt tempo steady, tepat di bawah LTPace",
           wl: ["Warmup", "- 10m Z2 HR", "", "Main set", "- " + w + "m Z4 HR", "", "Cooldown", "- 8m Z1 HR"],
           why: "Tempo continuous " + w + " mnt: membangun daya tahan di threshold." };
@@ -2767,7 +2767,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
       status: "train",
       title: st.s === 3 ? "Easy terbatas" : (yHard || yLong ? "Easy recovery" : "Easy Run"),
       duration: mins + " menit",
-      hr: "Zone 2",
+      hr: "Zona 2",
       pace: mp(lo) + "–" + mp(hi) + " /km",
       reason: (st.m
         ? (st.s === 3
