@@ -661,6 +661,56 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 @media(min-width:560px){body{padding:18px 0}.app{border:1px solid var(--card-border);border-radius:30px;overflow:hidden;min-height:calc(100dvh - 36px);margin:auto}.bottom-nav{bottom:28px}}
 @media(max-width:370px){.content{padding-left:15px;padding-right:15px}.page-title{font-size:34px}.hist-sum{gap:5px}.hist-sum .hs{padding:11px 6px}.hist-sum .hs b{font-size:17px}}
 
+
+/* Audit tampilan: konsistensi kontrol, keterbacaan, dan aksesibilitas */
+input:not([type="checkbox"]):not([type="radio"]),select,textarea{
+  display:block;width:100%;max-width:100%;min-width:0;min-height:46px;
+  font:inherit;font-size:14px;line-height:1.35;
+}
+input[type="checkbox"],input[type="radio"]{
+  appearance:auto!important;-webkit-appearance:auto!important;
+  display:inline-block!important;flex:0 0 18px!important;
+  width:18px!important;min-width:18px!important;max-width:18px!important;
+  height:18px!important;min-height:18px!important;
+  margin:0 2px 0 0!important;padding:0!important;
+  accent-color:var(--primary);background:transparent!important;border:0!important;
+}
+label:has(input[type="checkbox"]),label:has(input[type="radio"]){
+  width:100%;font-size:13px;line-height:1.45;color:var(--light-grey);
+}
+.field{min-width:0;align-items:center}
+.field>span{flex:1;min-width:0;line-height:1.4}
+.field input{flex:0 1 142px;width:142px;max-width:46%;min-width:88px}
+#raceDate{color-scheme:inherit}
+button,.hcard,.activity-item{-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--primary)!important;outline-offset:3px;
+}
+button:disabled{opacity:.48;cursor:not-allowed}
+.page-hero p,.setup-intro p{max-width:100%}
+.filter-dock{min-width:0}
+.filter-dock .fchips{flex:1}
+.hist-sum .hs{overflow:hidden}
+.hist-sum .hs b{font-variant-numeric:tabular-nums}
+.hcard-st{grid-template-columns:repeat(4,minmax(0,1fr))}
+.hcard-st b{font-variant-numeric:tabular-nums}
+.bottom-nav{padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.modal-bg{padding-top:24px}
+.modal{padding-bottom:max(20px,env(safe-area-inset-bottom))}
+@media(max-width:360px){
+  .content{padding-left:14px;padding-right:14px}
+  .setup-intro h1{font-size:42px}
+  .greeting{font-size:24px}
+  .filter-dock{gap:8px;padding:9px}
+  .filter-dock>span{font-size:8px}
+  .hist-sum .hs b{font-size:16px}
+  .hcard-st{gap:3px}
+  .hcard-st b{font-size:13px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+
 </style>
 </head>
 <body>
@@ -668,8 +718,8 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- SETUP -->
   <div id="screen-setup" class="screen active">
     <div class="content setup-layout">
-      <header class="setup-brand"><div class="brand-mark">R<span>↗</span></div><div><div class="brand">RunSense</div><div class="subtitle">Your running, understood.</div></div></header>
-      <section class="setup-intro"><span class="eyebrow">PERSONAL RUNNING COACH</span><h1>Build your<br><em>stronger self.</em></h1><p>Hubungkan data latihanmu. RunSense mengubah aktivitas menjadi arahan yang bisa kamu jalani.</p></section>
+      <header class="setup-brand"><div class="brand-mark">R<span>↗</span></div><div><div class="brand">RunSense</div><div class="subtitle">Lari lebih terarah, tubuh lebih kuat.</div></div></header>
+      <section class="setup-intro"><span class="eyebrow">PENDAMPING LATIHAN PRIBADI</span><h1>Bangun diri<br><em>lebih kuat.</em></h1><p>Hubungkan data latihanmu. RunSense mengubah aktivitas menjadi arahan yang bisa kamu jalani.</p></section>
       <div class="setup-panel">
 
       <div id="connStatus" class="status-line">Koneksi langsung ke Intervals.icu (tanpa server lokal)</div>
@@ -685,8 +735,8 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       <div class="chips" id="goalChips">
         <button class="chip active" data-goal="5K">5K</button>
         <button class="chip" data-goal="10K">10K</button>
-        <button class="chip" data-goal="Half">Half</button>
-        <button class="chip" data-goal="Marathon">Marathon</button>
+        <button class="chip" data-goal="Half">Separuh maraton</button>
+        <button class="chip" data-goal="Marathon">Maraton</button>
         <button class="chip" data-goal="Umum">Umum</button>
       </div>
 
@@ -723,9 +773,9 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- HARI INI -->
   <div id="screen-home" class="screen">
     <div class="content home-layout">
-      <header class="screen-top"><div><span class="eyebrow">RUNSENSE / DAILY BRIEF</span><div class="greeting" id="greeting">Selamat pagi</div><div class="td-date" id="tdDate"></div></div><div class="avatar-mark">RS</div></header>
+      <header class="screen-top"><div><span class="eyebrow">RUNSENSE / RINGKASAN HARIAN</span><div class="greeting" id="greeting">Selamat pagi</div><div class="td-date" id="tdDate"></div></div><div class="avatar-mark">RS</div></header>
       <div class="race-line" id="raceLine"></div>
-      <div class="section-kicker"><span>YOUR TRAINING</span><i></i><span>01</span></div>
+      <div class="section-kicker"><span>LATIHANMU</span><i></i><span>01</span></div>
       <div id="mainCard"></div>
       <div class="insight" id="autoLine" style="display:none;margin-bottom:14px"></div>
       <div class="leg-row" id="legRow">
@@ -757,8 +807,8 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- RIWAYAT -->
   <div id="screen-history" class="screen">
     <div class="content history-layout">
-      <header class="page-hero"><span class="eyebrow">YOUR ACTIVITY LOG</span><div class="page-title">Every run<br><em>has a story.</em></div><p>Jejak latihan, ritme, dan konsistensimu.</p></header>
-      <div class="filter-dock"><span>FILTER</span><div class="fchips" id="histChips"></div></div>
+      <header class="page-hero"><span class="eyebrow">CATATAN AKTIVITAS</span><div class="page-title">Setiap lari<br><em>punya cerita.</em></div><p>Jejak latihan, ritme, dan konsistensimu.</p></header>
+      <div class="filter-dock"><span>SARINGAN</span><div class="fchips" id="histChips"></div></div>
       <div class="hist-sum" id="histSum"></div>
       <div id="historyList"></div>
     </div>
@@ -767,8 +817,8 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- PROGRES -->
   <div id="screen-progress" class="screen">
     <div class="content progress-layout">
-      <header class="page-hero progress-hero"><span class="eyebrow">PERFORMANCE INTELLIGENCE</span><div class="page-title">See how far<br><em>you've grown.</em></div><p>Progres bukan satu angka. Lihat volume, konsistensi, intensitas, dan adaptasi tubuh.</p></header>
-      <div class="filter-dock"><span>TIMEFRAME</span><div class="fchips" id="prgChips"></div></div>
+      <header class="page-hero progress-hero"><span class="eyebrow">ANALISIS PERFORMA</span><div class="page-title">Lihat sejauh mana<br><em>kamu berkembang.</em></div><p>Progres bukan satu angka. Lihat volume, konsistensi, intensitas, dan adaptasi tubuh.</p></header>
+      <div class="filter-dock"><span>RENTANG WAKTU</span><div class="fchips" id="prgChips"></div></div>
       <div id="progressBody"></div>
     </div>
   </div>
@@ -776,8 +826,8 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- SAYA -->
   <div id="screen-me" class="screen">
     <div class="content profile-layout">
-      <header class="page-hero"><span class="eyebrow">YOUR RUNNING IDENTITY</span><div class="page-title">Athlete<br><em>profile.</em></div><p>Atur parameter tubuh, sasaran, dan cara RunSense membimbing latihanmu.</p></header>
-      <div class="section-kicker"><span>PERSONAL DATA</span><i></i><span>01</span></div>
+      <header class="page-hero"><span class="eyebrow">PROFIL PELARIMU</span><div class="page-title">Profil<br><em>pelari.</em></div><p>Atur parameter tubuh, sasaran, dan cara RunSense membimbing latihanmu.</p></header>
+      <div class="section-kicker"><span>DATA PRIBADI</span><i></i><span>01</span></div>
 
       <div class="card">
         <div class="label">Profil lari</div>
@@ -785,20 +835,20 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
         <div class="field"><span>Detak istirahat (28 hari)</span><input type="number" inputmode="numeric" id="inRest" placeholder="—" oninput="saveProfile()"></div>
         <div class="hint" id="inRestHint" style="margin:0 0 6px"></div>
         <div class="field"><span>Detak maksimal</span><input type="number" inputmode="numeric" id="inMax" placeholder="—" oninput="saveProfile()"></div>
-        <div class="field"><span>LTHR custom (bpm)</span><input type="number" inputmode="numeric" id="inLthr" placeholder="auto" oninput="saveProfile()"></div>
+        <div class="field"><span>Ambang HR khusus (bpm)</span><input type="number" inputmode="numeric" id="inLthr" placeholder="auto" oninput="saveProfile()"></div>
         <div class="hint" id="autoLthr" style="margin:0 0 6px"></div>
-        <div class="field"><span>LTPace custom (mnt/km)</span><input type="text" inputmode="numeric" id="inLtp" placeholder="mis. 8:30" oninput="saveProfile()"></div>
+        <div class="field"><span>Pace ambang khusus (mnt/km)</span><input type="text" inputmode="numeric" id="inLtp" placeholder="mis. 8:30" oninput="saveProfile()"></div>
         <div class="hint" id="autoLtp" style="margin:0 0 6px"></div>
         <div class="hint" style="margin-bottom:0">Terisi otomatis dari Intervals.icu bila tersedia.</div>
       </div>
 
       <div class="card">
-        <div class="label">Tujuan &amp; gaya coaching</div>
+        <div class="label">Tujuan &amp; gaya pendampingan</div>
         <div class="chips" id="setGoalChips" style="margin-bottom:12px">
           <button type="button" class="chip" data-goal="5K">5K</button>
           <button type="button" class="chip" data-goal="10K">10K</button>
-          <button type="button" class="chip" data-goal="Half">Half</button>
-          <button type="button" class="chip" data-goal="Marathon">Marathon</button>
+          <button type="button" class="chip" data-goal="Half">Separuh maraton</button>
+          <button type="button" class="chip" data-goal="Marathon">Maraton</button>
           <button type="button" class="chip" data-goal="Umum">Umum</button>
         </div>
         <div class="rows" style="margin-bottom:14px"><div class="row"><span>Estimasi <span id="meGoal">5K</span> saat ini</span><b id="meEst">—:—</b></div>
@@ -811,28 +861,28 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 
       <div class="card">
         <div class="label">Rencana minggu</div>
-        <div class="hint" style="margin-top:0">Jenis + km per hari. "Auto" = coach yang memutuskan.</div>
+        <div class="hint" style="margin-top:0">Jenis + km per hari. "Otomatis" = RunSense yang menentukan.</div>
         <div id="planGrid"></div>
         <div class="plan-warn" id="planWarn"></div>
-        <div class="label" style="margin-top:14px">Tanggal race</div>
+        <div class="label" style="margin-top:14px">Tanggal lomba</div>
         <input type="date" id="raceDate" onchange="setRace(this.value)" />
         <button type="button" class="btn btn-outline sm" style="margin-top:8px" onclick="setRace('')">Hapus tanggal race</button>
-        <div class="label" style="margin-top:14px">Jarak race dan target waktu</div>
-        <select id="raceDist" onchange="setRaceX()"><option value="">Pilih jarak</option><option value="5">5K</option><option value="10">10K</option><option value="21.1">Half marathon</option><option value="42.2">Maraton</option></select>
+        <div class="label" style="margin-top:14px">Jarak lomba dan target waktu</div>
+        <select id="raceDist" onchange="setRaceX()"><option value="">Pilih jarak lomba</option><option value="5">5K</option><option value="10">10K</option><option value="21.1">Half marathon</option><option value="42.2">Maraton</option></select>
         <input type="text" id="raceGoal" placeholder="Target, mis. 1:05:00 atau 55:00" onchange="setRaceX()" />
-        <div class="label" style="margin-top:14px">Pola run-walk</div>
-        <label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="rwOn" onchange="setRw()"> Pakai run-walk di semua tahap</label>
-        <input type="text" id="rwRun" placeholder="Durasi lari, mm:ss (3:45)" onchange="setRw()" />
-        <input type="text" id="rwWalk" placeholder="Durasi jalan, mm:ss (0:30)" onchange="setRw()" />
+        <div class="label" style="margin-top:14px">Pola lari-jalan</div>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="rwOn" onchange="setRw()"> Gunakan pola lari-jalan di semua tahap</label>
+        <input type="text" id="rwRun" placeholder="Durasi lari, menit:detik (3:45)" onchange="setRw()" />
+        <input type="text" id="rwWalk" placeholder="Durasi jalan, menit:detik (0:30)" onchange="setRw()" />
       </div>
 
       <div class="card">
         <div class="label">Integrasi</div>
         <div class="rows">
           <div class="row"><span>Intervals.icu</span><b id="meSync">—</b></div>
-          <div class="row"><span>Jam</span><b>Lewat Intervals.icu</b></div>
+          <div class="row"><span>Jam</span><b>Melalui Intervals.icu</b></div>
         </div>
-        <button type="button" class="btn btn-outline sm" style="margin-top:12px" onclick="syncNow()">Sinkron ulang</button>
+        <button type="button" class="btn btn-outline sm" style="margin-top:12px" onclick="syncNow()">Sinkronkan ulang</button>
         <button type="button" class="btn btn-outline sm" data-native hidden style="margin-top:8px" onclick="openJam()">Jam &amp; koneksi</button>
         <button type="button" class="btn btn-outline sm" data-native hidden style="margin-top:8px" onclick="openPengaturan()">Pengaturan jam &amp; aplikasi</button>
       </div>
@@ -846,9 +896,9 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       </div>
 
       <div class="card">
-        <div class="label">Tentang coach</div>
-        <p class="reason" style="margin-top:0">Coach membaca lari, detak, dan beban latihanmu dari Intervals.icu, lalu memilih sesi hari ini: lari, run-walk, jalan, atau istirahat. Semua hitungan tetap jalan di belakang layar.</p>
-        <button type="button" class="btn btn-outline sm" id="advBtn" style="margin-top:12px" onclick="toggleAdv()">Mode lanjutan: mati</button>
+        <div class="label">Tentang pendamping latihan</div>
+        <p class="reason" style="margin-top:0">RunSense membaca aktivitas, detak jantung, dan beban latihan dari Intervals.icu untuk menyarankan sesi hari ini: lari, lari-jalan, jalan kaki, atau istirahat. Perhitungan dilakukan otomatis di belakang layar.</p>
+        <button type="button" class="btn btn-outline sm" id="advBtn" style="margin-top:12px" onclick="toggleAdv()">Mode lanjutan: nonaktif</button>
       </div>
 
       <div id="advBox" style="display:none">
@@ -865,16 +915,16 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
           <div class="lowconf" id="lowConf" style="display:none"></div>
           <div class="insight" id="insightBox" style="margin-top:10px">—</div>
           <div class="label" style="margin-top:16px">Tes lapangan 12 menit (Cooper)</div>
-          <div class="hint" style="margin:0 0 8px">Lari sekuat mampu 12 menit di lintasan datar, lalu isi jarak totalnya. Hasilnya pembanding untuk estimasi di atas.</div>
+          <div class="hint" style="margin:0 0 8px">Berlari sekuat kemampuan selama 12 menit di lintasan datar, lalu masukkan jarak total. Hasilnya menjadi pembanding untuk estimasi di atas.</div>
           <div class="field"><span>Jarak (meter)</span><input type="number" inputmode="numeric" id="inCooper" placeholder="mis. 2200" oninput="cooperCalc()"></div>
           <div class="row" style="margin-top:6px"><span>Estimasi Max METs</span><b id="cooperOut">—</b></div>
           <div class="label" style="margin-top:16px">Referensi intensitas</div>
           <div id="refList" class="zone-list"></div>
-          <button type="button" class="btn btn-outline sm" style="margin-top:8px" onclick="runBacktest()">Uji estimator Max METs</button>
+          <button type="button" class="btn btn-outline sm" style="margin-top:8px" onclick="runBacktest()">Uji perhitungan Max METs</button>
         </div>
       </div>
 
-      <button type="button" class="btn btn-outline" style="margin-top:6px" onclick="if(confirm('Hapus data lokal dan keluar?'))logout()">Reset data &amp; logout</button>
+      <button type="button" class="btn btn-outline" style="margin-top:6px" onclick="if(confirm('Hapus data lokal dan keluar?'))logout()">Hapus data &amp; keluar</button>
     </div>
   </div>
 
@@ -961,7 +1011,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     afS: 0,
     rest: 0,
     restManual: 0,  // 1 = RHR diketik sendiri; 0 = otomatis rata-rata 28 hari
-    lthrC: 0,       // LTHR custom (bpm), 0 = pakai auto
+    lthrC: 0,       // Ambang HR khusus (bpm), 0 = pakai auto
     ltpC: 0,        // LTPace custom (detik/km), 0 = pakai auto
     max: 0,
     age: 0,
@@ -1663,7 +1713,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     return html;
   }
 
-    /* ---------- Uji estimator Max METs (backtest) ---------- */
+    /* ---------- Uji perhitungan Max METs (backtest) ---------- */
   // Tiap lari dinilai dengan estimasi yang HANYA memakai lari sebelumnya.
   // Pembanding: METs yang tersirat dari lari itu (metsOf(pace) / pctAt(durasi)),
   // yaitu batas bawah kapasitas bila lari itu dianggap usaha maksimal untuk durasinya.
@@ -1680,7 +1730,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     let flips = 0;
     res.forEach((x, i) => { if (i && x.st !== res[i - 1].st) flips++; });
     const n = res.length;
-    $("#mTitle").textContent = "Uji estimator Max METs";
+    $("#mTitle").textContent = "Uji perhitungan Max METs";
     $("#mSub").textContent = n + " lari bisa diuji dari " + runs.length + " lari valid";
     let body;
     if (n < 10) {
@@ -3736,7 +3786,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 
   async function syncNow() {
     if (!state.apiKey || state.apiKey === "demo") return;
-    $("#loadingText").textContent = "Sinkron ulang…";
+    $("#loadingText").textContent = "Sinkronkan ulang…";
     $("#loading").classList.add("show");
     try {
       await sync(false);
