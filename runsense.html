@@ -661,6 +661,26 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 @media(min-width:560px){body{padding:18px 0}.app{border:1px solid var(--card-border);border-radius:30px;overflow:hidden;min-height:calc(100dvh - 36px);margin:auto}.bottom-nav{bottom:28px}}
 @media(max-width:370px){.content{padding-left:15px;padding-right:15px}.page-title{font-size:34px}.hist-sum{gap:5px}.hist-sum .hs{padding:11px 6px}.hist-sum .hs b{font-size:17px}}
 
+
+/* Penyelarasan tab Profil: hierarki jelas, label dan kontrol konsisten */
+#screen-me .profile-layout{padding-top:18px}
+#screen-me .page-hero{padding-bottom:18px}
+#screen-me .page-title{font-size:36px;line-height:1.02}
+#screen-me .section-kicker{margin:4px 0 12px}
+#screen-me .profile-layout>.card{padding:18px;margin:10px 0 14px;border-radius:21px}
+#screen-me .profile-layout>.card>.label:first-child{margin:0 0 12px;font-size:10px;letter-spacing:.13em}
+#screen-me .field{min-height:50px;gap:10px;padding:9px 0}
+#screen-me .field span{flex:1;line-height:1.4;font-size:12px}
+#screen-me .field input{flex:0 0 112px;width:112px;max-width:112px;min-height:42px;padding:9px 10px!important;text-align:right}
+#screen-me .profile-layout input[type="date"],#screen-me .profile-layout select,#screen-me #raceGoal,#screen-me #rwRun,#screen-me #rwWalk{display:block;width:100%;max-width:none;min-height:46px;margin-top:8px}
+#screen-me .profile-layout .btn.sm{width:100%;margin-top:9px}
+#screen-me .profile-layout .style-option{margin:8px 0;padding:13px 14px}
+#screen-me .profile-layout .chips{gap:7px}
+#screen-me .profile-layout .hint{line-height:1.55}
+#screen-me #planGrid{margin-top:8px}
+#screen-me #advBox .card{padding:16px}
+#screen-me .logout{padding-bottom:8px}
+@media(max-width:370px){#screen-me .page-title{font-size:33px}#screen-me .profile-layout>.card{padding:15px}#screen-me .field input{flex-basis:104px;width:104px;max-width:104px}}
 </style>
 </head>
 <body>
@@ -738,7 +758,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       </div>
       <div class="card" id="vxCard" style="display:none"><div id="vxBody"></div></div>
       <div class="card" id="reviewCard" style="display:none">
-        <div class="label">Lari tadi</div>
+        <div class="label">Ringkasan lari hari ini</div>
         <div id="reviewBody"></div>
       </div>
       <div class="card quiet">
@@ -776,11 +796,11 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- SAYA -->
   <div id="screen-me" class="screen">
     <div class="content profile-layout">
-      <header class="page-hero"><span class="eyebrow">YOUR RUNNING IDENTITY</span><div class="page-title">Athlete<br><em>profile.</em></div><p>Atur parameter tubuh, sasaran, dan cara RunSense membimbing latihanmu.</p></header>
-      <div class="section-kicker"><span>PERSONAL DATA</span><i></i><span>01</span></div>
+      <header class="page-hero"><span class="eyebrow">PENGATURAN ATLET</span><div class="page-title">Profil<br><em>lari.</em></div><p>Atur data tubuh, target, jadwal latihan, dan koneksi sumber datamu.</p></header>
+      <div class="section-kicker"><span>DATA TUBUH &amp; DETAK</span><i></i><span>01</span></div>
 
       <div class="card">
-        <div class="label">Profil lari</div>
+        <div class="label">Parameter tubuh</div>
         <div class="field"><span>Usia</span><input type="number" inputmode="numeric" id="inAge" placeholder="—" oninput="saveProfile()"></div>
         <div class="field"><span>Detak istirahat (28 hari)</span><input type="number" inputmode="numeric" id="inRest" placeholder="—" oninput="saveProfile()"></div>
         <div class="hint" id="inRestHint" style="margin:0 0 6px"></div>
@@ -789,11 +809,11 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
         <div class="hint" id="autoLthr" style="margin:0 0 6px"></div>
         <div class="field"><span>LTPace custom (mnt/km)</span><input type="text" inputmode="numeric" id="inLtp" placeholder="mis. 8:30" oninput="saveProfile()"></div>
         <div class="hint" id="autoLtp" style="margin:0 0 6px"></div>
-        <div class="hint" style="margin-bottom:0">Terisi otomatis dari Intervals.icu bila tersedia.</div>
+        <div class="hint" style="margin:10px 0 0">Data otomatis diambil dari Intervals.icu jika tersedia. Isi nilai custom hanya bila ingin menimpa hasil otomatis.</div>
       </div>
 
       <div class="card">
-        <div class="label">Tujuan &amp; gaya coaching</div>
+        <div class="label">Target &amp; gaya coaching</div>
         <div class="chips" id="setGoalChips" style="margin-bottom:12px">
           <button type="button" class="chip" data-goal="5K">5K</button>
           <button type="button" class="chip" data-goal="10K">10K</button>
@@ -810,24 +830,24 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       </div>
 
       <div class="card">
-        <div class="label">Rencana minggu</div>
-        <div class="hint" style="margin-top:0">Jenis + km per hari. "Auto" = coach yang memutuskan.</div>
+        <div class="label">Jadwal latihan &amp; lomba</div>
+        <div class="hint" style="margin-top:0">Atur jenis latihan dan jarak setiap hari. Pilih Auto agar coach yang menentukan.</div>
         <div id="planGrid"></div>
         <div class="plan-warn" id="planWarn"></div>
-        <div class="label" style="margin-top:14px">Tanggal race</div>
+        <div class="label" style="margin-top:18px">Tanggal lomba</div>
         <input type="date" id="raceDate" onchange="setRace(this.value)" />
         <button type="button" class="btn btn-outline sm" style="margin-top:8px" onclick="setRace('')">Hapus tanggal race</button>
-        <div class="label" style="margin-top:14px">Jarak race dan target waktu</div>
+        <div class="label" style="margin-top:18px">Jarak lomba &amp; target waktu</div>
         <select id="raceDist" onchange="setRaceX()"><option value="">Pilih jarak</option><option value="5">5K</option><option value="10">10K</option><option value="21.1">Half marathon</option><option value="42.2">Maraton</option></select>
         <input type="text" id="raceGoal" placeholder="Target, mis. 1:05:00 atau 55:00" onchange="setRaceX()" />
-        <div class="label" style="margin-top:14px">Pola run-walk</div>
+        <div class="label" style="margin-top:18px">Pola lari–jalan</div>
         <label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="rwOn" onchange="setRw()"> Pakai run-walk di semua tahap</label>
         <input type="text" id="rwRun" placeholder="Durasi lari, mm:ss (3:45)" onchange="setRw()" />
         <input type="text" id="rwWalk" placeholder="Durasi jalan, mm:ss (0:30)" onchange="setRw()" />
       </div>
 
       <div class="card">
-        <div class="label">Integrasi</div>
+        <div class="label">Koneksi data</div>
         <div class="rows">
           <div class="row"><span>Intervals.icu</span><b id="meSync">—</b></div>
           <div class="row"><span>Jam</span><b>Lewat Intervals.icu</b></div>
@@ -838,7 +858,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       </div>
 
       <div class="card">
-        <div class="label">Tampilan</div>
+        <div class="label">Tema aplikasi</div>
         <div class="chips" id="setThemeChips" style="margin-bottom:0">
           <button type="button" class="chip" data-theme="dark" onclick="setTheme('dark')">Gelap</button>
           <button type="button" class="chip" data-theme="light" onclick="setTheme('light')">Terang</button>
@@ -846,7 +866,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       </div>
 
       <div class="card">
-        <div class="label">Tentang coach</div>
+        <div class="label">Cara kerja coach</div>
         <p class="reason" style="margin-top:0">Coach membaca lari, detak, dan beban latihanmu dari Intervals.icu, lalu memilih sesi hari ini: lari, run-walk, jalan, atau istirahat. Semua hitungan tetap jalan di belakang layar.</p>
         <button type="button" class="btn btn-outline sm" id="advBtn" style="margin-top:12px" onclick="toggleAdv()">Mode lanjutan: mati</button>
       </div>
@@ -2987,17 +3007,24 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
         (need.length > 1 ? `<p style="font-size:12px;color:var(--grey);margin-top:10px">+${need.length - 1} lari lain belum dikonfirmasi.</p>` : "");
     } else vxCard.style.display = "none";
 
-    /* Ulasan pasca-lari (< 48 jam) */
+    /* Beranda hanya menampilkan ringkasan lari yang benar-benar terjadi hari ini.
+       Analisis per sesi tetap berada di Riwayat melalui detail aktivitas. */
     const reviewCard = $("#reviewCard");
-    const recent = (state.acts || []).filter((x) => x[1] === "run" && x[3] > 0 && Date.now() - x[0] < 48 * 3600e3).sort((p, q) => q[0] - p[0]);
-    if (recent.length) {
-      ensureStream(recent[0]);
-      const rev = reviewRun(recent[0]);
-      if (rev.sections && rev.sections.length) {
+    const todayRun = (state.acts || []).filter((x) => x[1] === "run" && x[3] > 0 && d0(x[0]) === today()).sort((p, q) => q[0] - p[0])[0];
+    if (todayRun) {
+      ensureStream(todayRun);
+      const rev = reviewRun(todayRun);
+      if (rev && (rev.headline || rev.summary)) {
         reviewCard.style.display = "block";
-        $("#reviewBody").innerHTML = renderReviewHTML(rev, recent[0][0]);
+        $("#reviewBody").innerHTML =
+          (rev.headline ? `<div class="review-note ${rev.tone || "g"}" style="font-weight:750">${rev.headline}</div>` : "") +
+          (rev.summary ? `<p class="hint" style="margin:9px 0 0">${rev.summary}</p>` : "") +
+          `<button class="btn btn-outline sm" style="margin-top:12px" type="button" onclick="openAct(${todayRun[0]})">Lihat analisis di Riwayat</button>`;
       } else reviewCard.style.display = "none";
-    } else reviewCard.style.display = "none";
+    } else {
+      reviewCard.style.display = "none";
+      $("#reviewBody").innerHTML = "";
+    }
 
     /* Kesiapan, minggu ini, tren */
     $("#rdy").textContent = a.formLabel === "Data kurang" ? "Data belum cukup" : a.formLabel === "Baik" ? "Baik, boleh lari" : a.formLabel === "Lelah" ? "Lelah, hati-hati" : "Cukup";
