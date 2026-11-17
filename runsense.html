@@ -2038,7 +2038,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     const out = {};
     // Split km dihitung pada batas jarak tepat (interpolasi), bukan titik GPS yang melewati batas.
     const splits = [], sp = [];
-    let splitIndex = 1, prevTime = Number(time[0]), prevDist = Number(dist[0]), prevHr = hr && hr.length === time.length ? Number(hr[0]) : null;
+    let splitIndex = 1, splitStartIndex = 0, prevTime = Number(time[0]);
     for (let i = 1; i < time.length; i++) {
       const ti = Number(time[i]), di = Number(dist[i]);
       if (!Number.isFinite(ti) || !Number.isFinite(di) || ti <= Number(time[i - 1]) || di < Number(dist[i - 1])) continue;
@@ -2054,11 +2054,11 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
         if (dt > 0) {
           const pace = dt / 60;
           sp.push(pace);
-          const hSlice = hr && hr.length === time.length ? hr.slice(0, i + 1).map(Number).filter(v => v > 40 && Number.isFinite(v)) : [];
-          const hMean = hSlice.length ? mean(hSlice) : (bh > 40 ? bh : null);
-          splits.push({ km: splitIndex, pace, hr: hMean });
+          const hSlice = hr && hr.length === time.length ? hr.slice(splitStartIndex, i).map(Number).filter(v => v > 40 && Number.isFinite(v)) : [];
+          if (bh > 40 && Number.isFinite(bh)) hSlice.push(bh);
+          splits.push({ km: splitIndex, pace, hr: hSlice.length ? mean(hSlice) : null });
         }
-        prevTime = bt; prevDist = boundary; prevHr = bh; splitIndex++;
+        prevTime = bt; splitStartIndex = i; splitIndex++;
       }
     }
     if (splits.length) out.splits = splits;
