@@ -2045,7 +2045,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       const o = src && (src[t] || src[t + ".json"]);
       return Array.isArray(o) ? o : o && Array.isArray(o.data) ? o.data : null;
     };
-    const time = get("time"), dist = get("distance"), hr = get("heartrate");
+    const time = get("time"), dist = get("distance"), hr = get("heartrate"), velocity = get("velocity_smooth");
     if (!time || !dist || time.length < (minN || 30) || time.length !== dist.length) return null;
     const mean = (x) => x.reduce((p, q) => p + q, 0) / x.length;
     const med = (x) => { const b = x.slice().sort((p, q) => p - q); return b[Math.floor(b.length / 2)]; };
@@ -2092,8 +2092,10 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     const chart = [];
     let prev = 0;
     for (let i = stride; i < time.length; i += stride) {
-      const dt = time[i] - time[prev], dd = (dist[i] - dist[prev]) / 1000;
-      const p = dt > 0 && dd > 0 ? (dt / 60) / dd : 0;
+      const dt = Number(time[i]) - Number(time[prev]), dd = (Number(dist[i]) - Number(dist[prev])) / 1000;
+      // Gunakan velocity_smooth (m/s) untuk pace aktual tiap titik; distance/time hanya fallback.
+      const v = velocity && velocity.length === time.length ? Number(velocity[i]) : NaN;
+      const p = Number.isFinite(v) && v > 0.25 ? 1000 / v / 60 : dt > 0 && dd > 0 ? (dt / 60) / dd : 0;
       const h = hr && hr.length === time.length ? Number(hr[i]) : 0;
       if (p >= 2.5 && p <= 20 && time[i] > time[0]) chart.push([Math.round((time[i] - time[0]) / 60), Math.round(p * 100) / 100, h > 40 ? Math.round(h) : 0]);
       prev = i;
@@ -2132,14 +2134,15 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     const id = String(a[9]);
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
     const cached = state.sx[id];
-    if ((cached && cached.chart && cached.splits) || (cached && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    // Cache lama hanya menyimpan pace hasil distance/time; ambil ulang untuk memakai velocity stream.
+    if ((cached && cached.streamVersion >= 2 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 2 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
       // Endpoint Intervals.icu: singular /activity/ dan ekstensi .json.
-      const raw = await icuGet(`activity/${encodeURIComponent(id)}/streams.json?types=time,distance,heartrate`);
+      const raw = await icuGet(`activity/${encodeURIComponent(id)}/streams.json?types=time,distance,heartrate,velocity_smooth`);
       const summary = summarizeStream(raw, a, 30);
-      state.sx[id] = Object.assign(summary || { none: 1 }, { checkedAt: Date.now() });
+      state.sx[id] = Object.assign(summary || { none: 1 }, { streamVersion: 2, checkedAt: Date.now() });
     } catch (e) {
       // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
       if (/HTTP (404|422)/.test(String(e && e.message))) state.sx[id] = { none: 1, checkedAt: Date.now() };
