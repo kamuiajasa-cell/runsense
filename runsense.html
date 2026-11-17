@@ -1454,8 +1454,22 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       const d = Date.parse(String(w.id || "") + "T12:00:00");
       return d < a[0] && d >= a[0] - 28 * 864e5 && w.restingHR > 30;
     }).map(w => +w.restingHR).sort((x,y)=>x-y);
-    const histRest = histWellness.length >= 5 ? histWellness[Math.floor(histWellness.length / 2)] : restHr();
+    const histRest = histWellness.length >= 5 ? histWellness[Math.floor(histWellness.length / 2)] : 0;
     const histMax = maxHr();
+    const loadAt = (x) => {
+      if (!x || !(x[2] > 0)) return 0;
+      if (x[10] > 0) return Math.round(x[10]);
+      const hours = x[2] / 60;
+      if (x[1] === "run") {
+        let intensity = histRest > 0 && histMax > histRest && x[4] > 0
+          ? ((x[4] - histRest) / (histMax - histRest)) / 0.88
+          : (metsOf(x[3] > 0 ? x[2] / x[3] : 8) / 11.5) * 0.95;
+        intensity = clamp(intensity, 0.45, 1.15);
+        return Math.round(hours * 100 * intensity * intensity);
+      }
+      if (x[1] === "walk") return Math.round(x[2] * 0.35);
+      return Math.round(x[2] * 0.8);
+    };
     const histCandidates = priorRuns.filter(x => x[2] >= 10 && x[3] >= 2).map(x => metsOf(x[2] / x[3]) / Math.max(.35, pctAt(x[2]))).filter(x => isFinite(x) && x >= 4 && x <= 25).sort((x,y)=>x-y);
     const M = histCandidates.length >= 3 ? histCandidates[Math.floor(histCandidates.length * .75)] : null;
     const histStage = M == null ? 0 : M < 7.9 ? 1 : M < 9.2 ? 2 : M < 12 ? 3 : 4;
@@ -1467,7 +1481,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     const elev = a[5] > 0 ? a[5] : 0;
     const maxH = a[8] > 0 ? a[8] : 0;
     const icuLoad = a[10] > 0 ? a[10] : 0;
-    const load = icuLoad || loadOf(a);
+    const load = icuLoad || loadAt(a);
     const det = detectType(a);
     const c = metsOf(pace);
     const pct = M ? c / M : null;
@@ -1648,10 +1662,10 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     }
 
     // —— 3. Load & week context ——
-    const weekLoad = loadDays(7);
-    const weekKm = (state.acts || [])
-      .filter((x) => x[0] >= Date.now() - 7 * 864e5 && x[1] === "run")
-      .reduce((s, x) => s + x[3], 0);
+    const weekStart = a[0] - 7 * 864e5;
+    const contextActs = (state.acts || []).filter(x => x[0] >= weekStart && x[0] <= a[0]);
+    const weekLoad = contextActs.reduce((sum, x) => sum + loadAt(x), 0);
+    const weekKm = contextActs.filter(x => x[1] === "run").reduce((sum, x) => sum + x[3], 0);
 
     push(S_load, "g", "Beban sesi ini " + Math.round(load) + " poin (" + (icuLoad ? "dari Intervals" : "perkiraan app") +
       "). Total 7 hari terakhir ≈ " + f1(weekLoad) + " poin dan " + f1(weekKm) + " km.");
@@ -1669,12 +1683,12 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     // Hard streak
     let streak = 0;
     for (let i = 0; i < 5; i++) {
-      const day = today() - i * 864e5;
-      const dayActs = (state.acts || []).filter((x) => d0(x[0]) === day && x[1] === "run");
-      const dayLoad = dayActs.reduce((s, x) => s + loadOf(x), 0);
+      const day = d0(a[0]) - i * 864e5;
+      const dayActs = (state.acts || []).filter((x) => d0(x[0]) === day && x[0] <= a[0] && x[1] === "run");
+      const dayLoad = dayActs.reduce((sum, x) => sum + loadAt(x), 0);
       const dayHard = dayActs.some((x) => {
         const t = detectType(x).type;
-        return t === "thr" || t === "vo2" || t === "race" || loadOf(x) >= 70;
+        return t === "thr" || t === "vo2" || t === "race" || loadAt(x) >= 70;
       });
       if (dayHard || dayLoad >= 70) streak++;
       else break;
@@ -1688,7 +1702,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     // Monotony-ish: compare to previous 7d average session load
     const prevSessions = (state.acts || [])
       .filter((x) => x[1] === "run" && x[0] < a[0] && x[0] >= a[0] - 14 * 864e5)
-      .map((x) => loadOf(x))
+      .map((x) => loadAt(x))
       .filter((v) => v > 0);
     if (prevSessions.length >= 4) {
       const avgL = prevSessions.reduce((s, v) => s + v, 0) / prevSessions.length;
