@@ -1446,8 +1446,19 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     const empty = { tone: "g", headline: null, summary: "", sections: [], flat: [] };
     if (!a || a[1] !== "run" || !(a[3] > 0) || !(a[2] > 0)) return empty;
 
-    const st = stage();
-    const M = st && st.m;
+    // Rekonstruksi konteks saat aktivitas berlangsung; bukan readiness/tahap hari ini.
+    const prior = (state.acts || []).filter(x => x[0] < a[0]);
+    const priorRuns = prior.filter(x => x[1] === "run" && x[3] >= 1.5 && x[2] >= 8 && x[2] / x[3] >= 3 && x[2] / x[3] <= 14 && x[0] >= a[0] - 56 * 864e5);
+    const histWellness = (state.wellness || []).filter(w => {
+      const d = Date.parse(String(w.id || "") + "T12:00:00");
+      return d < a[0] && d >= a[0] - 28 * 864e5 && w.restingHR > 30;
+    }).map(w => +w.restingHR).sort((x,y)=>x-y);
+    const histRest = histWellness.length >= 5 ? histWellness[Math.floor(histWellness.length / 2)] : restHr();
+    const histMax = maxHr();
+    const histCandidates = priorRuns.filter(x => x[2] >= 10 && x[3] >= 2).map(x => metsOf(x[2] / x[3]) / Math.max(.35, pctAt(x[2]))).filter(x => isFinite(x) && x >= 4 && x <= 25).sort((x,y)=>x-y);
+    const M = histCandidates.length >= 3 ? histCandidates[Math.floor(histCandidates.length * .75)] : null;
+    const histStage = M == null ? 0 : M < 7.9 ? 1 : M < 9.2 ? 2 : M < 12 ? 3 : 4;
+    const st = { m: M, s: histStage, e: { n: priorRuns.length, conf: priorRuns.length >= 6 ? "baik" : priorRuns.length >= 3 ? "sedang" : "rendah" } };
     const pace = a[2] / a[3];
     const dur = a[2];
     const km = a[3];
@@ -1460,11 +1471,11 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     const c = metsOf(pace);
     const pct = M ? c / M : null;
     const lim = pctAt(dur);
-    const ath = state.athlete || {};
-    const lthr = ath.lthr;
-    const ltPace = ath.ltPace; // string mm:ss or null
-    const rst = restHr();
-    const mx = maxHr();
+    const rst = histRest;
+    const mx = histMax;
+    const lthr = rst > 0 && mx > rst ? Math.round(rst + .88 * (mx - rst)) : null;
+    const priorPaces = priorRuns.filter(x => x[3] >= 2 && x[2] >= 12).map(x => x[2] / x[3]).sort((x,y)=>x-y);
+    const ltPace = priorPaces.length ? mp(priorPaces[0] * 1.04) : null;
     const name = (a[7] || "").trim();
 
     const sec = (title) => ({ title, notes: [] });
@@ -2046,7 +2057,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       if (pct >= 5) out.fade = { pct };
     }
     // Simpan sampel ringkas untuk grafik; bukan stream mentah.
-    const stride = Math.max(1, Math.floor((time.length - 1) / 54));
+    const stride = Math.max(1, Math.floor((time.length - 1) / 180));
     const chart = [];
     let prev = 0;
     for (let i = stride; i < time.length; i += stride) {
@@ -2999,7 +3010,6 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     state.activities = (state.acts || [])
       .slice()
       .sort((a, b) => b[0] - a[0])
-      .slice(0, 25)
       .map((a) => {
         const dist = f1(a[3]);
         const m = Math.floor(a[2]), s = Math.round((a[2] % 1) * 60);
