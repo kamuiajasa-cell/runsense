@@ -740,6 +740,15 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   --el:rgba(45,65,20,.045);
 }
 
+
+/* Editorial hero headers shared with the other RunSense tabs */
+.home-hero{padding:5px 0 23px}
+.home-hero-top{display:flex;align-items:center;justify-content:space-between;min-height:42px}
+.home-hero .page-title{margin-top:15px}
+.home-hero p{display:flex;flex-direction:column;gap:3px}
+.home-hero .greeting{font-size:13px;color:var(--grey);font-weight:600}
+.home-date{font-size:11px;color:var(--grey);letter-spacing:.02em}
+
 </style>
 </head>
 <body>
@@ -802,7 +811,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- HARI INI -->
   <div id="screen-home" class="screen">
     <div class="content home-layout">
-      <header class="screen-top"><div><span class="eyebrow">RUNSENSE / DAILY BRIEF</span><div class="greeting" id="greeting">Selamat pagi</div><div class="td-date" id="tdDate"></div></div><div class="avatar-mark"><img src="icons/icon-192.png" alt="RunSense"></div></header>
+      <header class="page-hero home-hero"><div class="home-hero-top"><span class="eyebrow">YOUR DAILY RUNNING BRIEF</span><div class="avatar-mark"><img src="icons/icon-192.png" alt="RunSense"></div></div><div class="page-title">Run with<br><em>your rhythm.</em></div><p><span class="greeting" id="greeting">Selamat pagi</span><span class="home-date" id="tdDate"></span></p></header>
       <div class="race-line" id="raceLine"></div>
       <div class="section-kicker"><span>YOUR TRAINING</span><i></i><span>01</span></div>
       <div id="mainCard"></div>
@@ -855,7 +864,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
   <!-- SAYA -->
   <div id="screen-me" class="screen">
     <div class="content profile-layout">
-      <header class="page-hero"><span class="eyebrow">PENGATURAN ATLET</span><div class="page-title">Profil<br><em>lari.</em></div><p>Atur data tubuh, target, jadwal latihan, dan koneksi sumber datamu.</p></header>
+      <header class="page-hero"><span class="eyebrow">ATHLETE SETTINGS</span><div class="page-title">Your<br><em>profile.</em></div><p>Manage your body metrics, running goals, training schedule, and connected data sources.</p></header>
       <div class="section-kicker"><span>DATA TUBUH &amp; DETAK</span><i></i><span>01</span></div>
 
       <div class="card">
