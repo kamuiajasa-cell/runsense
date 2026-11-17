@@ -491,6 +491,89 @@ input[type=date],input[type=number]{background:var(--el);color:var(--tx);border:
 .lowconf{font-size:12.5px;color:var(--yellow);margin-top:10px;line-height:1.45}
 .leg-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 14px}
 .leg-row .chip{padding:7px 12px;font-size:12.5px;margin:0}
+
+/* ── RunSense visual system refresh · 2026 ── */
+:root,:root[data-theme="dark"]{
+ --primary:#c6ff38;--primary-dim:rgba(198,255,56,.13);--bg:#090b09;--card:#141914;
+ --grey:#899287;--light-grey:#c8d0c3;--tx:#f4f7ef;--yellow:#ffc857;--red:#ff6b64;
+ --nav-border:rgba(255,255,255,.09);--card-border:rgba(220,255,190,.09);--el:#1b221a;
+ --input-ph:#687366;--font:Inter,system-ui,sans-serif;color-scheme:dark
+}
+:root[data-theme="light"]{
+ --primary:#78b900;--primary-dim:rgba(120,185,0,.12);--bg:#f2f5ed;--card:#fff;
+ --grey:#727b6e;--light-grey:#46503f;--tx:#172012;--yellow:#bd8300;--red:#d84d45;
+ --nav-border:rgba(20,35,10,.1);--card-border:rgba(20,35,10,.08);--el:#f0f4e9;
+ --input-ph:#899181;color-scheme:light
+}
+html{background:var(--bg);scroll-behavior:smooth}
+body{background:radial-gradient(ellipse at 85% -10%,rgba(198,255,56,.09),transparent 34%),var(--bg);color:var(--tx);font-family:var(--font);letter-spacing:-.012em}
+.app{max-width:520px;min-height:100dvh;background:transparent}
+.screen{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+.content{padding:24px 19px 32px;max-width:520px}
+.brand{font-size:38px;font-weight:900;letter-spacing:-2.4px;color:var(--tx)}
+.subtitle{font-size:13px;color:var(--grey);margin-top:6px}
+.page-title{font-size:30px;font-weight:850;letter-spacing:-1.3px;margin:5px 0 20px}
+.greeting{font-size:26px;font-weight:850;letter-spacing:-1.1px}
+.td-date,.race-line{color:var(--grey);font-size:12px}
+.card,.prg-card,.hist-card,.style-option,.status-line{
+ background:linear-gradient(145deg,rgba(255,255,255,.035),transparent 65%),var(--card);
+ border:1px solid var(--card-border);border-radius:22px;
+ box-shadow:0 12px 32px rgba(0,0,0,.13)
+}
+.card{padding:17px;margin:13px 0}
+.card.quiet{background:linear-gradient(135deg,rgba(198,255,56,.07),transparent 75%),var(--card)}
+.label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--grey);margin:17px 0 9px}
+input,select,textarea{background:var(--el)!important;border:1px solid var(--card-border)!important;border-radius:13px!important;color:var(--tx)!important;padding:14px!important;min-height:48px}
+input:focus,select:focus{outline:1px solid var(--primary)!important}
+.hint,.sub,.trend,.body-line{color:var(--grey);line-height:1.55}
+.btn{border-radius:15px;min-height:52px;font-weight:800;letter-spacing:-.02em}
+.btn-primary{background:var(--primary)!important;color:#11180a!important;box-shadow:0 8px 24px rgba(198,255,56,.17)}
+.btn-outline,.chip,.fchip{border:1px solid var(--card-border)!important;background:var(--el)!important;color:var(--light-grey)!important;border-radius:999px}
+.chip.active,.fchip.active,.nav-item.active{background:var(--primary-dim)!important;color:var(--primary)!important;border-color:rgba(198,255,56,.32)!important}
+.style-option{padding:15px 16px;margin:9px 0}
+.style-option .title{font-weight:750}
+.style-option.active{border-color:var(--primary);background:var(--primary-dim)}
+.td-head{display:flex;align-items:flex-end;justify-content:space-between;margin:4px 0 16px}
+.race-line{margin-bottom:12px}
+#mainCard>.card,#mainCard .card{border-radius:24px}
+#mainCard .card:first-child{background:linear-gradient(135deg,rgba(198,255,56,.12),transparent 75%),var(--card)}
+#rdy{color:var(--primary);font-size:22px}
+.rows .row,.prg-row,.field{border-bottom:1px solid var(--card-border);padding:11px 0}
+.week{gap:7px}
+.week>*{border-radius:12px}
+.insight{border-radius:17px;background:var(--primary-dim);border:1px solid rgba(198,255,56,.2);padding:14px;color:var(--light-grey)}
+.prg-card{padding:17px;margin:12px 0;border-radius:22px}
+.prg-card h4{font-size:15px;font-weight:800;letter-spacing:-.25px;margin-bottom:8px}
+.prg-card .sub{font-size:12px}
+.prg-card svg{width:100%;overflow:visible;margin-top:12px}
+.prg-card .hist-sum,.hist-sum{gap:8px}
+.hist-sum .hs{background:var(--el);border:1px solid var(--card-border);border-radius:16px;padding:13px 8px}
+.hist-sum .hs b{font-size:20px;font-weight:850;color:var(--tx);letter-spacing:-.8px}
+.hist-sum .hs span{font-size:10px;color:var(--grey)}
+.prg-mix .pm{border:1px solid var(--card-border);background:var(--el);border-radius:14px}
+.prg-bar{height:12px;border-radius:99px}
+.prg-insight{border-color:var(--card-border);color:var(--light-grey);font-size:12px}
+.prg-read{font-size:12px;color:var(--light-grey)}
+.prg-yax{fill:var(--grey)}
+.prg-leg{font-size:10px}
+.hist-card{padding:15px;margin:10px 0}
+.bottom-nav{bottom:calc(10px + env(safe-area-inset-bottom));width:calc(100% - 24px);max-width:496px;padding:8px 8px;border-radius:22px;background:rgba(17,22,16,.92);border:1px solid rgba(255,255,255,.1);box-shadow:0 12px 40px rgba(0,0,0,.38);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);gap:3px}
+:root[data-theme="light"] .bottom-nav{background:rgba(255,255,255,.92);box-shadow:0 12px 32px rgba(30,50,10,.12)}
+.nav-item{border:0!important;border-radius:15px!important;min-height:56px;gap:5px;color:var(--grey)!important;font-size:10px;font-weight:700}
+.nav-item svg{width:21px;height:21px}
+.nav-item.active{background:var(--primary-dim)!important;color:var(--primary)!important}
+.sync-bar{margin:15px 0;color:var(--grey);font-size:11px}
+#screen-progress .fchips,#screen-history .fchips{margin:0 0 14px}
+.prg-empty{border:1px dashed var(--card-border);border-radius:16px;padding:24px 16px}
+#screen-me .card{padding:17px}
+#screen-me .field span{font-size:12px;color:var(--grey)}
+#screen-me .field input{max-width:120px;text-align:right}
+.modal,.sheet{border-radius:24px}
+button{transition:transform .16s ease,background .16s ease,border-color .16s ease}
+button:active{transform:scale(.97)}
+@media(min-width:560px){body{padding:18px 0}.app{border:1px solid var(--card-border);border-radius:30px;overflow:hidden;min-height:calc(100dvh - 36px);margin:auto}.bottom-nav{bottom:28px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
 </style>
 </head>
 <body>
