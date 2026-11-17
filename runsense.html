@@ -3307,11 +3307,11 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     runs.forEach(x => {
       const km=+x[3], min=+x[2], p=pace(min,km);
       if (!p) return;
-      const key = km >= 42 ? "Marathon" : km >= 21 ? "Half marathon" : km >= 10 ? "10 km" : km >= 5 ? "5 km" : km >= 3 ? "3 km" : km >= 1 ? "1 km" : null;
+      const key = km >= 42 ? "≥42 km" : km >= 21 ? "≥21 km" : km >= 10 ? "≥10 km" : km >= 5 ? "≥5 km" : km >= 3 ? "≥3 km" : km >= 1 ? "≥1 km" : null;
       if (key && (!best[key] || min/km < best[key].rate)) best[key]={rate:min/km,pace:p,km,date:x[0]};
     });
     const perf = Object.entries(best).map(([k,v]) => row("Aktivitas "+k, v.pace+"/km · "+fmt(v.km)+" km · "+date(v.date)));
-    if (perf.length) html += card("Performa aktual","Pace rata-rata aktivitas terjauh yang memenuhi jarak kategori. Bukan split atau catatan lomba.",perf.join(""),"Perbandingan performa paling kuat bila rute, kondisi, dan usaha serupa.");
+    if (perf.length) html += card("Performa aktual","Pace rata-rata terbaik dari aktivitas yang memenuhi jarak minimum kategori. Bukan split atau catatan lomba.",perf.join(""),"Perbandingan performa paling kuat bila rute, kondisi, dan usaha serupa.");
     
     // 2. AEROBIC DEVELOPMENT: hanya easy run dengan HR valid dan jarak cukup.
     const easy = runs.filter(x => {
