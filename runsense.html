@@ -2036,16 +2036,32 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     const mean = (x) => x.reduce((p, q) => p + q, 0) / x.length;
     const med = (x) => { const b = x.slice().sort((p, q) => p - q); return b[Math.floor(b.length / 2)]; };
     const out = {};
-    // split per km
-    const sp = [];
-    let k = 1, tP = time[0], dP = dist[0];
+    // Split km dihitung pada batas jarak tepat (interpolasi), bukan titik GPS yang melewati batas.
+    const splits = [], sp = [];
+    let splitIndex = 1, prevTime = Number(time[0]), prevDist = Number(dist[0]), prevHr = hr && hr.length === time.length ? Number(hr[0]) : null;
     for (let i = 1; i < time.length; i++) {
-      if (dist[i] - dist[0] >= k * 1000) {
-        const dk = (dist[i] - dP) / 1000;
-        if (dk > 0) sp.push((time[i] - tP) / 60 / dk);
-        tP = time[i]; dP = dist[i]; k++;
+      const ti = Number(time[i]), di = Number(dist[i]);
+      if (!Number.isFinite(ti) || !Number.isFinite(di) || ti <= Number(time[i - 1]) || di < Number(dist[i - 1])) continue;
+      while (di - Number(dist[0]) >= splitIndex * 1000) {
+        const boundary = Number(dist[0]) + splitIndex * 1000;
+        const span = di - Number(dist[i - 1]);
+        if (!(span > 0)) break;
+        const f = Math.max(0, Math.min(1, (boundary - Number(dist[i - 1])) / span));
+        const bt = Number(time[i - 1]) + (ti - Number(time[i - 1])) * f;
+        const bh = hr && hr.length === time.length && Number.isFinite(Number(hr[i - 1])) && Number.isFinite(Number(hr[i]))
+          ? Number(hr[i - 1]) + (Number(hr[i]) - Number(hr[i - 1])) * f : null;
+        const dt = bt - prevTime;
+        if (dt > 0) {
+          const pace = dt / 60;
+          sp.push(pace);
+          const hSlice = hr && hr.length === time.length ? hr.slice(0, i + 1).map(Number).filter(v => v > 40 && Number.isFinite(v)) : [];
+          const hMean = hSlice.length ? mean(hSlice) : (bh > 40 ? bh : null);
+          splits.push({ km: splitIndex, pace, hr: hMean });
+        }
+        prevTime = bt; prevDist = boundary; prevHr = bh; splitIndex++;
       }
     }
+    if (splits.length) out.splits = splits;
     if (sp.length >= 4) {
       const p12 = (sp[0] + sp[1]) / 2, md = med(sp.slice(2));
       const pct = Math.round(((md - p12) / md) * 100);
@@ -2069,19 +2085,6 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
       prev = i;
     }
     if (chart.length >= 5) out.chart = chart;
-    // Split kilometer dari stream penuh; grafik hanya memakai sampel yang dipadatkan.
-    const splits = []; let splitIndex = 1, splitStart = 0, splitTime = time[0], splitDist = dist[0];
-    for (let i = 1; i < time.length; i++) {
-      if ((dist[i] - dist[0]) / 1000 >= splitIndex) {
-        const dk = (dist[i] - splitDist) / 1000, dt = time[i] - splitTime;
-        if (dk > 0 && dt > 0) {
-          const sh = hr && hr.length === time.length ? hr.slice(splitStart, i + 1).filter(v => v > 40) : [];
-          splits.push({ km: splitIndex, pace: dt / 60 / dk, hr: sh.length ? mean(sh) : null });
-        }
-        splitStart = i; splitTime = time[i]; splitDist = dist[i]; splitIndex++;
-      }
-    }
-    if (splits.length) out.splits = splits;
     const T = time[time.length - 1] - time[0];
     if (hr && hr.length === time.length) {
       if (T >= 2400) {
@@ -3829,7 +3832,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     const pts = sx && Array.isArray(sx.chart) ? sx.chart : [];
     const splits = sx && Array.isArray(sx.splits) ? sx.splits : [];
     const splitHtml = splits.length ? '<div class="sa-head" style="margin-top:12px"><span class="sa-title">Split per kilometer</span></div>' + splits.map(q => '<div class="sa-split"><b>' + q.km + '</b><span>' + mp(q.pace) + ' /km</span><span>' + (q.hr ? Math.round(q.hr) + ' bpm' : 'HR —') + '</span></div>').join('') : '';
-    if (pts.length < 5) return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Grafik sesi</span><span class="sa-pill">Data belum tersedia</span></div><div class="sa-note">Grafik pace dan HR membutuhkan stream sensor dari sumber aktivitas. Ringkasan aktivitas tetap bisa dianalisis, tetapi titik per titik tidak tersedia untuk sesi ini.</div></div>`;
+    if (pts.length < 5) return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Grafik sesi</span><span class="sa-pill">Data belum tersedia</span></div><div class="sa-note">Grafik pace dan HR membutuhkan stream sensor dari sumber aktivitas. Ringkasan aktivitas tetap bisa dianalisis, tetapi titik per titik tidak tersedia untuk sesi ini.</div>${splitHtml}</div>`;
     const W=320,H=126,L=28,R=8,T=12,B=20, pw=W-L-R, ph=H-T-B;
     const xs=pts.map(x=>x[0]), ps=pts.map(x=>x[1]), hs=pts.map(x=>x[2]).filter(x=>x>0);
     const pMin=Math.max(3,Math.floor(Math.min(...ps)-0.5)), pMax=Math.ceil(Math.max(...ps)+0.5);
@@ -3901,11 +3904,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
     body += sessionAdaptationHTML(act);
     body += renderReviewHTML(rev, null);
 
-    const st = stage();
-    if (st.m && pace > 0) {
-      const pct = metsOf(pace) / st.m;
-      body += `<div class="insight" style="margin-top:12px">Intensitas ≈ <b>${Math.round(pct * 100)}%</b> Max METs (${f1(st.m)}) · tahan ${durText(pct)} · tahap T${st.s}</div>`;
-    }
+    // Intensitas historis sudah dihitung oleh reviewRun() dari data sebelum sesi ini.
 
     body += climAct(act);
     $("#mBody").innerHTML = body;
