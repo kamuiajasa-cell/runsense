@@ -4153,7 +4153,7 @@ input[type=password],input[type=text]{margin:0}
       .sort((a,b) => a.ms - b.ms);
     const reRefHr = med(reEasy.map(x => x.hr));
     const reNorm = reEasy.map(x => ({...x, np: x.pace * (reRefHr / x.hr)}));
-    const reEarly = reNorm.slice(0, Math.ceil(reNorm.length / 2)), reLate = reNorm.slice(Math.floor(reNorm.length / 2));
+    const reSplit = Math.ceil(reNorm.length / 2), reEarly = reNorm.slice(0, reSplit), reLate = reNorm.slice(reSplit);
     const reEarlyP = med(reEarly.map(x => x.np)), reLateP = med(reLate.map(x => x.np));
     const reDelta = reEarlyP != null && reLateP != null ? (reEarlyP - reLateP) / reEarlyP * 100 : null;
     const reTrend = reDelta == null || reNorm.length < 4 ? "Belum cukup data untuk membandingkan tren pada HR yang sebanding."
@@ -4167,12 +4167,16 @@ input[type=password],input[type=text]{margin:0}
     const reFuRuns = durRuns.filter(o => FU[o.x[0]] && FU[o.x[0]] >= 2);
     const reFuN = durRuns.filter(o => FU[o.x[0]]).length;
     const reForm = STR.fc && STR.fc.d >= yAgo(28) ? STR.fc : null;
+    const reTests = TS.slice(-3), reTestLatest = TS[TS.length - 1];
+    const reAsym = reTestLatest && reTestLatest.cl && reTestLatest.cr ? Math.abs(reTestLatest.cl - reTestLatest.cr) / Math.max(reTestLatest.cl, reTestLatest.cr) : 0;
     const reFactors = [];
+    if (reForm && reForm.pn) reFactors.push({p:0,t:"Ada catatan nyeri atau bengkak",why:"Jangan mengejar latihan saat nyeri/bengkak masih terasa; kurangi atau hentikan dan periksakan bila menetap, memburuk, atau mengganggu berjalan."});
     if (reNorm.length < 4) reFactors.push({p:1,t:"Data easy run pembanding masih sedikit",why:"Tambah beberapa easy run dengan HR dan pace valid agar tren efisiensi dapat dibaca."});
     else if (reDelta != null && reDelta < -1.5) reFactors.push({p:2,t:"Efisiensi aerobik perlu dipantau",why:"Pace setara-HR melambat; interpretasi tetap mempertimbangkan cuaca, tidur, elevasi, dan hidrasi."});
     if (durV === "dn") reFactors.push({p:2,t:"Durability perlu perhatian",why:"Analisis lari panjang menunjukkan penurunan kestabilan; jangan buru-buru menambah durasi."});
     if (reStrength28.length >= 3 && reDone < 2) reFactors.push({p:3,t:"Konsistensi latihan kekuatan",why:"Catatan 28 hari menunjukkan sesi kekuatan selesai masih sedikit; pilih menu ringan dan realistis."});
     if (reForm && (reForm.hd || reForm.ov)) reFactors.push({p:3,t:"Cek teknik secara terarah",why:"Ada catatan mandiri form; gunakan video/observasi, bukan diagnosis dari cadence atau stride."});
+    if (reAsym > 0.2) reFactors.push({p:3,t:"Periksa perbedaan kekuatan kiri–kanan",why:"Tes mini terakhir menunjukkan selisih lebih dari 20% pada angkat tumit. Ulangi tes dengan teknik konsisten dan prioritaskan sisi lebih lemah tanpa memaksakan."});
     if (reFuN >= 2 && reFuRuns.length === 0) reFactors.push({p:3,t:"Fueling belum tercatat pada lari panjang",why:"Log fueling belum menunjukkan sesi dengan asupan; catat untuk evaluasi, bukan menganggap itu penyebab."});
     if (reCad && reCad < 160) reFactors.push({p:4,t:"Cadence sebagai petunjuk, bukan target",why:"Kadence easy relatif rendah. Nilai bersama kenyamanan, stride, dan observasi form; tidak perlu mengejar angka 180."});
     if (!reFactors.length) reFactors.push({p:5,t:"Pertahankan fondasi yang sudah berjalan",why:"Data belum menunjukkan satu faktor yang dominan membatasi; utamakan konsistensi, easy effort, dan progres bertahap."});
@@ -4186,6 +4190,7 @@ input[type=password],input[type=text]{margin:0}
       row("Tren proxy efisiensi", reDelta != null && reNorm.length >= 4 ? sgn(reDelta,1) + "% (bagian terbaru)" : "Belum dapat dinilai"),
       row("Durability", durV === "up" ? "Baik / stabil" : durV === "flat" ? "Perlu dipantau" : durV === "dn" ? "Perlu perhatian" : "Belum cukup data"),
       row("Kekuatan · 28 hari", reStrength28.length ? reDone + " selesai · " + reSkip + " dilewati" : "Belum ada log"),
+      row("Tes mini kekuatan", reTestLatest ? reTestLatest.d + (reAsym > 0.2 ? " · selisih sisi >20%" : " · tercatat") : "Belum ada tes"),
       row("Cadence & stride easy", reCad ? Math.round(reCad) + " spm" + (reStride ? " · " + m2(reStride) + " m/langkah" : "") : "Belum tersedia")
     ].join("");
     const reHtml = '<section class="prg-card"><h4>Running Economy &amp; Adaptasi</h4><div class="sub">Lapisan interpretasi: efisiensi, durability, kekuatan, teknik dan fueling. Ini proxy, bukan pengukuran konsumsi oksigen.</div>' +
