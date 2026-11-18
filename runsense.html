@@ -4182,14 +4182,15 @@ input[type=password],input[type=text]{margin:0}
     ensureStream(act);
     const det = detectType(act);
     const rev = reviewRun(act);
-    const pace = act[3] > 0 ? act[2] / act[3] : 0;
+    const sxHeader = act && act[9] ? state.sx[String(act[9])] : null;
+    const pace = sxHeader && +sxHeader.streamAvgPace > 0 ? +sxHeader.streamAvgPace : sxHeader && Array.isArray(sxHeader.splits) && sxHeader.splits.length ? sxHeader.splits.reduce((sum,q)=>sum+(+q.pace||0),0)/sxHeader.splits.length : (act[3] > 0 ? act[2] / act[3] : 0);
     const maxH = act[8] > 0 ? act[8] : 0;
     $("#mTitle").textContent = (act[1] === "run" ? "Lari" : "Aktivitas") + " · " + f1(act[3]) + " km";
     $("#mSub").textContent =
       new Date(act[0]).toLocaleString("id-ID", { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) +
       " · " +
       mp(pace) +
-      " /km" +
+      " /km" + (sxHeader && +sxHeader.streamAvgPace > 0 ? " · stream" : sxHeader && sxHeader.splits && sxHeader.splits.length ? " · split" : " · ringkasan") +
       (act[4] ? " · HR " + Math.round(act[4]) + (maxH ? "–" + Math.round(maxH) : "") : "") +
       (act[5] ? " · +" + Math.round(act[5]) + " m" : "");
 
