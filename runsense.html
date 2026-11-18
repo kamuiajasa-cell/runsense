@@ -1372,8 +1372,8 @@ input[type=password],input[type=text]{margin:0}
 
   const KEY_STORE = "runsense_auto_v2";
   const SN = ["", "Fondasi: jalan cepat", "Run-walk (White Plan)", "Easy terbatas", "Terstruktur"];
-  const VX_LB = { easy: "Easy", long: "Long", thr: "Threshold", vo2: "VO2max", race: "Lomba" };
-  const VX_TY = [["easy","Easy"],["long","Long"],["thr","Threshold"],["vo2","VO2max"],["race","Lomba"]];
+  const VX_LB = { easy: "Easy", long: "Long", thr: "Threshold", vo2: "VO2max", race: "Lomba", recovery: "Recovery" };
+  const VX_TY = [["easy","Easy"],["recovery","Recovery"],["long","Long"],["thr","Threshold"],["vo2","VO2max"],["race","Lomba"]];
 
   let state = {
     goal: "5K",
@@ -2879,11 +2879,21 @@ input[type=password],input[type=text]{margin:0}
     const msgs = [];
     if (tot > 0 && lk > 0.3 * tot) msgs.push(`Long ${lk} km = ${Math.round((lk / tot) * 100)}% volume minggu. Batas ~30%. Kurangi long atau tambah easy.`);
     const wkS = today() - ((new Date().getDay() + 6) % 7) * 864e5;
-    const lastKm = (state.acts || []).filter((x) => x[1] === "run" && d0(x[0]) >= wkS - 7 * 864e5 && d0(x[0]) < wkS).reduce((a, x) => a + x[3], 0);
-    if (lastKm > 0) {
-      const cap = Math.round(lastKm * 1.1);
-      msgs.push("Minggu lalu " + Math.round(lastKm) + " km. Batas naik aman ~10%: " + cap + " km minggu ini." + (tot > cap * 1.05 ? " Rencanamu " + tot + " km melewati batas itu." : ""));
+    const wc = weeklyCtx();
+    const hardN = PLAN_DAYS.filter((d) => ((state.plan[d[0]] || {}).t) === "quality").length;
+    const runDays = PLAN_DAYS.filter((d) => ["easy", "quality", "long"].includes((state.plan[d[0]] || {}).t)).length;
+    const wkKm = (() => {
+      const D = 864e5, now = Date.now(); let k = 0;
+      (state.acts || []).forEach((x) => { const age = now - x[0]; if (x[1] === "run" && age > 7 * D && age <= 28 * D) k += x[3]; });
+      return k / 3;
+    })();
+    if (wkKm > 0 && tot > 0) {
+      const pctUp = Math.round((tot / wkKm - 1) * 100);
+      if (tot > wkKm * WK_HI) msgs.push("Rencana " + tot + " km, " + pctUp + "% di atas rata-rata 3 minggu sebelumnya (" + Math.round(wkKm) + " km). Ini pemicu evaluasi, bukan ambang cedera. Durasi sesi tetap dibatasi riwayat.");
     }
+    if (wc.ratio != null && wc.ratio > WK_HI) msgs.push("Beban 7 hari terakhir sudah " + Math.round((wc.ratio - 1) * 100) + "% di atas kebiasaan. Rekomendasi durasi dikurangi.");
+    if (hardN >= 3) msgs.push(hardN + " sesi quality dalam sepekan. Pertimbangkan kurangi.");
+    if (runDays >= 6) msgs.push(runDays + " hari lari. Sisakan minimal 1 hari rest.");
     const ty = (d) => (state.plan[d] || {}).t;
     PLAN_DAYS.forEach(([d, n], i) => {
       const nx = PLAN_DAYS[(i + 1) % 7];
@@ -2969,6 +2979,58 @@ input[type=password],input[type=text]{margin:0}
     if (L.length < 4) return false;
     L.sort((x, y) => x - y);
     return L[Math.floor(L.length / 2)] >= 8;
+  }
+
+  /* ---------- Historical cap: durasi sesi tidak boleh melompat dari kemampuan aktual ---------- */
+  /* Sesi lari selesai terpanjang (menit) dengan label sama dalam 30 hari; fallback 90 hari diturunkan kepercayaannya. */
+  function histCap(label) {
+    const now = Date.now();
+    const pick = (days) => (state.acts || [])
+      .filter((x) => x[1] === "run" && x[2] >= 10 && x[3] >= 1.5 && now - x[0] <= days * 864e5 && detectType(x).type === label)
+      .map((x) => x[2]);
+    const r30 = pick(30);
+    if (r30.length) {
+      const mx = Math.max(...r30);
+      /* 1 sesi: sangat konservatif (cap 100%), 2+ sesi: cap 110% */
+      return { max: mx, cap: mx * (r30.length === 1 ? 1.0 : 1.1), n: r30.length, conf: r30.length >= 4 ? "tinggi" : "sedang", src: "30h" };
+    }
+    const r90 = pick(90);
+    if (r90.length) {
+      const mx = Math.max(...r90);
+      return { max: mx, cap: mx * 0.85, n: r90.length, conf: "rendah", src: "90h" }; /* regresi setelah jeda */
+    }
+    return { max: 0, cap: 0, n: 0, conf: "none", src: "none" };
+  }
+  /* Terapkan cap ke durasi rencana; tanpa riwayat → bootstrap konservatif (tidak bebas pakai default). */
+  function applyCap(mins, label, boot) {
+    const h = histCap(label);
+    if (h.n === 0) return { mins: Math.min(mins, boot), h, capped: mins > boot };
+    const c = Math.max(15, Math.floor(h.cap));
+    return { mins: Math.min(mins, c), h, capped: mins > c };
+  }
+  const capNote = (r, lb) => r.capped
+    ? ` Durasi dibatasi riwayat: ${lb} terpanjangmu ${r.h.n ? Math.round(r.h.max) + " mnt" : "belum ada"}${r.h.src === "90h" ? " (>30 hari lalu)" : ""}, jadi naik bertahap.`
+    : "";
+
+  /* Konteks beban: menit 7 hari terakhir vs rata-rata mingguan 21 hari sebelumnya. Hanya konteks, bukan ambang cedera. */
+  function weeklyCtx() {
+    const now = Date.now(), D = 864e5;
+    let cur = 0, prev = 0, wk = new Set();
+    (state.acts || []).forEach((x) => {
+      if (x[1] !== "run") return;
+      const age = now - x[0];
+      if (age <= 7 * D) cur += x[2];
+      else if (age <= 28 * D) { prev += x[2]; wk.add(Math.floor((age - 7 * D) / (7 * D))); }
+    });
+    const avg = prev / 3;
+    return { cur, avg, ratio: avg > 0 && wk.size >= 2 ? cur / avg : null };
+  }
+  const WK_HI = 1.3; /* pemicu evaluasi planner, bukan batas cedera tervalidasi */
+  function wkAdjust(mins) {
+    const w = weeklyCtx();
+    return w.ratio != null && w.ratio > WK_HI
+      ? { mins: Math.max(15, Math.round(mins * 0.9)), note: ` Beban 7 hari ${Math.round((w.ratio - 1) * 100)}% di atas rata-rata 3 minggu sebelumnya, durasi dikurangi ~10%.` }
+      : { mins, note: "" };
   }
 
   function designToday() {
@@ -3171,8 +3233,10 @@ input[type=password],input[type=text]{margin:0}
       if (longCut) mins = d > 7 ? 60 : 40;
       else if (pl && pl.km > 0) mins = Math.min(mins, Math.max(20, Math.round(pl.km * (lo + hi) / 2)));
       if (fl) mins = Math.max(15, Math.round(mins * 0.7));
+      const tc = applyCap(mins, longCut ? "long" : "easy", longCut ? 45 : 30);
+      mins = tc.mins;
       return { k: "ok", status: "train", title: longCut ? "Long dipotong" : "Easy taper", duration: mins + " menit", hr: "Zone 2", pace: mp(lo) + "–" + mp(hi) + " /km",
-        reason: `H-${d}. ` + (longCut ? "Long dipotong jadi " + mins + " menit." : "Volume turun, intensitas dijaga.") + (pl && pl.t === "quality" ? " Quality di rencana ditahan, terlalu dekat race atau kondisi belum cukup." : ""),
+        reason: `H-${d}. ` + (longCut ? "Long dipotong jadi " + mins + " menit." : "Volume turun, intensitas dijaga.") + (pl && pl.t === "quality" ? " Quality di rencana ditahan, terlalu dekat race atau kondisi belum cukup." : "") + capNote(tc, longCut ? "Long" : "Easy"),
         steps: [["Pemanasan", "5 mnt jog"], ["Inti", Math.max(10, mins - 10) + " mnt @ " + mp(lo) + "–" + mp(hi)], ["Pendinginan", "5 mnt easy"]],
         score, stage: st.s, tag: "TAPER" };
     }
@@ -3197,22 +3261,27 @@ input[type=password],input[type=text]{margin:0}
 
     // Recovery
     if (score < 55 || au.severe || (tsb != null && tsb < -12) || qualityCount >= 3 || (style === "conservative" && score < 65)) {
+      const rc0 = histCap("recovery"), eh = histCap("easy");
+      /* Tanpa riwayat recovery: bootstrap dari easy terpanjang (×0,75), bukan memakai baseline easy penuh */
+      const rBoot = eh.n ? Math.floor(eh.max * 0.75) : 25;
+      const rc = rc0.n ? applyCap(35, "recovery", rBoot) : { mins: Math.max(15, Math.min(35, rBoot)), h: rc0, capped: 35 > rBoot };
+      const rw = wkAdjust(rc.mins), rMin = rw.mins;
       return {
         k: "wn",
         status: "train",
         title: "Recovery Run",
-        duration: "30–45 menit",
+        duration: rMin + " menit",
         hr: "Zone 1–2",
         pace: "Sangat mudah",
-        reason:
+        reason: (
           au.severe
             ? `Sinyal tubuh jelek (${au.why}). Recovery dulu, quality dikunci.`
             : qualityCount >= 3
             ? `Sudah ${qualityCount} sesi berat minggu ini. Recovery dulu.`
-            : "Form masih negatif atau kesiapan sedang. Jaga tetap mudah.",
+            : "Form masih negatif atau kesiapan sedang. Jaga tetap mudah.") + (rc.capped ? " Durasi dibatasi riwayat recovery/easy-mu." : "") + rw.note,
         steps: [
           ["Pemanasan", "3 mnt jalan"],
-          ["Inti", "25–35 mnt sangat mudah, bisa ngobrol bebas"],
+          ["Inti", Math.max(10, rMin - 6) + " mnt sangat mudah, bisa ngobrol bebas"],
           ["Pendinginan", "3 mnt jalan"]
         ],
         score,
@@ -3277,12 +3346,15 @@ input[type=password],input[type=text]{margin:0}
       const [lo, hi] = ep();
       const cut = cutbackDue();
       const mins0 = pl.km > 0 ? clamp(Math.round(pl.km * (lo + hi) / 2), 50, 150) : 75;
-      const mins = cut ? Math.max(40, Math.round(mins0 * 0.7)) : mins0;
+      const mins1 = cut ? Math.max(40, Math.round(mins0 * 0.7)) : mins0;
+      const lc = applyCap(mins1, "long", 60);
+      const lw = wkAdjust(lc.mins);
+      const mins = lw.mins;
       const over = wk > 0 && pl.km > 0.3 * wk;
       return { k: "wn", status: "train", title: "Long Run", duration: mins + " menit", hr: "Zone 2", pace: mp(lo) + "–" + mp(hi * 1.05) + " /km",
         reason: "Long sesuai rencana. Pace easy plus sedikit, bukan race pace." + (pl.km ? ` Target ${cut ? Math.round(pl.km * 0.7) : pl.km} km.` : "") +
           (cut ? " Cutback: 3 minggu long tanpa turun, minggu ini dipangkas ~30%. Saran, boleh diabaikan." : "") +
-          (over ? ` Long ${Math.round((pl.km / wk) * 100)}% volume minggu, di atas batas ~30%.` : ""),
+          (over ? ` Long ${Math.round((pl.km / wk) * 100)}% volume minggu, di atas batas ~30%.` : "") + capNote(lc, "Long") + lw.note,
         steps: [["Pemanasan", "10 mnt jog"], ["Inti", Math.max(30, mins - 15) + " mnt easy, stabil"], ["Pendinginan", "5 mnt jalan"]],
         score, stage: st.s, tag: "LONG" };
     }
@@ -3310,7 +3382,7 @@ input[type=password],input[type=text]{margin:0}
     if (wantQuality) {
       // Rotasi: tempo → cruise → VO2 (VO2 hanya form tinggi, tahap ≥ 4). Durasi kerja naik bertahap.
       const n28 = (state.acts || []).filter((x) => x[1] === "run" && Date.now() - x[0] <= 28 * 864e5 && /^(thr|vo2)$/.test(detectType(x).type)).length;
-      const lv = Math.min(3, n28);
+      let lv = Math.min(3, n28);
       const vo2Ok = score >= 75 && st.s >= 4 && !au.warn && !heat;
       const hillsOk = hillsRelevant();
       const idx = n28 % 3;
@@ -3319,6 +3391,7 @@ input[type=password],input[type=text]{margin:0}
         : (vo2Ok && !(hillsOk && Math.floor(n28 / 3) % 2 === 1)) ? "vo2" : hillsOk ? "hills" : "cruise";
       { const D0 = +state.raceDist || 0; if (kindQ !== "racepace") { if (D0 >= 21 && kindQ === "vo2") kindQ = idx === 0 ? "tempo" : "cruise"; else if (D0 > 0 && D0 <= 5 && kindQ === "cruise" && vo2Ok) kindQ = "vo2"; } }
       let q;
+      const buildQ = () => {
       if (kindQ === "racepace") {
         const D = +state.raceDist || 10, w = D >= 21 ? 10 : D >= 10 ? 8 : 5, r = (D >= 21 ? [2, 3, 3, 4] : [3, 4, 4, 5])[lv];
         q = { title: "Race-pace intervals", dur: 18 + r * (w + 2) - 2, hr: "Zone 3–4", pace: mp(gp) + " /km (target race)",
@@ -3350,6 +3423,17 @@ input[type=password],input[type=text]{margin:0}
           wl: ["Warmup", "- 10m Z2 HR", "", r + "x", "- 3m Z5 HR", "- 2m Z1 HR", "", "Cooldown", "- 8m Z1 HR"],
           why: "VO2 " + r + "×3 mnt: stimulus singkat. Form lagi tinggi, jadi boleh." };
       }
+      };
+      buildQ();
+      const qLab = kindQ === "vo2" ? "vo2" : "thr", qh = histCap(qLab);
+      const lv0 = lv;
+      if (qh.n > 0) { while (lv > 0 && q.dur > Math.floor(qh.cap)) { lv--; buildQ(); } }
+      else { lv = 0; buildQ(); } /* tanpa riwayat quality 30 hari → mulai level terendah */
+      const qNote = lv < lv0 || (qh.n === 0 && lv0 > 0)
+        ? " Volume quality dijaga sesuai riwayatmu" + (qh.n ? " (sesi sejenis terpanjang " + Math.round(qh.max) + " mnt)." : " (belum ada quality 30 hari terakhir).")
+        : "";
+      const qw = wkAdjust(q.dur);
+      if (qw.note) q.why += qw.note;
       return {
         k: "wn",
         status: "train",
@@ -3357,7 +3441,7 @@ input[type=password],input[type=text]{margin:0}
         duration: q.dur + " menit total",
         hr: q.hr,
         pace: q.pace,
-        reason: q.why + ` Quality ke-${n28 + 1} dalam 28 hari. Bukan all-out, kerja terkontrol.` + (heat ? " Panas: ikuti HR, bukan pace. Pace boleh melambat." : ""),
+        reason: q.why + qNote + ` Quality ke-${n28 + 1} dalam 28 hari. Bukan all-out, kerja terkontrol.` + (heat ? " Panas: ikuti HR, bukan pace. Pace boleh melambat." : ""),
         steps: [["Pemanasan", "10 mnt easy + strides"], ["Inti", q.core], ["Pendinginan", "8 mnt easy"]],
         wl: q.wl,
         score,
@@ -3378,7 +3462,11 @@ input[type=password],input[type=text]{margin:0}
     if (pl && pl.t === "easy" && pl.km > 0) mins = clamp(Math.round(pl.km * (lo + hi) / 2), 20, 90);
     if (yHard || yLong) mins = Math.min(mins, 35);
     if (fl) mins = Math.max(15, Math.round(mins * 0.7));
-    const easyNote = (er.src === "baseline" ? ` Pace dari easy 4 minggu terakhirmu (~${mp(er.base)}).` : "") +
+    const ec = applyCap(mins, "easy", 30);
+    mins = ec.mins;
+    const ew = wkAdjust(mins);
+    mins = ew.mins;
+    const easyNote = capNote(ec, "Easy") + ew.note + (er.src === "baseline" ? ` Pace dari easy 4 minggu terakhirmu (~${mp(er.base)}).` : "") +
       (heat ? " Panas: pace dilonggarkan ~6%, pakai HR sebagai patokan." : "") +
       (fl ? ` Kaki was-was hari ke-${fl.dayN}/${FLAG_DAYS[1]}: volume −30%, tanpa quality. Kalau nyeri muncul saat lari, berhenti dan tandai Sakit.` : "");
     const planNote = pl && (pl.t === "quality" || pl.t === "long") && !wantQuality
@@ -3976,7 +4064,7 @@ input[type=password],input[type=text]{margin:0}
       t: "<b>" + dm(w.ms) + " – " + dm(w.ms + 6 * DAY) + (k === weeks.length - 1 ? " (berjalan)" : "") + "</b> · " + fmt(w.km) + " km · " + w.n + " sesi" + (w.n ? " · " + Math.round(w.min) + " menit" : "") }));
     /* distribusi intensitas (berdasarkan menit) */
     const dist = { easy: 0, long: 0, mid: 0, hard: 0 };
-    runs.forEach(x => { const t = typeOf(x), m = +x[2]; if (t === "easy") dist.easy += m; else if (t === "long") dist.long += m; else if (t === "thr") dist.mid += m; else dist.hard += m; });
+    runs.forEach(x => { const t = typeOf(x), m = +x[2]; if (t === "easy" || t === "recovery") dist.easy += m; else if (t === "long") dist.long += m; else if (t === "thr") dist.mid += m; else dist.hard += m; });
     const dTot = dist.easy + dist.long + dist.mid + dist.hard;
     const pc = v => Math.round(v / dTot * 100);
     const distHtml = dTot > 0 ? '<div class="prg-bar"><i style="width:' + pc(dist.easy) + '%;background:var(--primary)"></i><i style="width:' + pc(dist.long) + '%;background:var(--primary);opacity:.55"></i><i style="width:' + pc(dist.mid) + '%;background:var(--yellow)"></i><i style="width:' + Math.max(0, 100 - pc(dist.easy) - pc(dist.long) - pc(dist.mid)) + '%;background:var(--red)"></i></div>' +
