@@ -2132,7 +2132,7 @@ input[type=password],input[type=text]{margin:0}
     }
     $("#mBody").innerHTML = body;
     const chartBody=$("#mBody");
-    chartBody.querySelectorAll(".sa-hit").forEach(hit=>hit.addEventListener("click",()=>{const read=$("#saStreamRead");if(read)read.textContent="Pada "+hit.dataset.min+" menit · pace "+mp(+hit.dataset.pace)+"/km"+(+hit.dataset.hr>0?" · HR "+Math.round(+hit.dataset.hr)+" bpm":" · HR tidak tersedia");}));
+    chartBody.querySelectorAll(".sa-hit").forEach(hit=>hit.addEventListener("click",()=>{const read=hit.classList.contains("sa-hrhit")?$("#saHrRead"):$("#saStreamRead");if(read)read.textContent="Pada "+hit.dataset.min+" menit · "+(hit.classList.contains("sa-hrhit")?"HR "+Math.round(+hit.dataset.hr)+" bpm":"pace "+mp(+hit.dataset.pace)+"/km")+(+hit.dataset.pace>0?" · pace "+mp(+hit.dataset.pace)+"/km":"");}));
     chartBody.querySelectorAll(".sa-touch").forEach(bar=>bar.addEventListener("click",()=>{const read=$("#saSplitRead");if(read)read.textContent="Km "+bar.dataset.km+" · pace "+mp(+bar.dataset.pace)+"/km"+(+bar.dataset.hr>0?" · HR "+Math.round(+bar.dataset.hr)+" bpm":" · HR tidak tersedia");bar.classList.add("selected");chartBody.querySelectorAll(".sa-touch").forEach(b=>{if(b!==bar)b.classList.remove("selected");});}));
     $("#actModal").classList.add("show");
   }
@@ -4130,9 +4130,10 @@ input[type=password],input[type=text]{margin:0}
       const hLo=Math.floor(Math.min(...hs)-5),hHi=Math.ceil(Math.max(...hs)+5),hy=v=>T+(1-(v-hLo)/Math.max(1,hHi-hLo))*ph;
       const hPts=pts.filter(q=>q[2]>0),hPath=hPts.map((q,i)=>`${i?"L":"M"}${x(q[0]).toFixed(1)},${hy(q[2]).toFixed(1)}`).join(" ");
       const hGrid=[0,.5,1].map(v=>{const y=T+v*ph,val=hHi-v*(hHi-hLo);return `<line class="sa-grid" x1="${L}" x2="${W-R}" y1="${y}" y2="${y}"/><text class="sa-axis" x="3" y="${y+4}">${Math.round(val)}</text>`;}).join("");
-      hrSvg=`<div class="sa-chart-label">Detak jantung <span>bpm</span></div><svg class="sa-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik detak jantung per waktu">${hGrid}<path class="sa-line hr" d="${hPath}"/><text class="sa-axis" x="${L}" y="${H-4}">0 mnt</text><text class="sa-axis" text-anchor="end" x="${W-R}" y="${H-4}">${Math.round(xs[xs.length-1])} mnt</text></svg>`;
+      const hrHits=hPts.map(q=>`<circle class="sa-hit sa-hrhit" data-min="${q[0]}" data-hr="${q[2]}" data-pace="${q[1]}" cx="${x(q[0]).toFixed(1)}" cy="${hy(q[2]).toFixed(1)}" r="8"/>`).join("");
+      hrSvg=`<div class="sa-chart-label">Detak jantung <span>bpm · sentuh titik</span></div><svg class="sa-chart sa-interactive" viewBox="0 ${W} ${H}" role="img" aria-label="HR per waktu, sentuh titik">${hGrid}<path class="sa-line hr" d="${hPath}"/>${hrHits}<text class="sa-axis" x="${L}" y="${H-4}">0 mnt</text><text class="sa-axis" text-anchor="end" x="${W-R}">${Math.round(xs[xs.length-1])} mnt</text></svg>`;
     }
-    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Grafik sesi</span><span class="sa-pill">${pts.length} titik stream</span></div><div class="sa-chart-label">Pace <span>min/km · lebih cepat di atas</span></div>${paceSvg}<div class="sa-chart-read" id="saStreamRead">Sentuh titik grafik untuk melihat pace dan HR pada waktu itu.</div><div class="sa-note">Grafik stream menunjukkan perubahan ritme sepanjang lari. Split pace dihitung dari stream jarak dan waktu per kilometer, bukan pace rata-rata aktivitas.</div>${hrSvg}${splitViz}<div class="sa-chart-read" id="saSplitRead">Sentuh bar split untuk detail per km.</div>${zoneViz}${splitHtml}</div>`;
+    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Grafik sesi</span><span class="sa-pill">${pts.length} titik stream</span></div><div class="sa-chart-label">Pace <span>min/km · lebih cepat di atas</span></div>${paceSvg}<div class="sa-chart-read" id="saStreamRead">Sentuh titik grafik untuk melihat pace dan HR pada waktu itu.</div><div class="sa-note">Grafik stream menunjukkan perubahan ritme sepanjang lari. Split pace dihitung dari stream jarak dan waktu per kilometer, bukan pace rata-rata aktivitas.</div>${hrSvg}<div class="sa-chart-read" id="saHrRead">Sentuh titik HR untuk melihat respons detak jantung.</div>${splitViz}<div class="sa-chart-read" id="saSplitRead">Sentuh bar split untuk detail per km.</div>${zoneViz}${splitHtml}</div>`;
   }
 
   function sessionAdaptationHTML(act) {
