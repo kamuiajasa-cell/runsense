@@ -2524,17 +2524,17 @@ input[type=password],input[type=text]{margin:0}
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
     const cached = state.sx[id];
     // Cache lama hanya menyimpan pace hasil distance/time; ambil ulang untuk memakai velocity stream.
-    if ((cached && cached.streamVersion >= 3 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 3 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if ((cached && cached.streamVersion >= 4 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 3 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
       // Endpoint Intervals.icu: singular /activity/ dan ekstensi .json.
       const raw = await icuGet(`activity/${encodeURIComponent(id)}/streams.json?types=time,distance,heartrate,velocity_smooth`);
       const summary = summarizeStream(raw, a, 30);
-      state.sx[id] = Object.assign(summary || { none: 1 }, { streamVersion: 3, checkedAt: Date.now() });
+      state.sx[id] = Object.assign(summary || { none: 1 }, { streamVersion: 4, checkedAt: Date.now() });
     } catch (e) {
       // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
-      if (/HTTP (404|422)/.test(String(e && e.message))) state.sx[id] = { none: 1, streamVersion: 3, checkedAt: Date.now() };
+      if (/HTTP (404|422)/.test(String(e && e.message))) state.sx[id] = { none: 1, streamVersion: 4, checkedAt: Date.now() };
     }
     delete sxBusy[id];
     if (state.sx[id]) {
