@@ -1159,17 +1159,6 @@ input[type=password],input[type=text]{margin:0}
     <div class="content profile-layout">
       <header class="page-hero" data-hero="me"><span class="eyebrow">ATHLETE SETTINGS</span><div class="page-title">Your<br><em>profile.</em></div><p data-hero-sub>Atur data tubuh, sasaran lari, jadwal latihan, dan sumber data yang terhubung.</p></header>
 
-      <div class="me-id">
-        <div class="avatar-mark"><img src="icons/icon-192.png" alt="RunSense"></div>
-        <div><b>Pengaturan pelari</b><span>Perubahan tersimpan otomatis di perangkat ini.</span></div>
-      </div>
-
-      <div class="me-stats">
-        <div class="me-stat hl"><small>Estimasi <span id="meGoal">5K</span></small><b id="meEst">—:—</b></div>
-        <div class="me-stat"><small>Target bagus</small><b id="meGood">—</b></div>
-        <div class="me-stat"><small>Keyakinan</small><b id="meProj">—</b></div>
-      </div>
-
       <div class="sg">
         <div class="sg-t">Data tubuh &amp; detak</div>
         <div class="sgroup">
@@ -2213,6 +2202,46 @@ input[type=password],input[type=text]{margin:0}
       ["BUILT AROUND YOU", "Dial in", "your numbers.", "Detak, LTHR, dan pace ambang untuk saran yang lebih akurat."]
     ]
   };
+  Object.entries({
+    setup: [
+      ["FIRST MILE", "Day one,", "mile one.", "Hubungkan akun, lalu coach mulai membaca polamu."],
+      ["NO GUESSWORK", "Train by data,", "not by guess.", "Hubungkan sekali, arahan harian dihitung dari lari dan kondisimu."],
+      ["HELLO, RUNNER", "Good to", "see you.", "Pilih target dan gaya latihan dulu, sisanya menyusul."],
+      ["COACH ON CALL", "Smart advice,", "zero fuss.", "Dari Intervals.icu langsung jadi saran yang bisa dijalani."],
+      ["TAKE A LOOK", "Try before", "you connect.", "Mode demo menampilkan cara kerja tanpa data pribadimu."],
+      ["EVERY JOURNEY", "Starts with", "one sync.", "Satu kali sinkron, lalu semua analisa siap dibuka."]
+    ],
+    home: [
+      ["TODAY'S VERDICT", "Run smart,", "not just far."],
+      ["STEADY WINS", "Patience is", "a pace."],
+      ["READ THE SIGNS", "Your body", "keeps score."],
+      ["TRAIN, THEN RECOVER", "Rest is", "part of the plan."]
+    ],
+    history: [
+      ["THE ARCHIVE", "Every km", "on record.", "Semua lari tersimpan, bisa disaring per minggu atau bulan."],
+      ["MILES BANKED", "Add them", "all up.", "Total jarak, waktu, dan beban latihan dari tiap periode."],
+      ["PAST RUNS", "Learn from", "every one.", "Buka satu sesi untuk melihat pace, detak, dan catatan coach."],
+      ["RUN BY RUN", "The story is", "in the pace.", "Grafik pace dan HR tiap lari ada di dalamnya."],
+      ["WEEK BY WEEK", "See your", "rhythm form.", "Lihat seberapa rutin kamu berlari dari minggu ke minggu."]
+    ],
+    progress: [
+      ["SLOW BURN", "Fitness is", "built quietly.", "Perubahan nyata muncul dalam hitungan minggu."],
+      ["THE BIG PICTURE", "Zoom out,", "see the shift.", "Ganti periode untuk melihat arah latihanmu."],
+      ["HONEST DATA", "No hype,", "just trends.", "Kesimpulan hanya muncul bila datanya cukup."],
+      ["ENGINE CHECK", "Is your base", "getting deeper?", "Cek efisiensi aerobik dan daya tahan di akhir lari panjang."],
+      ["CONSISTENCY", "Show up,", "stack weeks.", "Konsistensi jadi dasar hampir semua kemajuan."],
+      ["PERSONAL BEST?", "Faster than", "your old self?", "Bandingkan pace terbaikmu dengan periode sebelumnya."]
+    ],
+    me: [
+      ["MAKE IT YOURS", "Your numbers,", "your coach.", "Isi usia, detak, dan target agar saran makin tepat."],
+      ["DIAL IT IN", "Small inputs,", "sharper advice.", "LTHR dan pace ambang bisa kamu atur sendiri bila sudah tahu."],
+      ["PERSONAL SETTINGS", "Coach knows", "what you tell it.", "Data yang kamu isi menentukan seberapa pas arahannya."],
+      ["RACE READY", "Pick a goal,", "own the plan.", "Atur target lomba dan jadwal latihan mingguanmu."],
+      ["CONNECTED", "Data in,", "insight out.", "Cek sumber data yang tersambung dan status sinkron."],
+      ["YOUR RHYTHM", "Train the way", "that fits you.", "Gaya latihan dan tema aplikasi bisa kamu sesuaikan."],
+      ["BODY BASICS", "Know your", "baseline.", "Detak istirahat dan maksimal jadi dasar semua perhitungan."]
+    ]
+  }).forEach(([k, v]) => HERO_POOL[k].push(...v));
   function rotateHero(name) {
     const pool = HERO_POOL[name];
     if (!pool) return;
@@ -2598,7 +2627,8 @@ input[type=password],input[type=text]{margin:0}
     delete sxBusy[id];
     if (state.sx[id]) {
       const ks = Object.keys(state.sx);
-      if (ks.length > 90) ks.slice(0, ks.length - 90).forEach((x) => delete state.sx[x]);
+      if (ks.length > 400) ks.slice(0, ks.length - 400).forEach((x) => delete state.sx[x]);
+      ks.slice(-400, -60).forEach((x) => { const e = state.sx[x]; if (e && (e.chart || e.splits)) { delete e.chart; delete e.splits; e.lite = 1; } });
       persist();
       if (state.athlete) renderAll();
       const mo = $("#actModal");
@@ -2613,11 +2643,12 @@ input[type=password],input[type=text]{margin:0}
     if (durBusy || !state.apiKey || state.apiKey === "demo" || !Array.isArray(list)) return;
     const todo = list.filter((a) => a && a[9] && !/^hw/.test(String(a[9])) && a[1] === "run" && (a[3] >= 5 || a[2] >= 40)
       && !durTried[String(a[9])]
-      && !(state.sx[String(a[9])] && (state.sx[String(a[9])].streamVersion >= 4 || state.sx[String(a[9])].dur))).slice(-6);
+      && !(state.sx[String(a[9])] && (state.sx[String(a[9])].streamVersion >= 4 || state.sx[String(a[9])].dur))).slice(-12);
     if (!todo.length) return;
     durBusy = true;
     try { for (const a of todo) { durTried[String(a[9])] = 1; await ensureStream(a); } } catch (_) {}
     durBusy = false;
+    setTimeout(() => backfillDurability(list), 50); /* lanjut sampai semua lari periode terpilih terisi */
   }
 
   function kind(t) {
@@ -2675,7 +2706,7 @@ input[type=password],input[type=text]{margin:0}
       n++;
     });
     state.acts.sort((a, b) => a[0] - b[0]);
-    if (state.acts.length > 500) state.acts = state.acts.slice(-500);
+    if (state.acts.length > 1500) state.acts = state.acts.slice(-1500);
     return n;
   }
 
@@ -2704,7 +2735,7 @@ input[type=password],input[type=text]{margin:0}
       } catch (_) {}
 
       const now = Date.now();
-      const old = fmtDate(new Date(now - (state.acts.length ? 100 : 400) * 864e5));
+      const old = fmtDate(new Date(now - (state.acts.length ? 100 : 760) * 864e5));
       const neu = fmtDate(new Date(now + 864e5));
 
       const [acts, well] = await Promise.all([
@@ -3793,7 +3824,7 @@ input[type=password],input[type=text]{margin:0}
     function lineChart(id, items, yfmt, invert, unitLbl) {
       /* items: [{ms, v, t}] */
       if (items.length < 2) return "";
-      const t0 = items[0].ms, t1 = items[items.length - 1].ms || t0 + 1;
+      const t0 = from, t1 = now, ti0 = items[0].ms, ti1 = items[items.length - 1].ms, dl = ms => prgR >= 26 ? dmy(ms) : dm(ms);
       let lo = Math.min(...items.map(i => i.v)), hi = Math.max(...items.map(i => i.v));
       const pad = (hi - lo || 1) * 0.15; lo -= pad; hi += pad;
       const X = ms => PL + (t1 === t0 ? 0.5 : (ms - t0) / (t1 - t0)) * (W - PL - PR);
@@ -3801,7 +3832,7 @@ input[type=password],input[type=text]{margin:0}
       const pts = items.map(i => ({ x: X(i.ms), y: Y(i.v), t: i.t, v: i.v }));
       window.PRG[id] = pts;
       const rg = regress(items.map(i => ({ x: i.ms, y: i.v })));
-      const trend = rg ? '<line x1="' + X(t0) + '" x2="' + X(t1) + '" y1="' + Y(rg.a + rg.b * t0) + '" y2="' + Y(rg.a + rg.b * t1) + '" style="stroke:var(--grey);stroke-width:1.4;stroke-dasharray:5 4"/>' : "";
+      const trend = rg ? '<line x1="' + X(ti0) + '" x2="' + X(ti1) + '" y1="' + Y(rg.a + rg.b * ti0) + '" y2="' + Y(rg.a + rg.b * ti1) + '" style="stroke:var(--grey);stroke-width:1.4;stroke-dasharray:5 4"/>' : "";
       const path = pts.map((p, i) => (i ? "L" : "M") + p.x.toFixed(1) + " " + p.y.toFixed(1)).join(" ");
       const dots = pts.map(p => '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="2.6" style="fill:var(--primary)"/>').join("");
       const yTop = invert ? lo : hi, yBot = invert ? hi : lo;
@@ -3810,8 +3841,8 @@ input[type=password],input[type=text]{margin:0}
         '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + (H - PB) + '" y2="' + (H - PB) + '" style="stroke:var(--card-border)"/>' +
         '<text class="prg-yax" x="' + (PL - 5) + '" y="' + (PT + 3) + '" text-anchor="end">' + yfmt(yTop) + '</text>' +
         '<text class="prg-yax" x="' + (PL - 5) + '" y="' + (H - PB + 3) + '" text-anchor="end">' + yfmt(yBot) + '</text>' +
-        '<text class="prg-yax" x="' + PL + '" y="' + (H - 5) + '">' + dm(t0) + '</text>' +
-        '<text class="prg-yax" x="' + (W - PR) + '" y="' + (H - 5) + '" text-anchor="end">' + dm(t1) + '</text>' +
+        '<text class="prg-yax" x="' + PL + '" y="' + (H - 5) + '">' + dl(t0) + '</text>' +
+        '<text class="prg-yax" x="' + (W - PR) + '" y="' + (H - 5) + '" text-anchor="end">' + dl(t1) + '</text>' +
         trend + '<path d="' + path + '" style="fill:none;stroke:var(--primary);stroke-width:1.6;opacity:.55"/>' + dots + axisMk + '</svg>' +
         '<div class="prg-read" data-for="' + id + '">Sentuh grafik untuk melihat tiap sesi. Garis putus-putus = arah tren.</div>';
     }
@@ -3838,18 +3869,27 @@ input[type=password],input[type=text]{margin:0}
 
     /* =============== 1. PERFORMA =============== */
     const BK = [["3–5 km", 3, 5], ["5–10 km", 5, 10], ["10–21 km", 10, 21.0975], ["≥ 21 km", 21.0975, 999]];
-    const bestOf = (list, lo, hi) => { let b = null; list.forEach(x => { const km = +x[3]; if (km >= lo && km < hi) { const r = +x[2] / km; if (!b || r < b.r) b = { r, km, ms: x[0], sec: r * 60 }; } }); return b; };
-    const perfRows = [], perfDeltas = [];
+    const bestOf = (list, lo, hi, st) => { let b = null; list.forEach(x => { const km = +x[3]; if (km >= lo && km < hi) { const r = st ? actPace(x) : +x[2] / km; if (!b || r < b.r) b = { r, km, ms: x[0], sec: r * 60 }; } }); return b; };
+    const firstAct = (state.acts || []).length ? Math.min(...state.acts.map(x => x[0])) : Infinity;
+    const prevOk = firstAct <= prevFrom + 14 * DAY; /* riwayat tersinkron harus mencakup periode pembanding */
+    const perfRows = [], perfDeltas = [], perfNeed = [];
+    const hasMv = x => { const q = x[9] && state.sx ? state.sx[String(x[9])] : null; return !!(q && q.mv && q.mv.pace > 0); };
     BK.forEach(([lbl, lo, hi]) => {
-      const c = bestOf(runs, lo, hi); if (!c) return;
-      const p = bestOf(prevRuns, lo, hi);
+      if (!bestOf(runs, lo, hi)) return;
+      /* Kandidat terbaik (3 tercepat menurut rata-rata) per periode; stream dipakai hanya bila SEMUA kandidat di kedua periode sudah punya stream, agar basis pace sebanding. */
+      const cand = lst => lst.filter(x => +x[3] >= lo && +x[3] < hi).sort((u, v) => u[2] / u[3] - v[2] / v[3]).slice(0, 3);
+      const cR = cand(runs), cP = prevOk ? cand(prevRuns) : [];
+      cR.concat(cP).forEach(x => perfNeed.push(x));
+      const useS = cR.every(hasMv) && cP.every(hasMv);
+      const c = useS ? bestOf(cR, lo, hi, true) : bestOf(runs, lo, hi);
+      const p = prevOk ? (useS ? bestOf(cP, lo, hi, true) : bestOf(prevRuns, lo, hi)) : null;
       let dtxt = "";
       if (p) { const d = Math.round(c.sec - p.sec); perfDeltas.push(d); dtxt = ' <small class="' + (d < 0 ? "prg-up" : d > 0 ? "prg-dn" : "") + '">' + (d === 0 ? "sama" : sgn(d) + " dtk") + '</small>'; }
-      perfRows.push(row(lbl, fmtP(c.sec) + "/km" + dtxt + ' <small>· ' + fmt(c.km) + ' km · ' + dm(c.ms) + '</small>'));
+      perfRows.push(row(lbl, fmtP(c.sec) + "/km" + dtxt + ' <small>· ' + fmt(c.km) + ' km · ' + dm(c.ms) + (useS ? ' · stream' : '') + '</small>'));
     });
     const g = state.goalEst || {};
     const estRow = g.current && g.current !== "—:—" ? row("Estimasi " + (state.goal || "5K") + " (algoritma)", g.current) : "";
-    let perfV = "na", perfNote = "Belum ada periode pembanding yang sebanding.", perfConf = "rendah";
+    let perfV = "na", perfNote = prevOk ? "Belum ada periode pembanding yang sebanding." : "Riwayat tersinkron belum mencakup seluruh " + prgR + " minggu sebelumnya, jadi perbandingan tidak ditampilkan.", perfConf = "rendah";
     if (perfDeltas.length) {
       const d = med(perfDeltas);
       perfV = d <= -5 ? "up" : d >= 5 ? "dn" : "flat";
@@ -3858,12 +3898,16 @@ input[type=password],input[type=text]{margin:0}
         : "Pace terbaik relatif sama dengan periode sebelumnya.";
       perfConf = perfDeltas.length >= 3 ? "sedang" : "rendah";
     }
-    const perfHtml = perfRows.length ? card("Performa", "Pace rata-rata terbaik per kelompok jarak, dibanding " + prgR + " minggu sebelumnya. Hasil aktual aktivitas, bukan split atau catatan lomba.",
+    const perfHtml = perfRows.length ? card("Performa", "Pace terbaik per kelompok jarak, dibanding " + prgR + " minggu sebelumnya. Memakai pace waktu bergerak dari stream bila datanya sudah lengkap untuk kedua periode (ditandai \u201cstream\u201d), selain itu rata-rata aktivitas.",
       perfRows.join("") + estRow, "Perbandingan paling kuat bila rute, cuaca, dan usaha serupa. Satu sesi cepat bisa mengubah angka ini.", perfConf) : "";
 
     /* =============== 2. AEROBIK =============== */
     const easy = runs.filter(x => hrOk(x) && +x[3] >= 2 && +x[2] >= 12 && typeOf(x) === "easy")
-      .map(x => ({ ms: x[0], hr: +x[4], pace: +x[2] / +x[3] }));
+      .map(x => ({ ms: x[0], hr: +x[4], pace: +x[2] / +x[3], x }));
+    /* Basis pace harus sama untuk semua sesi: stream hanya dipakai bila SEMUA easy run periode ini sudah punya stream. */
+    const aeroSt = easy.length >= 4 && easy.every(e => hasMv(e.x));
+    if (aeroSt) easy.forEach(e => { e.pace = actPace(e.x); });
+    else easy.forEach(e => perfNeed.push(e.x));
     let aeroV = "na", aeroNote = "Butuh minimal 4 easy run ≥ 2 km dengan HR valid.", aeroConf = "rendah", aeroHtml = "";
     if (easy.length >= 4) {
       const ref = Math.round(med(easy.map(x => x.hr)));
@@ -3889,7 +3933,7 @@ input[type=password],input[type=text]{margin:0}
         : aeroV === "dn" ? "Pada HR acuan " + ref + " bpm, paruh akhir " + Math.abs(delta) + " dtk/km lebih lambat."
         : "Pace pada HR acuan relatif stabil.") + hrNote;
       const items = norm.map(x => ({ ms: x.ms, v: x.sec, t: "<b>" + dm(x.ms) + "</b> · " + fmtP(x.sec) + "/km pada " + ref + " bpm (asli " + fmtP(x.pace * 60) + "/km, HR " + Math.round(x.hr) + ")" }));
-      aeroHtml = card("Efisiensi aerobik", "Easy run ≥ 2 km, HR valid · " + norm.length + " sesi · pace dinormalisasi ke HR " + ref + " bpm (perkiraan linear)",
+      aeroHtml = card("Efisiensi aerobik", "Easy run ≥ 2 km, HR valid · " + norm.length + " sesi · pace " + (aeroSt ? "waktu bergerak (stream)" : "rata-rata aktivitas") + " dinormalisasi ke HR " + ref + " bpm (perkiraan linear)",
         lineChart("prgAero", items, v => fmtP(v), true, "Pace ternormalisasi pada HR acuan") +
         row("Paruh awal", fmtP(first) + "/km") + row("Paruh akhir", fmtP(last) + "/km") +
         row("Perubahan pace", '<span class="' + (delta > 0 ? "prg-up" : delta < 0 ? "prg-dn" : "") + '">' + (delta === 0 ? "0" : sgn(-delta)) + ' dtk/km</span>') + hrRows,
@@ -4010,7 +4054,7 @@ input[type=password],input[type=text]{margin:0}
     /* =============== RINGKASAN =============== */
     const sumRow = (name, v, label, note, c) => '<div class="prg-sumrow"><div class="top"><b>' + name + '</b>' + pill(v, label) + '</div><div class="nt">' + note + ' <span class="prg-conf">keyakinan ' + c + '</span></div></div>';
     const L = { up: "Membaik", flat: "Stabil", dn: "Perlu perhatian", na: "Belum cukup data" };
-    const summary = '<section class="prg-card"><h4>Ringkasan progres</h4><div class="sub">Lima sisi dinilai terpisah, tanpa skor gabungan. Periode: ' + dm(from) + ' – ' + dm(now) + '.</div>' +
+    const summary = '<section class="prg-card"><h4>Ringkasan progres</h4><div class="sub">Lima sisi dinilai terpisah, tanpa skor gabungan. Periode: ' + (prgR >= 26 ? dmy(from) + ' – ' + dmy(now) : dm(from) + ' – ' + dm(now)) + '.</div>' +
       sumRow("Performa", perfV, perfV === "dn" ? "Lebih lambat" : L[perfV], perfNote, perfConf) +
       sumRow("Aerobik", aeroV, aeroV === "dn" ? "Menurun" : L[aeroV], aeroV === "na" ? "Butuh minimal 4 easy run dengan HR valid." : aeroNote.split(". ")[0] + ".", aeroConf) +
       sumRow("Durability", durV, durLbl, durNote.split(". ")[0] + ".", durConf) +
@@ -4025,6 +4069,7 @@ input[type=password],input[type=text]{margin:0}
 
     el.innerHTML = summary + perfHtml + aeroHtml + durHtml + capHtml + susHtml + dq;
     backfillDurability(runs);
+    prefetchPace(perfNeed.map(x => ({ act: x }))).then(n => { if (n) renderProgress(); });
   }
   window.renderProgress = renderProgress;
 
@@ -4069,10 +4114,6 @@ input[type=password],input[type=text]{margin:0}
 
   function renderMe(a, g) {
     g = g || state.goalEst || {};
-    $("#meGoal").textContent = state.goal;
-    $("#meEst").textContent = g.current || "—:—";
-    $("#meGood").textContent = g.good || "—";
-    $("#meProj").textContent = g.projection || "—";
     [["#inAge", state.age], ["#inRest", state.rest], ["#inMax", state.max]].forEach(([s, v]) => {
       const el = $(s);
       if (el && document.activeElement !== el) el.value = v > 0 ? v : "";
@@ -4741,9 +4782,10 @@ input[type=password],input[type=text]{margin:0}
       }
     });
     state.acts.sort((a, b) => a[0] - b[0]);
-    if (state.acts.length > 500) state.acts = state.acts.slice(-500);
+    if (state.acts.length > 1500) state.acts = state.acts.slice(-1500);
     const ks = Object.keys(state.sx);
-    if (ks.length > 90) ks.slice(0, ks.length - 90).forEach((x) => delete state.sx[x]);
+    if (ks.length > 400) ks.slice(0, ks.length - 400).forEach((x) => delete state.sx[x]);
+      ks.slice(-400, -60).forEach((x) => { const e = state.sx[x]; if (e && (e.chart || e.splits)) { delete e.chart; delete e.splits; e.lite = 1; } });
 
     state.hwLast = Date.now();
     persist();
