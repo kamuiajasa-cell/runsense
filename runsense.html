@@ -4126,7 +4126,6 @@ input[type=password],input[type=text]{margin:0}
     const xs=pts.map(x=>x[0]),ps=pts.map(x=>x[1]),hs=pts.filter(x=>x[2]>0).map(x=>x[2]);
     const pLo=Math.max(2,Math.floor(Math.min(...ps)-0.5)),pHi=Math.ceil(Math.max(...ps)+0.5);
     const x=v=>L+(v/Math.max(1,xs[xs.length-1]))*pw;
-    const py=v=>T+(v-pLo)/Math.max(.1,pHi-pLo)*ph;
     const py=v=>T+(1-(v-pLo)/Math.max(.1,pHi-pLo))*ph;
     const pPath=pts.map((q,i)=>`${i?"L":"M"}${x(q[0]).toFixed(1)},${py(q[1]).toFixed(1)}`).join(" ");
     const pGrid=[0,.5,1].map(v=>{const y=T+v*ph;const val=pLo+v*(pHi-pLo);return `<line class="sa-grid" x1="${L}" x2="${W-R}" y1="${y}" y2="${y}"/><text class="sa-axis" x="3" y="${y+4}">${mp(val)}</text>`;}).join("");
