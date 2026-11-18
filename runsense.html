@@ -4143,6 +4143,57 @@ input[type=password],input[type=text]{margin:0}
     }
 
     if (durRuns.length && durHtml) durHtml = durHtml.replace(/<\/section>$/, fuNote(durRuns) + "</section>");
+    /* ===== Running Economy & Adaptation Layer (RE-A) =====
+       Proxy only: activity summaries cannot measure oxygen cost directly.
+       Connects comparable easy-run data, durability, strength adherence,
+       cadence/form self-check and fueling notes without causal claims. */
+    const reEasy = runs.filter(a => typeOf(a) === "easy" && hrOk(a) && a[4] > 0 && a[3] >= 2)
+      .map(a => ({a, pace: a[2] / a[3], hr: +a[4], ms: a[0], cad: cadOf(a), stride: strideOf(a)}))
+      .filter(x => x.pace >= 4 && x.pace <= 12 && x.hr > 0)
+      .sort((a,b) => a.ms - b.ms);
+    const reRefHr = med(reEasy.map(x => x.hr));
+    const reNorm = reEasy.map(x => ({...x, np: x.pace * (reRefHr / x.hr)}));
+    const reEarly = reNorm.slice(0, Math.ceil(reNorm.length / 2)), reLate = reNorm.slice(Math.floor(reNorm.length / 2));
+    const reEarlyP = med(reEarly.map(x => x.np)), reLateP = med(reLate.map(x => x.np));
+    const reDelta = reEarlyP != null && reLateP != null ? (reEarlyP - reLateP) / reEarlyP * 100 : null;
+    const reTrend = reDelta == null || reNorm.length < 4 ? "Belum cukup data untuk membandingkan tren pada HR yang sebanding."
+      : reDelta > 1.5 ? "Proxy efisiensi membaik: pace setara-HR di bagian periode terbaru lebih cepat."
+      : reDelta < -1.5 ? "Proxy efisiensi menurun: pace setara-HR di bagian periode terbaru lebih lambat."
+      : "Proxy efisiensi relatif stabil pada HR yang sebanding.";
+    const reConf = reNorm.length >= 8 && spanDays(reEasy) >= 42 ? "sedang" : reNorm.length >= 4 && spanDays(reEasy) >= 21 ? "rendah–sedang" : "rendah";
+    const reCad = med(reEasy.map(x => x.cad).filter(x => x > 0)), reStride = med(reEasy.map(x => x.stride).filter(x => x > 0));
+    const reStrength28 = STR.log.filter(e => e.d >= yAgo(28)), reDone = reStrength28.filter(e => e.s === "done").length, reSkip = reStrength28.filter(e => e.s === "skip").length;
+    const reFuRuns = durRuns.filter(o => FU[o.x[0]] && FU[o.x[0]] >= 2);
+    const reFuN = durRuns.filter(o => FU[o.x[0]]).length;
+    const reForm = STR.fc && STR.fc.d >= yAgo(28) ? STR.fc : null;
+    const reFactors = [];
+    if (reNorm.length < 4) reFactors.push({p:1,t:"Data easy run pembanding masih sedikit",why:"Tambah beberapa easy run dengan HR dan pace valid agar tren efisiensi dapat dibaca."});
+    else if (reDelta != null && reDelta < -1.5) reFactors.push({p:2,t:"Efisiensi aerobik perlu dipantau",why:"Pace setara-HR melambat; interpretasi tetap mempertimbangkan cuaca, tidur, elevasi, dan hidrasi."});
+    if (durV === "dn") reFactors.push({p:2,t:"Durability perlu perhatian",why:"Analisis lari panjang menunjukkan penurunan kestabilan; jangan buru-buru menambah durasi."});
+    if (reStrength28.length >= 3 && reDone < 2) reFactors.push({p:3,t:"Konsistensi latihan kekuatan",why:"Catatan 28 hari menunjukkan sesi kekuatan selesai masih sedikit; pilih menu ringan dan realistis."});
+    if (reForm && (reForm.hd || reForm.ov)) reFactors.push({p:3,t:"Cek teknik secara terarah",why:"Ada catatan mandiri form; gunakan video/observasi, bukan diagnosis dari cadence atau stride."});
+    if (reFuN >= 2 && reFuRuns.length === 0) reFactors.push({p:3,t:"Fueling belum tercatat pada lari panjang",why:"Log fueling belum menunjukkan sesi dengan asupan; catat untuk evaluasi, bukan menganggap itu penyebab."});
+    if (reCad && reCad < 160) reFactors.push({p:4,t:"Cadence sebagai petunjuk, bukan target",why:"Kadence easy relatif rendah. Nilai bersama kenyamanan, stride, dan observasi form; tidak perlu mengejar angka 180."});
+    if (!reFactors.length) reFactors.push({p:5,t:"Pertahankan fondasi yang sudah berjalan",why:"Data belum menunjukkan satu faktor yang dominan membatasi; utamakan konsistensi, easy effort, dan progres bertahap."});
+    reFactors.sort((a,b)=>a.p-b.p);
+    const reFocus = reFactors[0];
+    const reCoach = reFocus.p <= 2 ? "Fokus berikut: " + reFocus.t.toLowerCase() + ". " + reFocus.why
+      : "Fokus berikut: " + reFocus.t.toLowerCase() + ". " + reFocus.why;
+    const reRows = [
+      row("Easy run pembanding", reNorm.length + " sesi · keyakinan " + reConf),
+      row("Pace setara-HR (median)", reEarlyP != null && reLateP != null ? fmtP(reEarlyP) + " → " + fmtP(reLateP) + " /km" : "Belum cukup data"),
+      row("Tren proxy efisiensi", reDelta != null && reNorm.length >= 4 ? sgn(reDelta,1) + "% (bagian terbaru)" : "Belum dapat dinilai"),
+      row("Durability", durV === "up" ? "Baik / stabil" : durV === "flat" ? "Perlu dipantau" : durV === "dn" ? "Perlu perhatian" : "Belum cukup data"),
+      row("Kekuatan · 28 hari", reStrength28.length ? reDone + " selesai · " + reSkip + " dilewati" : "Belum ada log"),
+      row("Cadence & stride easy", reCad ? Math.round(reCad) + " spm" + (reStride ? " · " + m2(reStride) + " m/langkah" : "") : "Belum tersedia")
+    ].join("");
+    const reHtml = '<section class="prg-card"><h4>Running Economy &amp; Adaptasi</h4><div class="sub">Lapisan interpretasi: efisiensi, durability, kekuatan, teknik dan fueling. Ini proxy, bukan pengukuran konsumsi oksigen.</div>' +
+      '<div class="prg-insight"><b>Tren:</b> ' + reTrend + ' Keyakinan ' + reConf + '.</div>' + reRows +
+      '<div class="prg-insight"><b>Faktor pembatas yang diprioritaskan:</b> ' + reFocus.t + '. ' + reFocus.why + '</div>' +
+      '<div class="prg-insight"><b>Coach:</b> ' + reCoach + '</div>' +
+      (reFuN ? '<div class="prg-insight">Fueling tercatat pada ' + reFuRuns.length + ' dari ' + reFuN + ' sesi durability yang punya log. Data ini belum cukup untuk menyimpulkan efek fueling.</div>' : '<div class="prg-insight">Fueling lari panjang belum cukup tercatat untuk dibandingkan dengan durability.</div>') +
+      '<div class="prg-note">Pace setara-HR menormalkan pace terhadap median HR easy di periode ini. Kondisi cuaca, elevasi, permukaan, tidur, hidrasi dan fueling tidak seluruhnya dikontrol; jangan baca sebagai running economy fisiologis langsung.</div></section>';
+
     const susHtml = card("Keberlanjutan", "Konsistensi dan sinyal pemulihan dibanding baseline pribadi.", consRows + strRow() + wRows.join(""), susNote, susConf);
 
     /* =============== RINGKASAN =============== */
@@ -4161,7 +4212,7 @@ input[type=password],input[type=text]{margin:0}
     const dq = '<section class="prg-card prg-dq"><h4>Kualitas data</h4><div class="sub">' + runs.length + ' lari dipakai' + (excl > 0 ? ', ' + excl + ' dikecualikan (durasi &lt; 5 menit, jarak &lt; 1 km, atau pace tak wajar)' : '') + '. HR valid di ' + withHr + ' lari.' +
       ' Durability dihitung dari stream tiap lari panjang, bukan dari ringkasan aktivitas.</div></section>';
 
-    el.innerHTML = summary + perfHtml + aeroHtml + durHtml + capHtml + susHtml + fmCard() + dq;
+    el.innerHTML = summary + reHtml + perfHtml + aeroHtml + durHtml + capHtml + susHtml + fmCard() + dq;
     backfillDurability(runs);
     prefetchPace(perfNeed.map(x => ({ act: x }))).then(n => { if (n) renderProgress(); });
   }
