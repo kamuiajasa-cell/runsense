@@ -1118,6 +1118,7 @@ input[type=password],input[type=text]{margin:0}
         <div class="leg-note" id="legNote"></div>
       </div>
       <div class="card" id="vxCard" style="display:none"><div id="vxBody"></div></div>
+      <div class="card" id="strCard" style="display:none"></div>
       <div class="card" id="reviewCard" style="display:none">
         <div class="label">Ringkasan lari hari ini</div>
         <div id="reviewBody"></div>
@@ -2680,7 +2681,8 @@ input[type=password],input[type=text]{margin:0}
       (a.name || "").slice(0, 50),
       Number(a.max_heartrate || a.max_hr || 0),
       id,
-      Number(a.icu_training_load || a.training_load || a.hrss || 0)
+      Number(a.icu_training_load || a.training_load || a.hrss || 0),
+      Number(a.average_cadence || 0)
     ];
     // indices: 0 start,1 kind,2 min,3 km,4 avgHr,5 elev,6 lid,7 name,8 maxHr,9 icuId,10 load
   }
@@ -2957,6 +2959,7 @@ input[type=password],input[type=text]{margin:0}
     let k = 1;
     if (heat) k += 0.06;
     if (score < 55 || (au && au.warn)) k += 0.04;
+    k += ttK();
     return { lo: lo * k, hi: hi * k, src, base: b };
   }
   /* Hills dipakai hanya kalau medan latihanmu memang berbukit: median >= 8 m/km di 28 hari terakhir. */
@@ -2982,9 +2985,10 @@ input[type=password],input[type=text]{margin:0}
     const a = state.athlete || {}, L = +a.lthr || 0, fl = flagInfo();
     const zb = { 1: [0, 0.81], 2: [0.81, 0.89], 3: [0.9, 0.93], 4: [0.94, 0.99], 5: [1, 1.06] };
     if (L && typeof r.hr === "string") {
-      if (/LTHR/.test(r.hr)) r.hr = "Jangan lewat " + L + " bpm di awal";
+      if (/LTHR/.test(r.hr)) r.hr = "Jangan lewat " + L + " bpm di awal" + ((+state.raceDist || 0) >= 42 ? " · usaha ≈ Z3" : (+state.raceDist || 0) >= 21 ? " · usaha ≈ Z4" : (+state.raceDist || 0) >= 5 ? " · sampai Z5 di akhir" : "");
       else r.hr = r.hr.replace(/Zone (\d)(?:–(\d))?/, (m, x, y) => {
-        const lo = Math.round(L * zb[x][0]), hi = Math.round(L * zb[y || x][1]);
+        const mx0 = maxHr(), rs0 = restHr(), hrr = mx0 > rs0 && rs0 > 0, zr = { 1: [0, 0.6], 2: [0.6, 0.7], 3: [0.7, 0.8], 4: [0.8, 0.9], 5: [0.9, 1] };
+        const lo = hrr ? (x > 1 ? Math.round(rs0 + zr[x][0] * (mx0 - rs0)) : 0) : Math.round(L * zb[x][0]), hi = hrr ? Math.round(rs0 + zr[y || x][1] * (mx0 - rs0)) : Math.round(L * zb[y || x][1]);
         return m + " · " + (lo ? lo + "–" + hi : "<" + hi) + " bpm";
       });
     }
@@ -2995,7 +2999,6 @@ input[type=password],input[type=text]{margin:0}
       r.steps = [["Pemanasan", "5 mnt jalan"], ["Inti", n + "× (" + rwT(state.rw.run) + " lari + " + rwT(state.rw.walk) + " jalan)" + (/\d/.test(r.pace) ? ", lari @ " + r.pace.replace(" /km", "") : "")], ["Pendinginan", "5 mnt jalan"]];
       if (/\d/.test(r.pace)) r.pace += " (saat lari)";
     }
-    if (r.steps && (r.status === "rest" || r.tag === "RECOVERY") && !(fl && fl.lv === 2)) r.steps.push(["Kekuatan", "15 mnt, 2×/minggu: glute bridge 2×12, calf raise 2×15, plank 2×30 dtk, keseimbangan 1 kaki 2×30 dtk"]);
     if (r.steps && /^Easy (Run|terbatas)$/.test(r.title) && r.score > 65 && [2, 4].includes(new Date().getDay())) r.steps.push(["Opsional", "4× 20 dtk strides santai, jeda jalan 1 mnt"]);
     if (r.steps && r.title === "Long Run" && parseInt(r.duration) >= 60) r.steps.push(["Nutrisi", "Karbo 30–60 g/jam mulai menit 45, minum 150–250 ml tiap 20 mnt"]);
     if (r.steps && r.title === "Hari lomba" && (+state.raceDist || 0) >= 21) r.steps.push(["Nutrisi", "Karbo 40–60 g/jam sejak menit 40, minum di tiap pos"]);
@@ -3312,8 +3315,9 @@ input[type=password],input[type=text]{margin:0}
       const hillsOk = hillsRelevant();
       const idx = n28 % 3;
       const gp = goalPace(), rp = ph && ph.k === "peak" && gp > 0 && n28 % 2 === 1;
-      const kindQ = rp ? "racepace" : idx === 0 ? "tempo" : idx === 1 ? "cruise"
+      let kindQ = rp ? "racepace" : idx === 0 ? "tempo" : idx === 1 ? "cruise"
         : (vo2Ok && !(hillsOk && Math.floor(n28 / 3) % 2 === 1)) ? "vo2" : hillsOk ? "hills" : "cruise";
+      { const D0 = +state.raceDist || 0; if (kindQ !== "racepace") { if (D0 >= 21 && kindQ === "vo2") kindQ = idx === 0 ? "tempo" : "cruise"; else if (D0 > 0 && D0 <= 5 && kindQ === "cruise" && vo2Ok) kindQ = "vo2"; } }
       let q;
       if (kindQ === "racepace") {
         const D = +state.raceDist || 10, w = D >= 21 ? 10 : D >= 10 ? 8 : 5, r = (D >= 21 ? [2, 3, 3, 4] : [3, 4, 4, 5])[lv];
@@ -3642,6 +3646,7 @@ input[type=password],input[type=text]{margin:0}
     }
     $("#mainCard").innerHTML = h;
     climHome();
+    strRender();
 
     /* Konfirmasi jenis sesi */
     const now = Date.now();
@@ -4049,7 +4054,8 @@ input[type=password],input[type=text]{margin:0}
       durHtml = card("Durability", "Kestabilan pace dan HR di sepertiga akhir lari panjang", '<p class="prg-note">' + durRuns.length + ' sesi memenuhi syarat dari minimal 3. Lari interval, tempo, dan lomba tidak dipakai karena pace-nya memang bervariasi.</p>', "", "");
     }
 
-    const susHtml = card("Keberlanjutan", "Konsistensi dan sinyal pemulihan dibanding baseline pribadi.", consRows + wRows.join(""), susNote, susConf);
+    if (durRuns.length && durHtml) durHtml = durHtml.replace(/<\/section>$/, fuNote(durRuns) + "</section>");
+    const susHtml = card("Keberlanjutan", "Konsistensi dan sinyal pemulihan dibanding baseline pribadi.", consRows + strRow() + wRows.join(""), susNote, susConf);
 
     /* =============== RINGKASAN =============== */
     const sumRow = (name, v, label, note, c) => '<div class="prg-sumrow"><div class="top"><b>' + name + '</b>' + pill(v, label) + '</div><div class="nt">' + note + ' <span class="prg-conf">keyakinan ' + c + '</span></div></div>';
@@ -4067,7 +4073,7 @@ input[type=password],input[type=text]{margin:0}
     const dq = '<section class="prg-card prg-dq"><h4>Kualitas data</h4><div class="sub">' + runs.length + ' lari dipakai' + (excl > 0 ? ', ' + excl + ' dikecualikan (durasi &lt; 5 menit, jarak &lt; 1 km, atau pace tak wajar)' : '') + '. HR valid di ' + withHr + ' lari.' +
       ' Durability dihitung dari stream tiap lari panjang, bukan dari ringkasan aktivitas.</div></section>';
 
-    el.innerHTML = summary + perfHtml + aeroHtml + durHtml + capHtml + susHtml + dq;
+    el.innerHTML = summary + perfHtml + aeroHtml + durHtml + capHtml + susHtml + fmCard() + dq;
     backfillDurability(runs);
     prefetchPace(perfNeed.map(x => ({ act: x }))).then(n => { if (n) renderProgress(); });
   }
@@ -4419,7 +4425,7 @@ input[type=password],input[type=text]{margin:0}
       ).join("") +
       `</div>`;
 
-    body += sessionBodyHTML(act, rev);
+    body += sessionBodyHTML(act, rev) + cadHTML(act) + ttHTML(act) + fuHTML(act);
     $("#mBody").innerHTML = body;
     saBind();
     if (act[1] === "run") {
@@ -4764,7 +4770,7 @@ input[type=password],input[type=text]{margin:0}
       const km = (+w.distM || 0) / 1000;
       if (k === "run" && km <= 0) return;
       const id = String(w.iid);
-      const r = [+w.start, k, w.durSec / 60, km, +w.avgHr || 0, +w.elevUp || 0, id, String(w.name || "").slice(0, 50), +w.maxHr || 0, id, 0];
+      const r = [+w.start, k, w.durSec / 60, km, +w.avgHr || 0, +w.elevUp || 0, id, String(w.name || "").slice(0, 50), +w.maxHr || 0, id, 0, (() => { const c = (w.pts || []).map((p) => +(p && p[4])).filter((v) => v > 0); return c.length >= 20 ? Math.round(c.reduce((u, v) => u + v, 0) / c.length) : 0; })()];
       const m = matchIcu(r);
       const key = m ? String(m[9]) : id;
       if (k === "run") clGpsPts(m ? m[0] : r[0], w.pts, w.durSec);
@@ -5130,6 +5136,167 @@ input[type=password],input[type=text]{margin:0}
   };
 
   /* ---------- init ---------- */
+  /* ---------- Kekuatan di rumah, tes bicara, fueling ---------- */
+  const ld = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (_) { return d; } };
+  const sv = (k, v) => { if (state.apiKey === "demo") return; try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} };
+  const yAgo = (n) => { const d = new Date(Date.now() - n * 864e5); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+  const L5 = (a, b, c, d, e) => [a, b, c, d, e];
+  const STR_MENU = [
+    { id: "hip", n: "Pinggul stabil", mv: [["Jembatan pinggul 1 kaki", L5("2×8", "2×10", "3×10", "3×12", "3×12 pelan")], ["Step-up ke kursi", L5("2×8", "2×10", "3×10", "3×12", "3×12 pelan")], ["Side plank, tiap sisi", L5("2×20 dtk", "2×30 dtk", "3×30 dtk", "3×40 dtk", "3×45 dtk")]] },
+    { id: "calf", n: "Betis kuat", mv: [["Angkat tumit 1 kaki, lutut lurus", L5("2×8", "2×10", "3×8 turun 3 dtk", "4×6 + ransel", "4×6 + ransel berat")], ["Angkat tumit duduk, lutut ditekuk", L5("1×60 dtk", "1×90 dtk", "1×2 mnt", "1×2 mnt + ransel", "1×2 mnt + ransel berat")]] },
+    { id: "leg", n: "Kaki satu sisi", mv: [["Split squat", L5("2×8", "2×10", "3×10", "3×12", "3×12 + ransel")], ["Berdiri 1 kaki", L5("2×30 dtk", "2×45 dtk", "3×45 dtk", "3×30 dtk mata tertutup", "3×45 dtk mata tertutup")]] },
+    { id: "core", n: "Inti", mv: [["Plank", L5("2×30 dtk", "2×40 dtk", "3×40 dtk", "3×50 dtk", "3×60 dtk")], ["Dead bug", L5("2×8", "2×10", "3×10", "3×12", "3×12 pelan")]] },
+    { id: "drill", n: "Drill 5 menit", mv: [["Marching / A-skip", L5("2×20 m marching", "2×20 m A-skip pelan", "3×20 m A-skip", "3×20 m A-skip cepat", "4×20 m A-skip cepat")], ["Skip lutut tinggi", L5("2×15 dtk", "2×20 dtk", "3×20 dtk", "3×25 dtk", "3×30 dtk")]] }
+  ];
+  const STR = Object.assign({ log: [], lv: {}, st: {}, sk: {}, fc: null }, ld("runsense_str", {}));
+  const TT = ld("runsense_tt", {}), FU = ld("runsense_fuel", {});
+  let strSel = null, strFo = null;
+  const strTarget = () => { const p = racePhase(); return p && (p.k === "peak" || p.k === "taper") ? 1 : 2; };
+  function strWeekDone() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const s = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); return STR.log.filter((e) => e.s === "done" && e.d >= s).length; }
+  /* Menu yang boleh hari ini: sakit/hari lomba tanpa menu; kaki satu sisi tidak sehari sebelum quality/long; drill mulai tahap 3 */
+  function strMenus() {
+    const fl = flagInfo(), ph = racePhase(), st = stage().s, tm = planOf((new Date().getDay() + 1) % 7), tq = tm && (tm.t === "quality" || tm.t === "long");
+    if ((fl && fl.lv === 2) || (ph && ph.k === "race")) return [];
+    return STR_MENU.filter((m) => !(m.id === "drill" && (st < 3 || fl)) && !(m.id === "leg" && (tq || fl)));
+  }
+  function strSuggest(ms) {
+    const f = STR.fc && STR.fc.d >= yAgo(28) ? STR.fc : null, want = f && f.hd ? "hip" : f && f.ov ? "drill" : null, lg = STR.log[STR.log.length - 1];
+    if (want && ms.find((x) => x.id === want) && !(lg && lg.m === want && lg.d >= yAgo(2))) return want;
+    const last = (id) => { const e = STR.log.filter((x) => x.m === id && x.s === "done").pop(); return e ? e.d : ""; };
+    return ms.slice().sort((a, b) => (last(a.id) < last(b.id) ? -1 : last(a.id) > last(b.id) ? 1 : 0))[0].id;
+  }
+  function strPick(id) { strSel = id; strRender(); }
+  function strMark(s) {
+    const m = strMenus().find((x) => x.id === strSel); if (!m) return;
+    const t = ymd(); STR.prev = JSON.stringify({ log: STR.log, lv: STR.lv, st: STR.st, sk: STR.sk }); STR.up = null;
+    STR.log = STR.log.filter((e) => e.d !== t); STR.log.push({ d: t, m: m.id, s });
+    if (s === "done") {
+      STR.sk[m.id] = 0; STR.st[m.id] = (STR.st[m.id] || 0) + 1;
+      const ph = racePhase();
+      if (STR.st[m.id] >= 2 && !flagInfo() && !(ph && ph.k === "taper")) { m.mv.forEach((_, i) => { const k = m.id + ":" + i; STR.lv[k] = Math.min(4, (STR.lv[k] || 0) + 1); }); STR.st[m.id] = 0; STR.up = m.id; }
+    } else { STR.st[m.id] = 0; STR.sk[m.id] = (STR.sk[m.id] || 0) + 1; }
+    STR.log = STR.log.slice(-200); sv("runsense_str", STR); strRender();
+  }
+  function strUndo() { if (STR.prev) Object.assign(STR, JSON.parse(STR.prev)); STR.up = null; sv("runsense_str", STR); strRender(); }
+  function strForm() { strFo = {}; strRender(); }
+  function strFa(k, v) { strFo[k] = v; if (strFo.ov != null && strFo.hd != null && strFo.pn != null) { STR.fc = Object.assign({ d: ymd() }, strFo); strFo = null; strSel = null; sv("runsense_str", STR); } strRender(); }
+  function strFormHTML() {
+    if (strFo) {
+      const q = [["ov", "Kaki mendarat jauh di depan badan?"], ["hd", "Panggul turun ke satu sisi saat satu kaki menapak?"], ["pn", "Ada nyeri atau bengkak?"]];
+      return `<div class="label" style="margin-top:14px">Cek form · rekam 20 detik dari samping dan belakang</div>` + q.map(([k, t]) => `<p class="hint" style="margin:8px 0 4px">${t}</p><div class="ty-chips"><button class="ty-chip${strFo[k] === 1 ? " on" : ""}" type="button" onclick="strFa('${k}',1)">Ya</button><button class="ty-chip${strFo[k] === 0 ? " on" : ""}" type="button" onclick="strFa('${k}',0)">Tidak</button></div>`).join("");
+    }
+    const f = STR.fc;
+    if (f && f.d >= yAgo(28)) return f.pn ? `<div class="insight" style="margin-top:12px">Cek form terakhir: ada nyeri atau bengkak. Tandai Kaki "Was-was" bila masih terasa. Kalau tidak turun dalam 3 hari, periksakan ke dokter atau fisioterapis.</div>` : "";
+    return `<button class="link" type="button" style="margin-top:10px" onclick="strForm()">Cek form bulanan (3 ketukan)</button>`;
+  }
+  function strRender() {
+    const el = $("#strCard"); if (!el) return;
+    const ms = strMenus();
+    if (!ms.length || !state.athlete) { el.style.display = "none"; return; }
+    el.style.display = "";
+    if (!strSel || !ms.find((x) => x.id === strSel)) strSel = strSuggest(ms);
+    const m = ms.find((x) => x.id === strSel), fl = flagInfo(), ph = racePhase(), t = ymd(), today = STR.log.find((e) => e.d === t);
+    const light = !!fl || !!(ph && ph.k === "taper") || (STR.sk[m.id] || 0) >= 3;
+    const lvT = (i) => (light ? 0 : Math.min(4, STR.lv[m.id + ":" + i] || 0));
+    let note = "";
+    if (light) note = fl ? "Kaki sedang ditandai, jadi versi paling ringan dulu dan level tidak naik." : ph && ph.k === "taper" ? "Menjelang race: versi ringan saja." : "Beberapa kali dilewati, jadi dipendekkan ke versi minimum. Satu kali Sudah mengembalikan levelnya.";
+    else if (STR.up === m.id) note = "Level naik karena dua sesi terakhir menu ini selesai.";
+    else if (STR.log.length && !STR.log.some((e) => e.s === "done" && e.d >= yAgo(14))) note = "Dua minggu tanpa sesi kekuatan. Mulai dari yang paling mudah hari ini.";
+    el.innerHTML = `<div class="label">Kekuatan hari ini · ${strWeekDone()}/${strTarget()} minggu ini</div>` +
+      `<div class="ty-chips">${ms.map((x) => `<button class="ty-chip${x.id === strSel ? " on" : ""}" type="button" onclick="strPick('${x.id}')">${x.n}</button>`).join("")}</div>` +
+      m.mv.map((v, i) => `<div class="prg-row"><span>${v[0]}</span><b>${v[1][lvT(i)]}</b></div>`).join("") +
+      (note ? `<div class="insight" style="margin-top:10px">${note}</div>` : "") +
+      (today ? `<p class="hint">Hari ini ${today.s === "done" ? "sudah" : "dilewati"}: ${STR_MENU.find((x) => x.id === today.m).n}. <button class="link" type="button" onclick="strUndo()">Batalkan</button></p>`
+        : `<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-primary sm" type="button" onclick="strMark('done')">Sudah</button><button class="btn btn-outline sm" type="button" onclick="strMark('skip')">Skip</button></div>`) +
+      strFormHTML() + pqHTML();
+  }
+  function strRow() {
+    if (!STR.log.length) return "";
+    const d = STR.log.filter((e) => e.s === "done" && e.d >= yAgo(28)).length, s = STR.log.filter((e) => e.s === "skip" && e.d >= yAgo(28)).length;
+    return '<div class="prg-row"><span>Kekuatan, 4 minggu</span><b>' + d + " sudah · " + s + " skip</b></div>";
+  }
+  /* Tes bicara: 2 dari 3 easy terakhir terputus → rentang easy dilonggarkan 5% */
+  function ttK() {
+    const L = (state.acts || []).filter((a) => a[1] === "run" && TT[a[0]] && detectType(a).type === "easy").slice(-3);
+    return L.length >= 2 && L.filter((a) => TT[a[0]] >= 2).length >= 2 ? 0.05 : 0;
+  }
+  const chipRow = (cur, opts, fn, ms) => `<div class="ty-chips">` + opts.map(([k, t]) => `<button class="ty-chip${cur === k ? " on" : ""}" type="button" onclick="${fn}(${ms},${k})">${t}</button>`).join("") + `</div>`;
+  function ttHTML(a) {
+    if (a[1] !== "run") return "";
+    const v = TT[a[0]] || 0;
+    return `<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Tes bicara</span></div><div class="sa-note">Saat lari ini, kamu bisa ngobrol?</div>` + chipRow(v, [[1, "Lancar"], [2, "Terputus"], [3, "Tidak bisa"]], "setTT", a[0]) +
+      (v >= 2 && detectType(a).type === "easy" ? `<div class="sa-sub">Easy yang membuat obrolan terputus berarti terlalu cepat. Bila terjadi dua kali, coach melonggarkan pace easy sedikit.</div>` : "") + `</div></div>`;
+  }
+  function setTT(ms, v) { TT[ms] = TT[ms] === v ? 0 : v; sv("runsense_tt", TT); processData(); openAct(ms); }
+  function fuHTML(a) {
+    if (a[1] !== "run" || !(a[3] >= 10 || a[2] >= 60)) return "";
+    return `<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Fueling</span></div><div class="sa-note">Makan atau minum karbo saat lari ini?</div>` + chipRow(FU[a[0]] || 0, [[1, "Tidak"], [2, "Gel / permen"], [3, "Minuman karbo"]], "setFU", a[0]) +
+      `<div class="sa-sub">Dipakai kartu Durability untuk membandingkan lari dengan dan tanpa fueling. Untuk maraton, 60–90 g karbo per jam dilatih bertahap.</div></div></div>`;
+  }
+  function setFU(ms, v) { FU[ms] = FU[ms] === v ? 0 : v; sv("runsense_fuel", FU); openAct(ms); if ($("#progressBody")) renderProgress(); }
+  function fuNote(list) {
+    const g = (w) => list.filter((o) => (w ? FU[o.x[0]] >= 2 : FU[o.x[0]] === 1)).map((o) => o.d.effDrop).filter(Number.isFinite), md = (x) => { const s = x.slice().sort((p, q) => p - q); return s[s.length >> 1]; };
+    const tot = list.filter((o) => FU[o.x[0]]).length, a = g(1), b = g(0);
+    if (!tot) return '<div class="prg-insight">Catat fueling tiap lari panjang di detail sesi supaya penurunan efisiensi bisa dibandingkan dengan dan tanpa karbo.</div>';
+    let t = "Fueling tercatat di " + tot + " dari " + list.length + " lari.";
+    if (a.length >= 2 && b.length >= 2) t += " Penurunan efisiensi median " + Math.round(md(a) * 10) / 10 + "% dengan karbo vs " + Math.round(md(b) * 10) / 10 + "% tanpa.";
+    return '<div class="prg-insight">' + t + "</div>";
+  }
+  Object.assign(window, { strPick, strMark, strUndo, strForm, strFa, setTT, setFU });
+
+  /* ---------- Kadens, panjang langkah, tes mini, PAR-Q ---------- */
+  const cadN = (v) => { v = +v; return v > 0 ? (v < 120 ? v * 2 : v) : 0; };
+  const cadOf = (a) => cadN(a[11]);
+  const strideOf = (a) => { const c = cadOf(a), p = actPace(a); return c > 0 && p > 0 ? 1000 / (p * 60) / (c / 60) : 0; };
+  const mdn = (x) => { const s = x.slice().sort((p, q) => p - q); return s[s.length >> 1]; };
+  const m2 = (v) => (Math.round(v * 100) / 100).toString().replace(".", ",") + " m";
+  const inpS = "width:31%;padding:9px 10px;border-radius:10px;border:1px solid var(--card-border);background:var(--el);color:var(--tx);font:inherit";
+  function setHT(v, ms) { try { localStorage.setItem("runsense_ht", String(+v > 100 && +v < 230 ? +v : "")); } catch (_) {} if (ms) openAct(ms); }
+  function cadHTML(a) {
+    const c = cadOf(a); if (a[1] !== "run" || !c) return "";
+    const st = strideOf(a), ht = +localStorage.getItem("runsense_ht") || 0, n = [];
+    if (c < 170) n.push("Kadens di bawah 170. Menaikkannya sekitar 10% dikaitkan dengan risiko cedera lebih rendah. Naikkan pelan, bukan wajib 180.");
+    if (ht && ht < 160) n.push("Dengan tinggi " + ht + " cm, pelari biasanya main kadens (langkah pendek dan cepat).");
+    else if (ht >= 170) n.push("Dengan tinggi " + ht + " cm, pelari biasanya main panjang langkah. Pilih yang paling efisien buatmu.");
+    n.push("Yang paling penting: mendarat tidak jauh di depan badan (overstride). Cara mendaratnya (tumit, tengah, depan) bukan masalah.");
+    return `<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Kadens & langkah</span></div><div class="sa-metrics"><div class="sa-metric"><b>${c}</b><small>Langkah per menit</small></div><div class="sa-metric"><b>${st ? m2(st) : "—"}</b><small>Panjang langkah</small></div></div>` +
+      n.map((t) => `<div class="sa-note">${t}</div>`).join("") + `<div class="sa-sub">Tinggi badan (opsional, untuk membaca kadens): <input type="number" inputmode="numeric" placeholder="cm" value="${ht || ""}" onchange="setHT(this.value,${a[0]})" style="width:80px;padding:6px 8px;border-radius:8px;border:1px solid var(--card-border);background:var(--el);color:var(--tx)"></div></div></div>`;
+  }
+  const TS = ld("runsense_tests", []);
+  function saveTest() {
+    const g = (id) => +($("#" + id) || {}).value || 0, t = { d: ymd(), pl: g("tPl"), cl: g("tCl"), cr: g("tCr"), sl: g("tSl"), sr: g("tSr") };
+    if (!(t.pl || t.cl || t.cr || t.sl || t.sr)) return;
+    TS.push(t); sv("runsense_tests", TS.slice(-24)); renderProgress();
+  }
+  function fmCard() {
+    const now = Date.now(), pr = (l, v) => '<div class="prg-row"><span>' + l + "</span><b>" + v + "</b></div>";
+    const runs = (state.acts || []).filter((a) => a[1] === "run" && a[0] >= now - 56 * 864e5 && cadOf(a) > 0 && detectType(a).type === "easy");
+    let h = "", ins = [];
+    if (runs.length >= 3) { const sl = runs.map(strideOf).filter((v) => v > 0); h += pr("Kadens easy, median 8 minggu", Math.round(mdn(runs.map(cadOf))) + " langkah/menit") + (sl.length ? pr("Panjang langkah easy", m2(mdn(sl))) : ""); }
+    else h += '<p class="prg-note">Kadens muncul setelah minimal 3 easy run dengan data kadens (sinkron ulang bila baru).</p>';
+    h += strRow();
+    const t = TS[TS.length - 1];
+    if (t) {
+      const f = (l, a, b, u) => (a || b ? pr(l, (a || "—") + " / " + (b || "—") + " " + u) : "");
+      h += pr("Tes mini terakhir", t.d) + (t.pl ? pr("Plank", t.pl + " dtk") : "") + f("Angkat tumit 1 kaki, kiri / kanan", t.cl, t.cr, "rep") + f("Side plank, kiri / kanan", t.sl, t.sr, "dtk");
+      [["angkat tumit", t.cl, t.cr], ["side plank", t.sl, t.sr]].forEach(([n, a, b]) => { if (a && b && Math.abs(a - b) / Math.max(a, b) > 0.2) ins.push("Selisih kiri-kanan di " + n + " lebih dari 20%. Beri sisi yang lemah porsi ekstra di menu kekuatan."); });
+    }
+    if (!t || t.d < yAgo(28)) h += '<div class="label" style="margin-top:12px">Tes mini bulanan, tanpa alat (maksimal, sampai gagal)</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><input id="tPl" type="number" inputmode="numeric" placeholder="Plank dtk" style="' + inpS + '"><input id="tCl" type="number" inputmode="numeric" placeholder="Tumit kiri" style="' + inpS + '"><input id="tCr" type="number" inputmode="numeric" placeholder="Tumit kanan" style="' + inpS + '"><input id="tSl" type="number" inputmode="numeric" placeholder="Side plank kiri dtk" style="' + inpS + '"><input id="tSr" type="number" inputmode="numeric" placeholder="Side plank kanan dtk" style="' + inpS + '"></div><button class="btn btn-outline sm" type="button" style="margin-top:10px" onclick="saveTest()">Simpan tes</button>';
+    const e1 = estMax(), e0 = estMax((state.acts || []).filter((a) => a[0] <= now - 56 * 864e5), now - 56 * 864e5);
+    if (e1.m && e0.m && e1.conf !== "rendah" && e0.conf !== "rendah" && Math.abs(e1.m - e0.m) < 0.3) ins.push("Kapasitas aerobik (VO₂max) mendatar 8 minggu. Itu wajar: VO₂max punya batas. Ekonomi lari masih bisa naik lewat kekuatan, drill, dan durability.");
+    return '<section class="prg-card"><h4>Kekuatan & form</h4><div class="sub">Kadens, langkah, kekuatan di rumah. Dinilai terpisah dari pace.</div>' + h + ins.map((x) => '<div class="prg-insight">' + x + "</div>").join("") + "</section>";
+  }
+  const PQQ = ["Dokter pernah bilang kamu punya masalah jantung atau tekanan darah tinggi?", "Dada terasa nyeri saat berolahraga?", "Dalam sebulan terakhir, dada nyeri saat tidak berolahraga?", "Kamu pernah pusing, kehilangan keseimbangan, atau pingsan?", "Ada masalah tulang, sendi, atau otot yang bisa memburuk karena olahraga?", "Sedang diresepkan obat untuk tekanan darah atau jantung?", "Ada alasan lain kamu sebaiknya tidak berolahraga?"];
+  let PQ = ld("runsense_parq", null), pqA = null;
+  function pqStart() { pqA = []; strRender(); }
+  function pqAns(v) { pqA.push(v); if (pqA.length === 7) { PQ = { d: ymd(), y: pqA.filter((x) => x).length }; sv("runsense_parq", PQ); pqA = null; } strRender(); }
+  function pqHTML() {
+    if (pqA) return `<div class="label" style="margin-top:14px">PAR-Q · ${pqA.length + 1} dari 7</div><p class="hint" style="margin:8px 0 4px">${PQQ[pqA.length]}</p><div class="ty-chips"><button class="ty-chip" type="button" onclick="pqAns(1)">Ya</button><button class="ty-chip" type="button" onclick="pqAns(0)">Tidak</button></div>`;
+    if (PQ) return PQ.y ? `<div class="insight" style="margin-top:12px">PAR-Q: ${PQ.y} jawaban "Ya". Sebaiknya periksa ke dokter dulu sebelum menaikkan intensitas. Tes EKG saat bergerak (treadmill) bisa jadi bahan pemeriksaan.</div>` : "";
+    return `<button class="link" type="button" style="margin-top:10px" onclick="pqStart()">Cek kesiapan jantung (PAR-Q, sekali saja)</button>`;
+  }
+  Object.assign(window, { setHT, saveTest, pqStart, pqAns });
+
   (async function init() {
     applyTheme();
     rotateHero("setup");
