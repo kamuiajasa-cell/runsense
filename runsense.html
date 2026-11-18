@@ -4172,7 +4172,7 @@ input[type=password],input[type=text]{margin:0}
     const reReady = readiness();
     const reFactors = [];
     if (reReady != null && reReady < 50) reFactors.push({p:0,t:"Pemulihan didahulukan",why:"Readiness rendah (" + reReady + "/100). Fokus adaptasi ditunda; ikuti guardrail istirahat/pemulihan yang sudah ada."});
-    if (reForm && reForm.pn) reFactors.push({p:0,t:"Ada catatan nyeri atau bengkak",why:"Jangan mengejar latihan saat nyeri/bengkak masih terasa; kurangi atau hentikan dan periksakan bila menetap, memburuk, atau mengganggu berjalan."});
+    if (reForm && reForm.pn) reFactors.push({p:-1,t:"Ada catatan nyeri atau bengkak",why:"Jangan mengejar latihan saat nyeri/bengkak masih terasa; kurangi atau hentikan dan periksakan bila menetap, memburuk, atau mengganggu berjalan."});
     if (reNorm.length < 4) reFactors.push({p:1,t:"Data easy run pembanding masih sedikit",why:"Tambah beberapa easy run dengan HR dan pace valid agar tren efisiensi dapat dibaca."});
     else if (reDelta != null && reDelta < -1.5) reFactors.push({p:2,t:"Efisiensi aerobik perlu dipantau",why:"Pace setara-HR melambat; interpretasi tetap mempertimbangkan cuaca, tidur, elevasi, dan hidrasi."});
     if (durV === "dn") reFactors.push({p:2,t:"Durability perlu perhatian",why:"Analisis lari panjang menunjukkan penurunan kestabilan; jangan buru-buru menambah durasi."});
