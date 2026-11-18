@@ -4113,7 +4113,7 @@ input[type=password],input[type=text]{margin:0}
       const colors=['#55B8E8','#8BCB63','#F2C45C','#EE8D53','#DC5D64'];
       const bar=vals.map((v,i)=>'<div style="width:'+((v/total)*100).toFixed(2)+'%;background:'+colors[i]+'"></div>').join("");
       const legend=vals.map((v,i)=>'<span style="color:'+colors[i]+'">Z'+(i+1)+' '+Math.round(v)+'%</span>').join(' · ');
-      return '<div class="sa-chart-label">Distribusi zona HR</div><div class="sa-zonebar">'+bar+'</div><div class="sa-zonelegend">'+legend+'</div>';
+      return '<div class="sa-chart-label">Distribusi zona HR <span>proporsi waktu</span></div><div class="sa-zonebar">'+bar+'</div><div class="sa-zonelegend">'+legend+'</div><div class="sa-note">Bagian ini menunjukkan porsi waktu di setiap zona. Bandingkan dengan tujuan sesi: lari easy idealnya tidak terlalu banyak bergeser ke zona lebih tinggi.</div>';
     })() : "";
     if (pts.length < 5) return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Grafik sesi</span><span class="sa-pill">Data belum tersedia</span></div><div class="sa-note">Grafik pace dan HR membutuhkan stream sensor dari sumber aktivitas. Ringkasan aktivitas tetap bisa dianalisis, tetapi titik per titik tidak tersedia untuk sesi ini.</div>${splitHtml}</div>`;
     const W=360,H=190,L=42,R=12,T=16,B=24,pw=W-L-R,ph=H-T-B;
