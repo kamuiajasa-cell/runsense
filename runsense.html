@@ -2484,6 +2484,8 @@ input[type=password],input[type=text]{margin:0}
     }
     if (chart.length >= 5) out.chart = chart;
     const T = time[time.length - 1] - time[0];
+    const streamD = Number(dist[dist.length - 1]) - Number(dist[0]);
+    if (T > 0 && streamD > 0) out.streamAvgPace = (T / 60) / (streamD / 1000);
     if (hr && hr.length === time.length) {
       if (T >= 2400) {
         const t0 = time[0] + T * 0.1, tm = time[0] + T * 0.55;
