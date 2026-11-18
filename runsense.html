@@ -1002,6 +1002,8 @@ input[type=password],input[type=text]{margin:0}
   .me-stats{gap:6px}.me-stat{padding:var(--s3) 10px}.me-stat b{font-size:17px}
   .setup-panel{padding:var(--s4)}
 }
+/* Activity graph spacing and touch feedback */
+.sa-card{display:flex;flex-direction:column;gap:12px}.sa-card .sa-chart-label{margin:0}.sa-chart{margin:0}.sa-note{margin:0}.sa-chart-read{font-size:12px;line-height:1.45;color:var(--primary);background:var(--primary-dim);border-radius:10px;padding:9px 11px;min-height:34px}.sa-hit{fill:transparent;stroke:transparent;pointer-events:all;cursor:pointer}.sa-interactive{touch-action:pan-y}.sa-touch{cursor:pointer;touch-action:manipulation}.sa-touch.selected{fill:var(--yellow);stroke:var(--tx);stroke-width:1.5}
 </style>
 </head>
 <body>
@@ -2129,6 +2131,9 @@ input[type=password],input[type=text]{margin:0}
         res.slice(-8).reverse().map((x) => '<div><b>' + new Date(x.t).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + ' · ' + f1(x.km) + ' km</b><span>est ' + f1(x.est) + ' · lari ' + f1(x.run) + ' · T' + x.st + '</span></div>').join("") + '</div>';
     }
     $("#mBody").innerHTML = body;
+    const chartBody=$("#mBody");
+    chartBody.querySelectorAll(".sa-hit").forEach(hit=>hit.addEventListener("click",()=>{const read=$("#saStreamRead");if(read)read.textContent="Pada "+hit.dataset.min+" menit · pace "+mp(+hit.dataset.pace)+"/km"+(+hit.dataset.hr>0?" · HR "+Math.round(+hit.dataset.hr)+" bpm":" · HR tidak tersedia");}));
+    chartBody.querySelectorAll(".sa-touch").forEach(bar=>bar.addEventListener("click",()=>{const read=$("#saSplitRead");if(read)read.textContent="Km "+bar.dataset.km+" · pace "+mp(+bar.dataset.pace)+"/km"+(+bar.dataset.hr>0?" · HR "+Math.round(+bar.dataset.hr)+" bpm":" · HR tidak tersedia");bar.classList.add("selected");chartBody.querySelectorAll(".sa-touch").forEach(b=>{if(b!==bar)b.classList.remove("selected");});}));
     $("#actModal").classList.add("show");
   }
 
@@ -4100,7 +4105,7 @@ input[type=password],input[type=text]{margin:0}
       const W=340,H=150,L=38,R=8,T=12,B=28, pw=W-L-R,ph=H-T-B;
       const pvals=splits.map(q=>+q.pace).filter(v=>v>0), lo=Math.min(...pvals), hi=Math.max(...pvals);
       const span=Math.max(0.15,hi-lo), bw=Math.min(26,pw/splits.length*0.55);
-      const bars=splits.map((q,i)=>{const v=+q.pace||0;if(!v)return "";const h=8+(hi-v)/span*(ph-8),x=L+(i+.5)*pw/splits.length-bw/2,y=T+ph-h;return '<rect class="sa-bar" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="4"/><text class="sa-axis" text-anchor="middle" x="'+(x+bw/2).toFixed(1)+'" y="'+(y-3).toFixed(1)+'">'+mp(v)+'</text><text class="sa-axis" text-anchor="middle" x="'+(x+bw/2).toFixed(1)+'" y="'+(H-7)+'">'+q.km+'</text>';}).join("");
+      const bars=splits.map((q,i)=>{const v=+q.pace||0;if(!v)return "";const h=8+(hi-v)/span*(ph-8),x=L+(i+.5)*pw/splits.length-bw/2,y=T+ph-h;return '<rect class="sa-bar sa-touch" data-km="'+q.km+'" data-pace="'+v+'" data-hr="'+(+q.hr||0)+'" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="4"/><text class="sa-axis" text-anchor="middle" x="'+(x+bw/2).toFixed(1)+'" y="'+(y-3).toFixed(1)+'">'+mp(v)+'</text><text class="sa-axis" text-anchor="middle" x="'+(x+bw/2).toFixed(1)+'" y="'+(H-7)+'">'+q.km+'</text>';}).join("");
       return '<div class="sa-chart-label">Pace per kilometer <span>lebih cepat = bar lebih tinggi</span></div><svg class="sa-chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Pace split per kilometer">'+bars+'</svg>';
     })() : "";
     const zoneViz = sx && Array.isArray(sx.tiz) && sx.tiz.some(v=>+v>0) ? (() => {
@@ -4118,7 +4123,8 @@ input[type=password],input[type=text]{margin:0}
     const py=v=>T+(1-(v-pLo)/Math.max(.1,pHi-pLo))*ph;
     const pPath=pts.map((q,i)=>`${i?"L":"M"}${x(q[0]).toFixed(1)},${py(q[1]).toFixed(1)}`).join(" ");
     const pGrid=[0,.5,1].map(v=>{const y=T+v*ph;const val=pLo+v*(pHi-pLo);return `<line class="sa-grid" x1="${L}" x2="${W-R}" y1="${y}" y2="${y}"/><text class="sa-axis" x="3" y="${y+4}">${mp(val)}</text>`;}).join("");
-    const paceSvg=`<svg class="sa-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik pace per waktu">${pGrid}<path class="sa-line" d="${pPath}"/><text class="sa-axis" x="${L}" y="${H-4}">0 mnt</text><text class="sa-axis" text-anchor="end" x="${W-R}" y="${H-4}">${Math.round(xs[xs.length-1])} mnt</text></svg>`;
+    const paceHits=pts.map(q=>`<circle class="sa-hit" data-min="${q[0]}" data-pace="${q[1]}" data-hr="${q[2]}" cx="${x(q[0]).toFixed(1)}" cy="${py(q[1]).toFixed(1)}" r="8"/>`).join("");
+    const paceSvg=`<svg class="sa-chart sa-interactive" viewBox="0 ${W} ${H}" role="img" aria-label="Pace per waktu, sentuh titik untuk detail">${pGrid}<path class="sa-line" d="${pPath}"/>${paceHits}<text class="sa-axis" x="${L}" y="${H-4}">0 mnt</text><text class="sa-axis" text-anchor="end" x="${W-R}" y="${H-4}">${Math.round(xs[xs.length-1])} mnt</text></svg>`;
     let hrSvg="";
     if(hs.length>4){
       const hLo=Math.floor(Math.min(...hs)-5),hHi=Math.ceil(Math.max(...hs)+5),hy=v=>T+(1-(v-hLo)/Math.max(1,hHi-hLo))*ph;
@@ -4126,7 +4132,7 @@ input[type=password],input[type=text]{margin:0}
       const hGrid=[0,.5,1].map(v=>{const y=T+v*ph,val=hHi-v*(hHi-hLo);return `<line class="sa-grid" x1="${L}" x2="${W-R}" y1="${y}" y2="${y}"/><text class="sa-axis" x="3" y="${y+4}">${Math.round(val)}</text>`;}).join("");
       hrSvg=`<div class="sa-chart-label">Detak jantung <span>bpm</span></div><svg class="sa-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik detak jantung per waktu">${hGrid}<path class="sa-line hr" d="${hPath}"/><text class="sa-axis" x="${L}" y="${H-4}">0 mnt</text><text class="sa-axis" text-anchor="end" x="${W-R}" y="${H-4}">${Math.round(xs[xs.length-1])} mnt</text></svg>`;
     }
-    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Grafik sesi</span><span class="sa-pill">${pts.length} titik sampel</span></div><div class="sa-chart-label">Pace <span>menit/km · lebih cepat = lebih tinggi</span></div>${paceSvg}${hrSvg}<div class="sa-sub">Grafik stream sensor sepanjang waktu. Split menggunakan pace rata-rata setiap kilometer.</div>${splitViz}${zoneViz}${splitHtml}</div>`;
+    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Grafik sesi</span><span class="sa-pill">${pts.length} titik stream</span></div><div class="sa-chart-label">Pace <span>min/km · lebih cepat di atas</span></div>${paceSvg}<div class="sa-chart-read" id="saStreamRead">Sentuh titik grafik untuk melihat pace dan HR pada waktu itu.</div><div class="sa-note">Grafik stream menunjukkan perubahan ritme sepanjang lari. Split pace dihitung dari stream jarak dan waktu per kilometer, bukan pace rata-rata aktivitas.</div>${hrSvg}${splitViz}<div class="sa-chart-read" id="saSplitRead">Sentuh bar split untuk detail per km.</div>${zoneViz}${splitHtml}</div>`;
   }
 
   function sessionAdaptationHTML(act) {
