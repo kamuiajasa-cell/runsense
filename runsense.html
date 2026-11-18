@@ -2554,7 +2554,7 @@ input[type=password],input[type=text]{margin:0}
     if (durBusy || !state.apiKey || state.apiKey === "demo" || !Array.isArray(list)) return;
     const todo = list.filter((a) => a && a[9] && !/^hw/.test(String(a[9])) && a[1] === "run" && (a[3] >= 5 || a[2] >= 40)
       && !durTried[String(a[9])]
-      && !(state.sx[String(a[9])] && (state.sx[String(a[9])].streamVersion >= 3 || state.sx[String(a[9])].dur))).slice(-6);
+      && !(state.sx[String(a[9])] && (state.sx[String(a[9])].streamVersion >= 4 || state.sx[String(a[9])].dur))).slice(-6);
     if (!todo.length) return;
     durBusy = true;
     try { for (const a of todo) { durTried[String(a[9])] = 1; await ensureStream(a); } } catch (_) {}
