@@ -4167,7 +4167,7 @@ input[type=password],input[type=text]{margin:0}
     const reFuRuns = durRuns.filter(o => FU[o.x[0]] && FU[o.x[0]] >= 2);
     const reFuN = durRuns.filter(o => FU[o.x[0]]).length;
     const reForm = STR.fc && STR.fc.d >= yAgo(28) ? STR.fc : null;
-    const reTests = TS.slice(-3), reTestLatest = TS[TS.length - 1];
+    const reTestLatest = TS[TS.length - 1];
     const reAsym = reTestLatest && reTestLatest.cl && reTestLatest.cr ? Math.abs(reTestLatest.cl - reTestLatest.cr) / Math.max(reTestLatest.cl, reTestLatest.cr) : 0;
     const reFactors = [];
     if (reForm && reForm.pn) reFactors.push({p:0,t:"Ada catatan nyeri atau bengkak",why:"Jangan mengejar latihan saat nyeri/bengkak masih terasa; kurangi atau hentikan dan periksakan bila menetap, memburuk, atau mengganggu berjalan."});
