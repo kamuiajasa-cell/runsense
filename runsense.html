@@ -4160,7 +4160,8 @@ input[type=password],input[type=text]{margin:0}
       : reDelta > 1.5 ? "Proxy efisiensi membaik: pace setara-HR di bagian periode terbaru lebih cepat."
       : reDelta < -1.5 ? "Proxy efisiensi menurun: pace setara-HR di bagian periode terbaru lebih lambat."
       : "Proxy efisiensi relatif stabil pada HR yang sebanding.";
-    const reConf = reNorm.length >= 8 && spanDays(reEasy) >= 42 ? "sedang" : reNorm.length >= 4 && spanDays(reEasy) >= 21 ? "rendah–sedang" : "rendah";
+    const reSpan = reEasy.length > 1 ? (reEasy[reEasy.length - 1].ms - reEasy[0].ms) / DAY : 0;
+    const reConf = reNorm.length >= 8 && reSpan >= 42 ? "sedang" : reNorm.length >= 4 && reSpan >= 21 ? "rendah–sedang" : "rendah";
     const reCad = med(reEasy.map(x => x.cad).filter(x => x > 0)), reStride = med(reEasy.map(x => x.stride).filter(x => x > 0));
     const reStrength28 = STR.log.filter(e => e.d >= yAgo(28)), reDone = reStrength28.filter(e => e.s === "done").length, reSkip = reStrength28.filter(e => e.s === "skip").length;
     const reFuRuns = durRuns.filter(o => FU[o.x[0]] && FU[o.x[0]] >= 2);
