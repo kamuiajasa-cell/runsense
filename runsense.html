@@ -4169,7 +4169,9 @@ input[type=password],input[type=text]{margin:0}
     const reForm = STR.fc && STR.fc.d >= yAgo(28) ? STR.fc : null;
     const reTestLatest = TS[TS.length - 1];
     const reAsym = reTestLatest && reTestLatest.cl && reTestLatest.cr ? Math.abs(reTestLatest.cl - reTestLatest.cr) / Math.max(reTestLatest.cl, reTestLatest.cr) : 0;
+    const reReady = readiness();
     const reFactors = [];
+    if (reReady != null && reReady < 50) reFactors.push({p:0,t:"Pemulihan didahulukan",why:"Readiness rendah (" + reReady + "/100). Fokus adaptasi ditunda; ikuti guardrail istirahat/pemulihan yang sudah ada."});
     if (reForm && reForm.pn) reFactors.push({p:0,t:"Ada catatan nyeri atau bengkak",why:"Jangan mengejar latihan saat nyeri/bengkak masih terasa; kurangi atau hentikan dan periksakan bila menetap, memburuk, atau mengganggu berjalan."});
     if (reNorm.length < 4) reFactors.push({p:1,t:"Data easy run pembanding masih sedikit",why:"Tambah beberapa easy run dengan HR dan pace valid agar tren efisiensi dapat dibaca."});
     else if (reDelta != null && reDelta < -1.5) reFactors.push({p:2,t:"Efisiensi aerobik perlu dipantau",why:"Pace setara-HR melambat; interpretasi tetap mempertimbangkan cuaca, tidur, elevasi, dan hidrasi."});
@@ -4182,9 +4184,10 @@ input[type=password],input[type=text]{margin:0}
     if (!reFactors.length) reFactors.push({p:5,t:"Pertahankan fondasi yang sudah berjalan",why:"Data belum menunjukkan satu faktor yang dominan membatasi; utamakan konsistensi, easy effort, dan progres bertahap."});
     reFactors.sort((a,b)=>a.p-b.p);
     const reFocus = reFactors[0];
-    const reCoach = reFocus.p <= 2 ? "Fokus berikut: " + reFocus.t.toLowerCase() + ". " + reFocus.why
+    const reCoach = reReady != null && reReady < 50 ? "Readiness rendah (" + reReady + "/100). Hari ini prioritaskan pemulihan dan jangan menambah beban demi mengejar adaptasi. " + reFocus.t + " menjadi fokus setelah pulih."
       : "Fokus berikut: " + reFocus.t.toLowerCase() + ". " + reFocus.why;
     const reRows = [
+      row("Readiness hari ini", reReady == null ? "Data belum cukup" : reReady + "/100"),
       row("Easy run pembanding", reNorm.length + " sesi · keyakinan " + reConf),
       row("Pace setara-HR (median)", reEarlyP != null && reLateP != null ? fmtP(reEarlyP) + " → " + fmtP(reLateP) + " /km" : "Belum cukup data"),
       row("Tren proxy efisiensi", reDelta != null && reNorm.length >= 4 ? sgn(reDelta,1) + "% (bagian terbaru)" : "Belum dapat dinilai"),
