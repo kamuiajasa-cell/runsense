@@ -4129,7 +4129,7 @@ input[type=password],input[type=text]{margin:0}
     const py=v=>T+(v-pLo)/Math.max(.1,pHi-pLo)*ph;
     const py=v=>T+(1-(v-pLo)/Math.max(.1,pHi-pLo))*ph;
     const pPath=pts.map((q,i)=>`${i?"L":"M"}${x(q[0]).toFixed(1)},${py(q[1]).toFixed(1)}`).join(" ");
-    const pGrid=[0,.5,1].map(v=>{const y=T+v*ph;const val=pHi-v*(pHi-pLo);return `<line class="sa-grid" x1="${L}" x2="${W-R}" y1="${y}" y2="${y}"/><text class="sa-axis" x="3" y="${y+4}">${mp(val)}</text>`;}).join("");
+    const pGrid=[0,.5,1].map(v=>{const y=T+v*ph;const val=pLo+v*(pHi-pLo);return `<line class="sa-grid" x1="${L}" x2="${W-R}" y1="${y}" y2="${y}"/><text class="sa-axis" x="3" y="${y+4}">${mp(val)}</text>`;}).join("");
     const paceSvg=`<svg class="sa-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik pace per waktu">${pGrid}<path class="sa-line" d="${pPath}"/><text class="sa-axis" x="${L}" y="${H-4}">0 mnt</text><text class="sa-axis" text-anchor="end" x="${W-R}" y="${H-4}">${Math.round(xs[xs.length-1])} mnt</text></svg>`;
     let hrSvg="";
     if(hs.length>4){
