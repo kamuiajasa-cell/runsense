@@ -3176,7 +3176,8 @@ input[type=password],input[type=text]{margin:0}
   function feelToday(){ return FEEL.today[ymd()] || {}; }
   function feelSet(k,v){
     const f=Object.assign({},feelToday()); f[k]=v; f.savedDate=""; f.updated=Date.now();
-    FEEL.today[ymd()]=f; feelSave(); renderFeelCheckin();
+    FEEL.today[ymd()]=f; feelSave();
+    if(state.athlete) renderAll(); else renderFeelCheckin();
   }
   function feelSaveToday(){
     const f=Object.assign({},feelToday());
@@ -3184,7 +3185,8 @@ input[type=password],input[type=text]{margin:0}
     if(!required.every(k=>f[k]!==undefined&&f[k]!==null)){ alert('Lengkapi semua pilihan check-in terlebih dahulu.'); return; }
     f.savedDate=ymd(); f.updated=Date.now(); FEEL.today[ymd()]=f; feelSave();
     state.heat=f.hot?ymd():'';
-    if(state.apiKey!=="demo"){try{localStorage.setItem("runsense_heat",state.heat);}catch(_){}}
+    state.flag=f.pain===2?{lv:2,since:Date.now()}:f.pain===1?{lv:1,since:Date.now()}:null;
+    if(state.apiKey!=="demo"){try{localStorage.setItem("runsense_heat",state.heat);localStorage.setItem("runsense_flag",JSON.stringify(state.flag));}catch(_){}}
     if(state.athlete) processData(); else renderAll();
   }
   function feelBtn(k,v,label,active){
