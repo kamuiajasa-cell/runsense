@@ -1279,6 +1279,7 @@ input[type=password],input[type=text]{margin:0}
                 <div class="row"><span>Keyakinan RAI</span><b id="raiConf">—</b></div>
                 <div class="row"><span>Max METs</span><b id="afMets">—</b></div>
                 <div class="row"><span>Profil tubuh · BMI</span><b id="bodyContext">—</b></div>
+                <div class="row"><span>Tren berat 28 hari</span><b id="bodyTrend">—</b></div>
                 <div class="row"><span>Kategori</span><b id="afBand">—</b></div>
                 <div class="row"><span>Tahap</span><b id="afStage">—</b></div>
                 <div class="row"><span>CTL / ATL / TSB</span><b id="advLoad">—</b></div>
@@ -1402,6 +1403,7 @@ input[type=password],input[type=text]{margin:0}
     age: 0,
     weight: 0,       // kg; konteks tubuh untuk Planner, bukan RAI
     height: 0,       // cm; konteks antropometri untuk Planner, bukan RAI
+    weightHistory: [], // [{date: yyyy-mm-dd, weight: kg}]
     plan: {},
     race: "",
     flag: null,     // {lv: 1 was-was | 2 sakit, since: ms}
@@ -1511,7 +1513,27 @@ input[type=password],input[type=text]{margin:0}
   function bodyLoadContext() {
     const w = +state.weight || 0, h = +state.height || 0;
     const bmi = w > 0 && h >= 100 ? w / Math.pow(h / 100, 2) : null;
-    return { weight: w || null, height: h || null, bmi: bmi != null ? Math.round(bmi * 10) / 10 : null };
+    const hist = (state.weightHistory || []).filter(x => x && /^\\d{4}-\\d{2}-\\d{2}$/.test(x.date) && Number.isFinite(+x.weight) && x.weight >= 25 && x.weight <= 250).sort((a,b)=>a.date.localeCompare(b.date));
+    const cutoff = new Date(Date.now() - 28 * 864e5).toISOString().slice(0,10);
+    const recent = hist.filter(x => x.date >= cutoff);
+    const first = recent[0], last = recent[recent.length - 1];
+    const deltaKg = first && last && first.date !== last.date ? Math.round((last.weight - first.weight) * 10) / 10 : null;
+    const deltaPct = deltaKg != null ? deltaKg / first.weight * 100 : null;
+    const spanDays = first && last ? Math.round((Date.parse(last.date + "T00:00:00Z") - Date.parse(first.date + "T00:00:00Z")) / 864e5) : 0;
+    const trend = deltaKg != null && spanDays >= 7 ? { kg: deltaKg, pct: Math.round(deltaPct * 10) / 10, days: spanDays, n: recent.length } : null;
+    return { weight: w || null, height: h || null, bmi: bmi != null ? Math.round(bmi * 10) / 10 : null, trend, historyCount: hist.length };
+  }
+
+  /* Simpan satu titik per hari; perubahan input pada hari yang sama memperbarui titik itu. */
+  function recordWeightPoint() {
+    if (!(state.weight >= 25 && state.weight <= 250)) return;
+    const date = ymd();
+    const h = Array.isArray(state.weightHistory) ? state.weightHistory.slice() : [];
+    const idx = h.findIndex(x => x.date === date);
+    const point = { date, weight: Math.round(state.weight * 10) / 10 };
+    if (idx >= 0) h[idx] = point; else h.push(point);
+    h.sort((a,b)=>a.date.localeCompare(b.date));
+    state.weightHistory = h.slice(-180);
   }
 
   /* ---------- AF: Max METs estimator ---------- */
@@ -2912,6 +2934,8 @@ input[type=password],input[type=text]{margin:0}
     const w = $("#planWarn");
     const msgs = [];
     if (tot > 0 && lk > 0.3 * tot) msgs.push(`Long ${lk} km = ${Math.round((lk / tot) * 100)}% volume minggu. Batas ~30%. Kurangi long atau tambah easy.`);
+    const body = bodyLoadContext();
+    if (body.trend && Math.abs(body.trend.pct) >= 3) msgs.push(`Berat badan berubah ${body.trend.kg > 0 ? "+" : ""}${body.trend.kg} kg (${body.trend.pct > 0 ? "+" : ""}${body.trend.pct}%) dalam ${body.trend.days} hari. Ini bukan indikator cedera; cek apakah perubahan disertai kelelahan, asupan kurang, atau pemulihan terganggu sebelum menaikkan beban.`);
     const wkS = today() - ((new Date().getDay() + 6) % 7) * 864e5;
     const wc = weeklyCtx();
     const hardN = PLAN_DAYS.filter((d) => ((state.plan[d[0]] || {}).t) === "quality").length;
@@ -3091,6 +3115,7 @@ input[type=password],input[type=text]{margin:0}
     if (a.ltPace && r.pace === "Mendekati LTPace") r.pace = a.ltPace + " /km (LTPace)";
     const bc = bodyLoadContext();
     if (bc.bmi != null && r.status !== "done") r.reason += ` Profil tubuh tercatat: ${bc.weight} kg, ${bc.height} cm (BMI ${bc.bmi}); dipakai sebagai konteks pemantauan beban, bukan penalti kemampuan atau prediksi cedera.`;
+    if (bc.trend && Math.abs(bc.trend.pct) >= 3 && r.status === "train") r.reason += ` Tren BB berubah ${bc.trend.kg > 0 ? "+" : ""}${bc.trend.kg} kg dalam ${bc.trend.days} hari. Pertahankan progres konservatif dan evaluasi energi serta pemulihan; angka ini bukan prediksi cedera.`;
     const RW = ["Easy Run", "Easy terbatas", "Easy recovery", "Long Run", "Easy taper", "Long dipotong", "Recovery Run"];
     if (rwOn() && r.status === "train" && stage().s >= 3 && RW.includes(r.title)) {
       const cyc = (state.rw.run + state.rw.walk) / 60, n = Math.max(4, Math.round(((parseInt(r.duration) || 40) - 10) / cyc));
@@ -4329,6 +4354,8 @@ input[type=password],input[type=text]{margin:0}
     $("#raiValue").textContent = rai.score == null ? "Belum cukup data" : rai.score + " / 100";
     $("#raiConf").textContent = rai.score == null ? "—" : rai.conf + " · " + rai.n + " lari";
     $("#bodyContext").textContent = body.bmi == null ? "Belum diisi" : "BMI " + body.bmi + (body.weight ? " · " + body.weight + " kg" : "");
+    const bt = $("#bodyTrend");
+    if (bt) bt.textContent = body.trend ? (body.trend.kg > 0 ? "+" : "") + body.trend.kg + " kg · " + body.trend.days + " hari" : (body.historyCount >= 2 ? "Belum ada rentang 7 hari" : "Butuh catatan berkala");
     $("#afMets").textContent = a.mets ? f1(a.mets) + " (≈ VO₂max " + Math.round(a.mets * 3.5) + ")" : "—";
     $("#afBand").textContent = a.mets ? band(a.mets) : "—";
     $("#afStage").textContent = a.stageName || "—";
@@ -4373,6 +4400,7 @@ input[type=password],input[type=text]{margin:0}
     const wt = +$("#inWeight").value || 0, ht = +$("#inHeight").value || 0;
     state.weight = wt >= 25 && wt <= 250 ? Math.round(wt * 10) / 10 : 0;
     state.height = ht >= 100 && ht <= 230 ? Math.round(ht) : 0;
+    recordWeightPoint();
     const rv = Math.max(0, Math.min(120, +$("#inRest").value || 0));
     if (rv > 0) { state.rest = rv; state.restManual = 1; }
     else { state.restManual = 0; applyRhrAuto(); }
@@ -4721,6 +4749,7 @@ input[type=password],input[type=text]{margin:0}
     state.src = "";
     state.hwLast = 0;
     state.rest = state.max = state.age = state.weight = state.height = state.afS = state.restManual = state.lthrC = state.ltpC = 0;
+    state.weightHistory = [];
     state.athlete = null;
     state.apiKey = null;
     state.acts = [];
@@ -4754,6 +4783,7 @@ input[type=password],input[type=text]{margin:0}
           age: state.age,
           weight: state.weight,
           height: state.height,
+          weightHistory: state.weightHistory,
           hwLast: state.hwLast,
           sx: state.sx
         })
@@ -4783,6 +4813,8 @@ input[type=password],input[type=text]{margin:0}
         state.age = d.age || 0;
         state.weight = d.weight || 0;
         state.height = d.height || (+localStorage.getItem("runsense_ht") || 0);
+        state.weightHistory = Array.isArray(d.weightHistory) ? d.weightHistory : [];
+        if (!state.weightHistory.length && state.weight >= 25) state.weightHistory = [{ date: ymd(), weight: state.weight }];
         state.sx = d.sx && typeof d.sx === "object" ? d.sx : {};
         state.hwLast = d.hwLast || 0;
       }
