@@ -2777,7 +2777,7 @@ input[type=password],input[type=text]{margin:0}
       const moving = samples.filter(x => x.v >= 0.8).map(x => x.v).sort((a,b)=>a-b);
       if (moving.length >= 60) {
         const percentile = p => moving[Math.min(moving.length-1, Math.floor((moving.length-1)*p))];
-        const threshold = Math.max(1.8, percentile(.5) * 1.12);
+        const p25=percentile(.25), p75=percentile(.75), spread=p75-p25;\n        const threshold = spread >= 0.3 ? (p25+p75)/2 : Math.max(1.8, percentile(.5)*1.12);
         const flags = samples.map(x => x.v >= threshold);
         // Tutup celah GPS singkat agar satu repetisi tidak terpecah.
         for (let i=1;i<flags.length-1;i++) if (!flags[i] && flags[i-1] && flags[i+1]) flags[i]=true;
