@@ -3261,9 +3261,10 @@ input[type=password],input[type=text]{margin:0}
     const fl=feelLearning(),recentFeel=fl.sessions.filter(x=>now-x.ms<=14*D),hardRpe=recentFeel.filter(x=>x.rpe>=7).length;
     const avgRpe=recentFeel.length?recentFeel.reduce((s,x)=>s+x.rpe,0)/recentFeel.length:null;
     let volumeFactor=1,notes=[];
-    if(ratio!=null&&ratio>1.5){volumeFactor=.75;notes.push("menit lari 7 hari >150% rerata 3 minggu");}
-    else if(ratio!=null&&ratio>1.3){volumeFactor=.85;notes.push("volume mingguan meningkat cepat");}
-    else if(ratio!=null&&ratio>1.15){volumeFactor=.92;notes.push("volume mingguan mulai meningkat");}
+    // Kenaikan menit mingguan hanya dipotong oleh wkAdjust(); jangan dihitung dua kali.
+    if(ratio!=null&&ratio>1.5)notes.push("menit lari 7 hari >150% rerata 3 minggu");
+    else if(ratio!=null&&ratio>1.3)notes.push("volume mingguan meningkat cepat");
+    else if(ratio!=null&&ratio>1.15)notes.push("volume mingguan mulai meningkat");
     if(hard.length>=2){volumeFactor=Math.min(volumeFactor,.85);notes.push("2+ sesi intens dalam 7 hari");}
     if(hardRpe>=2){volumeFactor=Math.min(volumeFactor,.85);notes.push("2+ sesi terakhir terasa berat (RPE ≥7)");}
     return {acute,prevWeekly,ratio,hard7:hard.length,hardRpe,avgRpe,volumeFactor,qualityLock:hard.length>=2||hardRpe>=2||(ratio!=null&&ratio>1.5),recoveryBias:hardRpe>=2||(avgRpe!=null&&avgRpe>=7&&recentFeel.length>=2),notes};
