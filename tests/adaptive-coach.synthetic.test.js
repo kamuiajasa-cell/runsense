@@ -86,7 +86,7 @@ check("Heavy leg feedback prioritizes recovery and reduces dose", () => {
   assert.ok(c.volumeFactor < 1);
 });
 
-const syntaxBlocks = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)]
+const syntaxBlocks = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
   .map(match => match[1]).filter(script => script.trim());
 for (const script of syntaxBlocks) new Function(script);
 console.log(JSON.stringify({
