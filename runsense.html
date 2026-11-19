@@ -2484,6 +2484,13 @@ input[type=password],input[type=text]{margin:0}
             "Lari", "Jalan", zone, "");
           continue;
         }
+        const strides = detail.match(/(\d+)\s*[×x]\s*(\d+)\s*(dtk|detik|s)\s*strides?/i);
+        if (strides && !isWarm && !isCool) {
+          const rest = detail.match(/jeda(?:\s*jalan)?\s*(\d+)\s*(?:mnt|menit|min)/i);
+          lines.push(section);
+          repeat(+strides[1], +strides[2] + "s", (rest ? +rest[1] : 1) + "m", "Strides", "Jalan", "", "");
+          continue;
+        }
         const interval = detail.match(/(\d+)\s*[×x]\s*(\d+)\s*(?:mnt|menit|min)/i);
         if (interval && !isWarm && !isCool) {
           const rest = detail.match(/jeda\s*(\d+)\s*(?:mnt|menit|min)/i);
