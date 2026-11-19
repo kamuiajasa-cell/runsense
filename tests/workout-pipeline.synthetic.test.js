@@ -73,14 +73,21 @@ test("Intervals event uses the selected date, run type, and full compiled descri
   assert.equal(event.description, compiled.text);
 });
 test("A complete synthetic Intervals workout_doc is accepted", () => {
-  const mockApiResponse = { id: 8123, workout_doc: { steps: [{}, {}, {}, {}] } };
+  const mockApiResponse = { id: 8123, workout_doc: { steps: [
+    { duration: 600 },
+    { reps: 4, text: "4x", steps: [{ duration: 360 }, { duration: 60 }] },
+    { duration: 480 }
+  ] } };
   assert.equal(hasStructuredWorkout(mockApiResponse, compiled.expectedSteps), true);
 });
 test("An event without workout_doc is not falsely reported as synced", () => {
   assert.equal(hasStructuredWorkout({ id: 8124 }, compiled.expectedSteps), false);
 });
 test("A truncated workout_doc is rejected", () => {
-  assert.equal(hasStructuredWorkout({ workout_doc: { steps: [{}, {}] } }, compiled.expectedSteps), false);
+  assert.equal(hasStructuredWorkout({ workout_doc: { steps: [
+    { duration: 600 },
+    { reps: 4, steps: [{ duration: 360 }] }
+  ] } }, compiled.expectedSteps), false);
 });
 test("Walk recommendations remain Walk events", () => {
   const walk = buildIntervalsWorkoutEvent({ title: "Walk recovery", stage: 1 }, "2026-11-19", "Warmup\n- 5m Z1 HR");
