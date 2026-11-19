@@ -122,9 +122,9 @@ check("Saved pain check-in safely overrides the planned workout", () => {
 });
 check("Saved low-energy and heavy-fatigue check-in reduces a quality session", () => {
   const result = runFeelDecision({ pain: 0, energy: 1, fatigue: 3, legs: 3, savedDate: "2026-11-19" });
-  assert.equal(result.status, "train");
+  assert.equal(result.status, "rest");
   assert.equal(result.tag, "RECOVERY");
-  assert.notEqual(result.duration, "40 menit");
+  assert.equal(result.duration, "—");
 });
 
 const syntaxBlocks = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
