@@ -1085,7 +1085,7 @@ input[type=password],input[type=text]{margin:0}
         </div>
 
         <div class="actions">
-          <button class="btn btn-primary" id="btnConnect" onclick="connect()">Hubungkan &amp; Mulai</button>
+          <button class="btn btn-primary" id="btnConnect" type="button">Hubungkan &amp; Mulai</button>
           <button class="btn btn-outline" onclick="enterDemo()">Coba Demo</button>
         </div>
 
@@ -5703,6 +5703,13 @@ input[type=password],input[type=text]{margin:0}
   window.showScreen = showScreen;
   window.selectStyle = selectStyle;
   window.connect = connect;
+  // Explicit listener for WebViews that restrict inline onclick handlers.
+  const connectButton = document.getElementById("btnConnect");
+  if (connectButton) connectButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (typeof window.connect === "function") window.connect();
+    else showError("Aplikasi belum siap. Muat ulang halaman lalu coba lagi.");
+  });
   window.enterDemo = enterDemo;
   window.logout = logout;
   window.syncNow = syncNow;
