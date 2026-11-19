@@ -2363,9 +2363,10 @@ input[type=password],input[type=text]{margin:0}
     state.style = el.dataset.style;
   }
 
-  document.getElementById("goalChips").addEventListener("click", (e) => {
+  const goalChips = document.getElementById("goalChips");
+  if (goalChips) goalChips.addEventListener("click", (e) => {
     if (!e.target.classList.contains("chip")) return;
-    document.querySelectorAll("#goalChips .chip").forEach((c) => c.classList.remove("active"));
+    goalChips.querySelectorAll(".chip").forEach((c) => c.classList.remove("active"));
     e.target.classList.add("active");
     state.goal = e.target.dataset.goal;
   });
