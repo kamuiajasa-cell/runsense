@@ -1586,9 +1586,8 @@ input[type=password],input[type=text]{margin:0}
 
   function stage() {
     const e = estMax(), M = e.m;
-    if (M == null) {
-      return { s: (state.acts || []).some((r) => r[1] === "run") ? 4 : 2, m: null, e, unknown: 1 };
-    }
+    if (M == null) return { s: 2, m: null, e, unknown: 1 };
+
     let raw = M < 7.9 ? 1 : M < 9.2 ? 2 : M < 12 ? 3 : 4, s = raw;
     const prev = +state.afS || 0;
     if (prev && prev !== raw && Math.abs(prev - raw) === 1) {
@@ -1647,10 +1646,10 @@ input[type=password],input[type=text]{margin:0}
     return (state.acts || []).filter((a) => a[0] >= cut).reduce((s, a) => s + loadOf(a), 0);
   }
 
-  /* Quality eligibility: stage <= 2 → no quality */
+  /* Quality perlu fondasi latihan yang terbukti, bukan hanya skor kemampuan. */
   function qualityEligible() {
-    const st = stage();
-    return !(st && st.s <= 2);
+    const st = stage(), tol = trainingTolerance();
+    return !!(st && st.s >= 3 && tol.runs28 >= 3 && tol.lastAgeDays <= 14 && tol.activeDays28 >= 3);
   }
 
   const fmtHm = (h) => { const m = Math.round(h * 60); return Math.floor(m / 60) + "j" + String(m % 60).padStart(2, "0"); };
@@ -3039,38 +3038,48 @@ input[type=password],input[type=text]{margin:0}
     return L[Math.floor(L.length / 2)] >= 8;
   }
 
-  /* ---------- Historical cap: durasi sesi tidak boleh melompat dari kemampuan aktual ---------- */
-  /* Sesi lari selesai terpanjang (menit) dengan label sama dalam 30 hari; fallback 90 hari diturunkan kepercayaannya. */
+  /* ---------- Training tolerance: kebiasaan yang berhasil ditanggung ---------- */
+  function trainingTolerance() {
+    const now = Date.now(), D = 864e5;
+    const runs = (state.acts || []).filter(x => x[1] === "run" && x[2] >= 8 && x[3] >= 1.5 && x[0] <= now).sort((a,b) => b[0]-a[0]);
+    const r28 = runs.filter(x => now-x[0] <= 28*D), r42 = runs.filter(x => now-x[0] <= 42*D);
+    const med = a => { const v=a.slice().sort((x,y)=>x-y); return v.length ? v[Math.floor(v.length/2)] : 0; };
+    return {
+      runs28:r28.length, runs42:r42.length,
+      activeDays28:new Set(r28.map(x=>new Date(x[0]).toISOString().slice(0,10))).size,
+      lastAgeDays:runs.length ? Math.max(0,(now-runs[0][0])/D) : 999,
+      typical:med(r42.map(x=>x[2])),
+      p75:r42.length ? r42.map(x=>x[2]).sort((a,b)=>a-b)[Math.floor((r42.length-1)*.75)] : 0,
+      weeklyMinutes:r28.reduce((v,x)=>v+x[2],0)/4
+    };
+  }
+
+  /* Median sesi sejenis + frekuensi; satu sesi ekstrem tidak menaikkan plafon. */
   function histCap(label) {
-    const now = Date.now();
-    const pick = (days) => (state.acts || [])
-      .filter((x) => x[1] === "run" && x[2] >= 10 && x[3] >= 1.5 && now - x[0] <= days * 864e5 && detectType(x).type === label)
-      .map((x) => x[2]);
-    const r30 = pick(30);
-    if (r30.length) {
-      const mx = Math.max(...r30);
-      /* 1 sesi: sangat konservatif (cap 100%), 2+ sesi: cap 110% */
-      return { max: mx, cap: mx * (r30.length === 1 ? 1.0 : 1.1), n: r30.length, conf: r30.length >= 4 ? "tinggi" : "sedang", src: "30h" };
-    }
-    const r90 = pick(90);
-    if (r90.length) {
-      const mx = Math.max(...r90);
-      return { max: mx, cap: mx * 0.85, n: r90.length, conf: "rendah", src: "90h" }; /* regresi setelah jeda */
-    }
-    return { max: 0, cap: 0, n: 0, conf: "none", src: "none" };
+    const now=Date.now(), D=864e5;
+    const pick=days=>(state.acts||[]).filter(x=>x[1]==="run"&&x[2]>=8&&x[3]>=1.5&&x[0]<=now&&now-x[0]<=days*D&&detectType(x).type===label).sort((a,b)=>b[0]-a[0]);
+    const summarize=(arr,src)=>{
+      if(!arr.length)return null;
+      const ds=arr.map(x=>x[2]).sort((a,b)=>a-b), median=ds[Math.floor(ds.length/2)];
+      const age=Math.max(0,(now-arr[0][0])/D);
+      const recency=age<=14?1:age<=28?.9:age<=42?.8:age<=60?.7:.6;
+      const allowance=arr.length>=5?1.08:arr.length>=3?1.03:arr.length===2?1:.9;
+      return {max:Math.max(...ds),median,p75:ds[Math.floor((ds.length-1)*.75)],cap:Math.max(15,median*allowance*recency),n:arr.length,age,conf:arr.length>=5?"tinggi":arr.length>=3?"sedang":"rendah",src};
+    };
+    return summarize(pick(30),"30h")||summarize(pick(90),"90h")||{max:0,median:0,p75:0,cap:0,n:0,age:999,conf:"none",src:"none"};
   }
-  /* Terapkan cap ke durasi rencana; tanpa riwayat → bootstrap konservatif (tidak bebas pakai default). */
-  function applyCap(mins, label, boot) {
-    const h = histCap(label);
-    if (h.n === 0) return { mins: Math.min(mins, boot), h, capped: mins > boot };
-    const c = Math.max(15, Math.floor(h.cap));
-    return { mins: Math.min(mins, c), h, capped: mins > c };
+  function applyCap(mins,label,boot) {
+    const h=histCap(label), tol=trainingTolerance();
+    let c=h.n?h.cap:Math.min(boot,tol.typical?tol.typical*.9:boot);
+    if(!h.n&&tol.lastAgeDays>14)c*=tol.lastAgeDays<=28?.9:tol.lastAgeDays<=42?.8:.7;
+    c=Math.max(15,Math.floor(c));
+    return {mins:Math.min(mins,c),h,capped:mins>c,cap:c,tol};
   }
-  const capNote = (r, lb) => r.capped
-    ? ` Durasi dibatasi riwayat: ${lb} terpanjangmu ${r.h.n ? Math.round(r.h.max) + " mnt" : "belum ada"}${r.h.src === "90h" ? " (>30 hari lalu)" : ""}, jadi naik bertahap.`
+  const capNote=(r,lb)=>r.capped
+    ? ` Durasi dibatasi toleransi aktual: plafon ${lb.toLowerCase()} sekitar ${r.cap} menit; median sesi sejenis ${r.h.n?Math.round(r.h.median)+" menit":"belum cukup data"}${r.h.src==="90h"?", dengan riwayat yang lebih lama":""}.`
     : "";
 
-  /* Konteks beban: menit 7 hari terakhir vs rata-rata mingguan 21 hari sebelumnya. Hanya konteks, bukan ambang cedera. */
+  /* Konteks beban 7 hari vs rata-rata 3 minggu sebelumnya; konteks, bukan prediksi cedera. */
   function weeklyCtx() {
     const now = Date.now(), D = 864e5;
     let cur = 0, prev = 0, wk = new Set();
@@ -3085,10 +3094,12 @@ input[type=password],input[type=text]{margin:0}
   }
   const WK_HI = 1.3; /* pemicu evaluasi planner, bukan batas cedera tervalidasi */
   function wkAdjust(mins) {
-    const w = weeklyCtx();
-    return w.ratio != null && w.ratio > WK_HI
-      ? { mins: Math.max(15, Math.round(mins * 0.9)), note: ` Beban 7 hari ${Math.round((w.ratio - 1) * 100)}% di atas rata-rata 3 minggu sebelumnya, durasi dikurangi ~10%.` }
-      : { mins, note: "" };
+    const w=weeklyCtx();
+    if(w.ratio==null)return {mins,note:""};
+    if(w.ratio>1.5)return {mins:Math.max(15,Math.round(mins*.75)),note:` Beban 7 hari ${Math.round((w.ratio-1)*100)}% di atas kebiasaan; durasi dipangkas ~25%.`};
+    if(w.ratio>WK_HI)return {mins:Math.max(15,Math.round(mins*.85)),note:` Beban 7 hari ${Math.round((w.ratio-1)*100)}% di atas kebiasaan; durasi dipangkas ~15%.`};
+    if(w.ratio>1.15)return {mins:Math.max(15,Math.round(mins*.9)),note:" Beban mingguan mulai meningkat; durasi ditahan sedikit."};
+    return {mins,note:""};
   }
 
   function designToday() {
@@ -3122,7 +3133,7 @@ input[type=password],input[type=text]{margin:0}
       r.steps = [["Pemanasan", "5 mnt jalan"], ["Inti", n + "× (" + rwT(state.rw.run) + " lari + " + rwT(state.rw.walk) + " jalan)" + (/\d/.test(r.pace) ? ", lari @ " + r.pace.replace(" /km", "") : "")], ["Pendinginan", "5 mnt jalan"]];
       if (/\d/.test(r.pace)) r.pace += " (saat lari)";
     }
-    if (r.steps && /^Easy (Run|terbatas)$/.test(r.title) && r.score > 65 && [2, 4].includes(new Date().getDay())) r.steps.push(["Opsional", "4× 20 dtk strides santai, jeda jalan 1 mnt"]);
+    if (r.steps && /^Easy (Run|terbatas)$/.test(r.title) && r.score > 65 && [2,4].includes(new Date().getDay()) && trainingTolerance().runs28>=5) r.steps.push(["Opsional","4× 20 dtk strides santai, jeda jalan 1 mnt"]);
     if (r.steps && r.title === "Long Run" && parseInt(r.duration) >= 60) r.steps.push(["Nutrisi", "Karbo 30–60 g/jam mulai menit 45, minum 150–250 ml tiap 20 mnt"]);
     if (r.steps && r.title === "Hari lomba" && (+state.raceDist || 0) >= 21) r.steps.push(["Nutrisi", "Karbo 40–60 g/jam sejak menit 40, minum di tiap pos"]);
     return r;
@@ -3322,10 +3333,9 @@ input[type=password],input[type=text]{margin:0}
 
     // Recovery
     if (score < 55 || au.severe || (tsb != null && tsb < -12) || qualityCount >= 3 || (style === "conservative" && score < 65)) {
-      const rc0 = histCap("recovery"), eh = histCap("easy");
-      /* Tanpa riwayat recovery: bootstrap dari easy terpanjang (×0,75), bukan memakai baseline easy penuh */
-      const rBoot = eh.n ? Math.floor(eh.max * 0.75) : 25;
-      const rc = rc0.n ? applyCap(35, "recovery", rBoot) : { mins: Math.max(15, Math.min(35, rBoot)), h: rc0, capped: 35 > rBoot };
+      const rc0 = histCap("recovery"), eh = histCap("easy"), tol = trainingTolerance();
+      const rBoot = eh.n ? Math.floor(eh.median * 0.75) : tol.typical ? Math.floor(tol.typical * 0.7) : 20;
+      const rc = applyCap(Math.min(25,rBoot),"recovery",20);
       const rw = wkAdjust(rc.mins), rMin = rw.mins;
       return {
         k: "wn",
@@ -3352,7 +3362,7 @@ input[type=password],input[type=text]{margin:0}
 
     // Stage 1 — walk
     if (st.s === 1) {
-      const mins = score > 70 ? 35 : 25;
+      const mins = 25;
       return {
         k: "ok",
         status: "train",
@@ -3376,7 +3386,7 @@ input[type=password],input[type=text]{margin:0}
 
     // Stage 2 — run-walk
     if (st.s === 2) {
-      const w = wp(((Math.round(today() / 864e5) % 3) + 3) % 3, score > 68 ? 1 : 0.75);
+      const w = wp(((Math.round(today() / 864e5) % 3) + 3) % 3, 0.75);
       const pr = st.m ? paceOf(0.9 * st.m) : 9.5;
       return {
         k: "ok",
@@ -3406,9 +3416,9 @@ input[type=password],input[type=text]{margin:0}
     if (pl && pl.t === "long" && st.s >= 3 && !fl && !yHard && !yLong) {
       const [lo, hi] = ep();
       const cut = cutbackDue();
-      const mins0 = pl.km > 0 ? clamp(Math.round(pl.km * (lo + hi) / 2), 50, 150) : 75;
-      const mins1 = cut ? Math.max(40, Math.round(mins0 * 0.7)) : mins0;
-      const lc = applyCap(mins1, "long", 60);
+      const mins0 = pl.km > 0 ? clamp(Math.round(pl.km * (lo + hi) / 2), 35, 90) : 45;
+      const mins1 = cut ? Math.max(30, Math.round(mins0 * 0.75)) : mins0;
+      const lc = applyCap(mins1, "long", 35);
       const lw = wkAdjust(lc.mins);
       const mins = lw.mins;
       const over = wk > 0 && pl.km > 0.3 * wk;
@@ -3519,11 +3529,13 @@ input[type=password],input[type=text]{margin:0}
       lo = Math.max(lo, cap);
       hi = lo * 1.08;
     }
-    let mins = score > 72 ? 50 : score > 55 ? 40 : 32;
-    if (pl && pl.t === "easy" && pl.km > 0) mins = clamp(Math.round(pl.km * (lo + hi) / 2), 20, 90);
+    const tol=trainingTolerance(), eh0=histCap("easy");
+    let mins=eh0.n?Math.round(eh0.median):tol.typical?Math.round(tol.typical*.9):25;
+    mins=clamp(mins,20,35);
+    if(pl&&pl.t==="easy"&&pl.km>0)mins=Math.min(mins,clamp(Math.round(pl.km*(lo+hi)/2),20,35));
     if (yHard || yLong) mins = Math.min(mins, 35);
     if (fl) mins = Math.max(15, Math.round(mins * 0.7));
-    const ec = applyCap(mins, "easy", 30);
+    const ec = applyCap(mins, "easy", 25);
     mins = ec.mins;
     const ew = wkAdjust(mins);
     mins = ew.mins;
