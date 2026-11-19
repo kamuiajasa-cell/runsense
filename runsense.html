@@ -1164,6 +1164,8 @@ input[type=password],input[type=text]{margin:0}
         <div class="sg-t">Data tubuh &amp; detak</div>
         <div class="sgroup">
           <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><span class="srow-t">Usia</span><input type="number" inputmode="numeric" id="inAge" placeholder="—" oninput="saveProfile()"></div>
+          <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M8 7h8M8 17h8"/></svg></span><span class="srow-t">Berat badan<span class="srow-s">kg · konteks Planner</span></span><input type="number" inputmode="decimal" id="inWeight" min="25" max="250" step="0.1" placeholder="—" oninput="saveProfile()"></div>
+          <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18M9 3v3M9 9v3M9 15v3M9 21h10"/></svg></span><span class="srow-t">Tinggi badan<span class="srow-s">cm · konteks Planner</span></span><input type="number" inputmode="numeric" id="inHeight" min="100" max="230" placeholder="—" oninput="saveProfile()"></div>
           <div class="srow has-hint"><span class="sic y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z"/></svg></span><span class="srow-t">Detak istirahat<span class="srow-s">Rata-rata 28 hari</span></span><input type="number" inputmode="numeric" id="inRest" placeholder="—" oninput="saveProfile()"><div class="srow-hint" id="inRestHint"></div></div>
           <div class="srow"><span class="sic r"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="srow-t">Detak maksimal</span><input type="number" inputmode="numeric" id="inMax" placeholder="—" oninput="saveProfile()"></div>
           <div class="srow has-hint"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span><span class="srow-t">LTHR custom<span class="srow-s">bpm</span></span><input type="number" inputmode="numeric" id="inLthr" placeholder="auto" oninput="saveProfile()"><div class="srow-hint" id="autoLthr"></div></div>
@@ -1273,7 +1275,10 @@ input[type=password],input[type=text]{margin:0}
             <div class="sg-t">Mode lanjutan</div>
             <div class="sgroup">
               <div class="sblock rows" style="padding:4px 0">
+                <div class="row"><span>RAI · kemampuan lari</span><b id="raiValue">—</b></div>
+                <div class="row"><span>Keyakinan RAI</span><b id="raiConf">—</b></div>
                 <div class="row"><span>Max METs</span><b id="afMets">—</b></div>
+                <div class="row"><span>Profil tubuh · BMI</span><b id="bodyContext">—</b></div>
                 <div class="row"><span>Kategori</span><b id="afBand">—</b></div>
                 <div class="row"><span>Tahap</span><b id="afStage">—</b></div>
                 <div class="row"><span>CTL / ATL / TSB</span><b id="advLoad">—</b></div>
@@ -1395,6 +1400,8 @@ input[type=password],input[type=text]{margin:0}
     ltpC: 0,        // LTPace custom (detik/km), 0 = pakai auto
     max: 0,
     age: 0,
+    weight: 0,       // kg; konteks tubuh untuk Planner, bukan RAI
+    height: 0,       // cm; konteks antropometri untuk Planner, bukan RAI
     plan: {},
     race: "",
     flag: null,     // {lv: 1 was-was | 2 sakit, since: ms}
@@ -1479,6 +1486,33 @@ input[type=password],input[type=text]{margin:0}
     if (r) state.rest = r.avg;
   }
   function maxHr() { return +state.max > 0 ? +state.max : (+state.age > 0 ? Math.round(208 - 0.7 * state.age) : 0); }
+
+  /* RAI v1: indeks kemampuan lari eksperimental. BB/TB sengaja tidak menjadi input.
+     Komponen yang belum punya bukti valid dikeluarkan; bobot komponen tersedia dinormalisasi ulang. */
+  function runningAbilityIndex() {
+    const now = Date.now(), runs = (state.acts || []).filter(a => a[1] === "run" && a[3] >= 1.5 && a[2] >= 8 && a[0] >= now - 84 * 864e5 && a[2] / a[3] >= 3 && a[2] / a[3] <= 14);
+    const parts = [], add = (key, label, value, weight, evidence) => { if (Number.isFinite(value)) parts.push({ key, label, value: clamp(value, 0, 100), weight, evidence }); };
+    const est = estMax(runs, now);
+    const best = runs.filter(a => a[3] >= 2 && a[2] >= 10).map(a => metsOf(a[2] / a[3]) / pctAt(a[2])).filter(v => Number.isFinite(v) && v >= 4 && v <= 25);
+    if (best.length >= 2) add("performance", "Performa", (Math.max(...best) - 5.5) / 8.5 * 100, 35, best.length + " usaha valid");
+    if (est.m != null && est.n >= 3) add("aerobic", "Aerobik", (est.m - 5.5) / 8.5 * 100, 25, est.n + " sampel HR/pace");
+    const longest = runs.length ? Math.max(...runs.map(a => a[2])) : 0;
+    if (runs.length >= 3) add("durability", "Durabilitas", (longest - 15) / 75 * 100, 20, "lari terpanjang " + Math.round(longest) + " menit");
+    const dec = runs.map(a => { const s = a[9] && state.sx ? state.sx[String(a[9])] : null; return s && s.dec && Number.isFinite(+s.dec.pct) ? +s.dec.pct : null; }).filter(v => v != null && v >= 0 && v <= 40);
+    if (dec.length >= 3) { const d = dec.slice().sort((a,b)=>a-b)[Math.floor(dec.length/2)]; add("economy", "Stabilitas pace-HR", 100 - d * 2.5, 15, dec.length + " stream"); }
+    const days = new Set(runs.map(a => new Date(a[0]).toISOString().slice(0,10))).size;
+    if (runs.length >= 3) add("consistency", "Konsistensi", days / 18 * 100, 5, days + " hari lari/12 minggu");
+    const weight = parts.reduce((s,p)=>s+p.weight,0), score = weight ? Math.round(parts.reduce((s,p)=>s+p.value*p.weight,0)/weight) : null;
+    const conf = runs.length >= 18 && parts.length >= 4 ? "Baik" : runs.length >= 8 && parts.length >= 3 ? "Sedang" : "Rendah";
+    return { score: runs.length >= 3 && parts.length >= 2 ? score : null, conf, n: runs.length, parts, weight, note: "RAI v1 eksperimental; bukan VO₂max atau diagnosis. BB/TB tidak dihitung." };
+  }
+
+  /* BB/TB hanya konteks tubuh di Planner. BMI bukan skor kebugaran/risiko cedera. */
+  function bodyLoadContext() {
+    const w = +state.weight || 0, h = +state.height || 0;
+    const bmi = w > 0 && h >= 100 ? w / Math.pow(h / 100, 2) : null;
+    return { weight: w || null, height: h || null, bmi: bmi != null ? Math.round(bmi * 10) / 10 : null };
+  }
 
   /* ---------- AF: Max METs estimator ---------- */
   function estMax(acts, at) {
@@ -3055,6 +3089,8 @@ input[type=password],input[type=text]{margin:0}
       });
     }
     if (a.ltPace && r.pace === "Mendekati LTPace") r.pace = a.ltPace + " /km (LTPace)";
+    const bc = bodyLoadContext();
+    if (bc.bmi != null && r.status !== "done") r.reason += ` Profil tubuh tercatat: ${bc.weight} kg, ${bc.height} cm (BMI ${bc.bmi}); dipakai sebagai konteks pemantauan beban, bukan penalti kemampuan atau prediksi cedera.`;
     const RW = ["Easy Run", "Easy terbatas", "Easy recovery", "Long Run", "Easy taper", "Long dipotong", "Recovery Run"];
     if (rwOn() && r.status === "train" && stage().s >= 3 && RW.includes(r.title)) {
       const cyc = (state.rw.run + state.rw.walk) / 60, n = Math.max(4, Math.round(((parseInt(r.duration) || 40) - 10) / cyc));
@@ -4268,7 +4304,7 @@ input[type=password],input[type=text]{margin:0}
 
   function renderMe(a, g) {
     g = g || state.goalEst || {};
-    [["#inAge", state.age], ["#inRest", state.rest], ["#inMax", state.max]].forEach(([s, v]) => {
+    [["#inAge", state.age], ["#inWeight", state.weight], ["#inHeight", state.height], ["#inRest", state.rest], ["#inMax", state.max]].forEach(([s, v]) => {
       const el = $(s);
       if (el && document.activeElement !== el) el.value = v > 0 ? v : "";
     });
@@ -4289,6 +4325,10 @@ input[type=password],input[type=text]{margin:0}
     $("#advBox").style.display = adv ? "block" : "none";
     $("#advBtn").textContent = "Mode lanjutan: " + (adv ? "nyala" : "mati");
     if (!a) return;
+    const rai = runningAbilityIndex(), body = bodyLoadContext();
+    $("#raiValue").textContent = rai.score == null ? "Belum cukup data" : rai.score + " / 100";
+    $("#raiConf").textContent = rai.score == null ? "—" : rai.conf + " · " + rai.n + " lari";
+    $("#bodyContext").textContent = body.bmi == null ? "Belum diisi" : "BMI " + body.bmi + (body.weight ? " · " + body.weight + " kg" : "");
     $("#afMets").textContent = a.mets ? f1(a.mets) + " (≈ VO₂max " + Math.round(a.mets * 3.5) + ")" : "—";
     $("#afBand").textContent = a.mets ? band(a.mets) : "—";
     $("#afStage").textContent = a.stageName || "—";
@@ -4330,6 +4370,9 @@ input[type=password],input[type=text]{margin:0}
   function toggleAdv() { localStorage.setItem("runsense_adv", localStorage.getItem("runsense_adv") === "1" ? "0" : "1"); if (state.athlete) renderMe(state.athlete); }
   function saveProfile() {
     state.age = Math.max(0, Math.min(90, +$("#inAge").value || 0));
+    const wt = +$("#inWeight").value || 0, ht = +$("#inHeight").value || 0;
+    state.weight = wt >= 25 && wt <= 250 ? Math.round(wt * 10) / 10 : 0;
+    state.height = ht >= 100 && ht <= 230 ? Math.round(ht) : 0;
     const rv = Math.max(0, Math.min(120, +$("#inRest").value || 0));
     if (rv > 0) { state.rest = rv; state.restManual = 1; }
     else { state.restManual = 0; applyRhrAuto(); }
@@ -4677,7 +4720,7 @@ input[type=password],input[type=text]{margin:0}
     localStorage.removeItem(KEY_STORE);
     state.src = "";
     state.hwLast = 0;
-    state.rest = state.max = state.age = state.afS = state.restManual = state.lthrC = state.ltpC = 0;
+    state.rest = state.max = state.age = state.weight = state.height = state.afS = state.restManual = state.lthrC = state.ltpC = 0;
     state.athlete = null;
     state.apiKey = null;
     state.acts = [];
@@ -4709,6 +4752,8 @@ input[type=password],input[type=text]{margin:0}
           ltpC: state.ltpC,
           max: state.max,
           age: state.age,
+          weight: state.weight,
+          height: state.height,
           hwLast: state.hwLast,
           sx: state.sx
         })
@@ -4736,6 +4781,8 @@ input[type=password],input[type=text]{margin:0}
         state.ltpC = d.ltpC || 0;
         state.max = d.max || 0;
         state.age = d.age || 0;
+        state.weight = d.weight || 0;
+        state.height = d.height || (+localStorage.getItem("runsense_ht") || 0);
         state.sx = d.sx && typeof d.sx === "object" ? d.sx : {};
         state.hwLast = d.hwLast || 0;
       }
