@@ -3263,6 +3263,17 @@ input[type=password],input[type=text]{margin:0}
     const heavyLegs=recentFeel.filter(x=>x.legs>=2).length;
     const todayFeel=FEEL&&FEEL.today?FEEL.today[ymd()]:null;
     const todayLegsHeavy=!!(todayFeel&&todayFeel.savedDate===ymd()&&todayFeel.legs>=2);
+    // Tanggapan spesifik sesi quality: RPE/kaki menentukan apakah dosis boleh naik.
+    const qualitySessions=acts.filter(a=>["thr","vo2","race"].includes(detectType(a).type)).sort((a,b)=>b[0]-a[0]).slice(0,4);
+    const qualityFeedback=qualitySessions.map(a=>({a,fb:(FEEL.sessions||{})[a[0]]||null}));
+    let successfulQuality=0,qualityCaution=false;
+    for(const q of qualityFeedback){
+      if(!q.fb||!(q.fb.rpe>0))break;
+      if(q.fb.rpe>=8||q.fb.legs>=2){qualityCaution=true;break;}
+      if(q.fb.rpe<=6&&(q.fb.legs==null||q.fb.legs<=1))successfulQuality++;
+      else break;
+    }
+    const qualityProgressionLevel=Math.min(3,Math.floor(successfulQuality/2));
     let volumeFactor=1,notes=[];
     // Kenaikan menit mingguan hanya dipotong oleh wkAdjust(); jangan dihitung dua kali.
     if(ratio!=null&&ratio>1.5)notes.push("menit lari 7 hari >150% rerata 3 minggu");
@@ -3271,7 +3282,8 @@ input[type=password],input[type=text]{margin:0}
     if(hard.length>=2){volumeFactor=Math.min(volumeFactor,.85);notes.push("2+ sesi intens dalam 7 hari");}
     if(hardRpe>=2){volumeFactor=Math.min(volumeFactor,.85);notes.push("2+ sesi terakhir terasa berat (RPE ≥7)");}
     if(heavyLegs>=2||todayLegsHeavy){volumeFactor=Math.min(volumeFactor,.85);notes.push("otot/kaki melaporkan beban berat");}
-    return {acute,prevWeekly,ratio,hard7:hard.length,hardRpe,heavyLegs,avgRpe,volumeFactor,qualityLock:hard.length>=2||hardRpe>=2||heavyLegs>=2||todayLegsHeavy||(ratio!=null&&ratio>1.5),recoveryBias:hardRpe>=2||heavyLegs>=2||todayLegsHeavy||(avgRpe!=null&&avgRpe>=7&&recentFeel.length>=2),notes};
+    if(qualityCaution){volumeFactor=Math.min(volumeFactor,.85);notes.push("respons sesi quality terakhir berat; dosis berikutnya diturunkan");}
+    return {acute,prevWeekly,ratio,hard7:hard.length,hardRpe,heavyLegs,avgRpe,qualityCaution,qualityProgressionLevel,successfulQuality,volumeFactor,qualityLock:hard.length>=2||hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||(ratio!=null&&ratio>1.5),recoveryBias:hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||(avgRpe!=null&&avgRpe>=7&&recentFeel.length>=2),notes};
   }
   function applyFeelDecision(r){
     if(!r||r.status==='done'||r.status==='rest')return r;
@@ -3658,7 +3670,9 @@ input[type=password],input[type=text]{margin:0}
       // Rotasi: tempo → cruise → VO2 (VO2 hanya form tinggi, tahap ≥ 4). Durasi kerja naik bertahap.
       const n28 = (state.acts || []).filter((x) => x[1] === "run" && Date.now() - x[0] <= 28 * 864e5 && /^(thr|vo2)$/.test(detectType(x).type)).length;
       let lv = Math.min(3, n28);
-      const vo2Ok = score >= 75 && st.s >= 4 && !au.warn && !heat;
+      // Dosis quality naik hanya setelah dua respons berturut-turut terkendali.
+      lv = Math.min(lv, adapt.qualityProgressionLevel);
+      const vo2Ok = score >= 75 && st.s >= 4 && !au.warn && !heat && !adapt.qualityCaution;
       const hillsOk = hillsRelevant();
       const idx = n28 % 3;
       const gp = goalPace(), rp = ph && ph.k === "peak" && gp > 0 && n28 % 2 === 1;
