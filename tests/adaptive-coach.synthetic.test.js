@@ -87,8 +87,22 @@ check("Heavy leg feedback prioritizes recovery and reduces dose", () => {
 });
 
 
-const applyFeelSource = html.match(/function applyFeelDecision\(r\)\{[\s\S]*?\n\s*\}/);
-assert.ok(applyFeelSource, "applyFeelDecision must exist");
+function extractDecisionFunction(source) {
+  const start = source.indexOf("function applyFeelDecision(r){");
+  assert.notEqual(start, -1, "applyFeelDecision must exist");
+  const open = source.indexOf("{", start);
+  let depth = 0;
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === "{") depth++;
+    else if (source[i] === "}") {
+      depth--;
+      if (depth === 0) return source.slice(start, i + 1);
+    }
+  }
+  throw new Error("Unclosed applyFeelDecision");
+}
+const applyFeelSource = extractDecisionFunction(html);
+
 function runFeelDecision(feel) {
   const fn = new Function("feelToday", "ymd", "feelLearning",
     applyFeelSource[0] + "; return applyFeelDecision;"
