@@ -76,7 +76,7 @@ check("Two quality sessions in seven days lock another quality session", () => {
   assert.equal(c.qualityLock, true);
 });
 check("Normal easy running remains unlocked", () => {
-  const c = evaluate([[1, "easy"], [3, "easy"], [5, "easy"], ...priorBaseline]);
+  const c = evaluate([[1, "easy", 10], [3, "easy", 10], [5, "easy", 10], ...priorBaseline]);
   assert.equal(c.qualityLock, false);
   assert.equal(c.volumeFactor, 1);
 });
