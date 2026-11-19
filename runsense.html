@@ -3313,7 +3313,7 @@ input[type=password],input[type=text]{margin:0}
   }
   function applyFeelDecision(r){
     if(!r||r.status==='done'||r.status==='rest')return r;
-    const f=feelToday(), pain=+f.pain||0, weak=f.energy===1, tired=f.fatigue===3||f.legs===3;
+    const draft=feelToday(), f=draft&&draft.savedDate===ymd()?draft:{}, pain=+f.pain||0, weak=f.energy===1, tired=f.fatigue===3||f.legs===3;
     if(pain>=2)return {k:'bad',status:'rest',title:'Istirahat — ada nyeri',duration:'—',hr:'—',pace:'—',tag:'RECOVERY',score:r.score,steps:[['Prioritas','Jangan berlari jika nyeri jelas atau mengubah cara berjalan/berlari.'],['Berikutnya','Evaluasi gejala; bila menetap atau memburuk, minta penilaian tenaga kesehatan.']],reason:'Check-in melaporkan nyeri yang jelas. Ini mengalahkan target latihan dan metrik kesiapan.'};
     if(pain===1)return {k:'wn',status:'train',title:'Jalan atau recovery ringan',duration:'15–20 menit',hr:'Nyaman',pace:'Tanpa target',tag:'RECOVERY',score:r.score,steps:[['Pilihan','Jalan hanya jika tidak menambah nyeri.'],['Batas','Nyeri meningkat atau mengubah gerak = berhenti.']],reason:'Ada nyeri ringan. Hari ini bukan waktu mengejar target lari.'};
     if(weak&&(tired||f.fatigue===2))return {k:'bad',status:'rest',title:'Istirahat dan pulihkan diri',duration:'—',hr:'—',pace:'—',tag:'RECOVERY',score:r.score,steps:[['Saran','Tidur, makan, dan hidrasi cukup; evaluasi kembali besok.']],reason:'Energi rendah disertai kelelahan. Respons tubuh lebih penting daripada jadwal.'};
