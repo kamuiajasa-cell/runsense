@@ -2874,7 +2874,16 @@ input[type=password],input[type=text]{margin:0}
       if (i != null) {
         const o = state.acts[i];
         if (JSON.stringify(o) !== JSON.stringify(r)) {
-          if (o[0] !== r[0] && state.vx[o[0]]) { state.vx[r[0]] = state.vx[o[0]]; delete state.vx[o[0]]; }
+          if (o[0] !== r[0]) {
+            if (state.vx[o[0]]) { state.vx[r[0]] = state.vx[o[0]]; delete state.vx[o[0]]; }
+            // FEEL is keyed by activity start timestamp; keep post-run feedback attached
+            // when Intervals.icu corrects the start time of the same stable activity ID.
+            if (FEEL.sessions && FEEL.sessions[o[0]]) {
+              FEEL.sessions[r[0]] = Object.assign({}, FEEL.sessions[o[0]], { activityId: String(r[9]) });
+              delete FEEL.sessions[o[0]];
+              feelSave();
+            }
+          }
           state.acts[i] = r; n++;
         }
         return;
