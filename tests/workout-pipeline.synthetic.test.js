@@ -25,6 +25,7 @@ function extractFunction(name) {
 const buildWorkout = new Function(extractFunction("buildWorkout") + "; return buildWorkout;")();
 const buildIntervalsWorkoutEvent = new Function(extractFunction("buildIntervalsWorkoutEvent") + "; return buildIntervalsWorkoutEvent;")();
 const hasStructuredWorkout = new Function(extractFunction("hasStructuredWorkout") + "; return hasStructuredWorkout;")();
+const mergeActsSource = extractFunction("mergeActs");
 const ZONE_PCT = { 1: [50, 70], 2: [70, 80], 3: [80, 87], 4: [87, 93], 5: [93, 100] };
 const toCourse = new Function("ZONE_PCT", extractFunction("toCourse") + "; return toCourse;")(ZONE_PCT);
 
@@ -94,6 +95,21 @@ test("Walk recommendations remain Walk events", () => {
   assert.equal(walk.type, "Walk");
 });
 
+
+test("Post-run feedback follows stable activity ID when Intervals corrects start time", () => {
+  const oldStart = Date.UTC(2026, 10, 18, 8);
+  const newStart = oldStart + 60000;
+  const state = { acts: [[oldStart, "run", 35, 5, 150, 0, "icu_42", "Easy", 0, "42", 0, 0]], vx: {} };
+  const FEEL = { sessions: { [oldStart]: { rpe: 5, legs: 1 } } };
+  let saved = 0;
+  const row = () => [newStart, "run", 35, 5, 150, 0, "icu_42", "Easy", 0, "42", 0, 0];
+  const mergeActs = new Function("state", "FEEL", "feelSave", "row", mergeActsSource + "; return mergeActs;")(state, FEEL, () => saved++, row);
+  mergeActs([{}]);
+  assert.equal(FEEL.sessions[oldStart], undefined);
+  assert.equal(FEEL.sessions[newStart].rpe, 5);
+  assert.equal(FEEL.sessions[newStart].activityId, "42");
+  assert.equal(saved, 1);
+});
 const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(x => x[1]).filter(x => x.trim());
 for (const script of scripts) new Function(script);
 const report = { syntheticOnly: true, productionFunctions: ["buildWorkout", "buildIntervalsWorkoutEvent", "hasStructuredWorkout", "toCourse"], scriptBlocksSyntaxChecked: scripts.length, passed: results.filter(x => x.result === "PASS").length, failed: results.filter(x => x.result === "FAIL").length, results };
