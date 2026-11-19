@@ -1038,6 +1038,15 @@ input[type=password],input[type=text]{margin:0}
 .sa-bar.cur{color:var(--tx);font-weight:800}
 .sa-metrics{margin:0!important}
 
+
+/* Simplifikasi antarmuka: sembunyikan panel diagnostik/edukasi yang bukan alur harian. */
+.profile-layout > .sg:has(#advBtn),
+.profile-layout > .sg:has(#inCooper),
+.profile-layout > .sg:has(#refList) { display:none !important; }
+/* Ringkas hierarki halaman agar fokus ke keputusan latihan. */
+.home-hero .page-title { line-height:1.02; }
+.progress-hero [data-hero-sub] { max-width:34rem; }
+.progress-layout .filter-dock { margin-bottom:12px; }
 </style>
 </head>
 <body>
@@ -1152,7 +1161,7 @@ input[type=password],input[type=text]{margin:0}
   <!-- PROGRES -->
   <div id="screen-progress" class="screen">
     <div class="content progress-layout">
-      <header class="page-hero progress-hero" data-hero="progress"><span class="eyebrow">PERFORMANCE INTELLIGENCE</span><div class="page-title">See how far<br><em>you've grown.</em></div><p data-hero-sub>Lima sisi dinilai terpisah: performa, aerobik, durability, kapasitas latihan, dan keberlanjutan. Setiap kesimpulan menyertakan tingkat keyakinan.</p></header>
+      <header class="page-hero progress-hero" data-hero="progress"><span class="eyebrow">PERFORMANCE INTELLIGENCE</span><div class="page-title">See how far<br><em>you've grown.</em></div><p data-hero-sub>Ringkasan perkembangan lari berdasarkan data yang tersedia.</p></header>
       <div class="filter-dock"><span>TIMEFRAME</span><div class="fchips" id="prgChips"></div></div>
       <div id="progressBody"></div>
     </div>
@@ -1161,7 +1170,7 @@ input[type=password],input[type=text]{margin:0}
   <!-- SAYA -->
   <div id="screen-me" class="screen">
     <div class="content profile-layout">
-      <header class="page-hero" data-hero="me"><span class="eyebrow">ATHLETE SETTINGS</span><div class="page-title">Your<br><em>profile.</em></div><p data-hero-sub>Atur data tubuh, sasaran lari, jadwal latihan, dan sumber data yang terhubung.</p></header>
+      <header class="page-hero" data-hero="me"><span class="eyebrow">ATHLETE SETTINGS</span><div class="page-title">Your<br><em>profile.</em></div><p data-hero-sub>Data tubuh, target, jadwal, dan koneksi.</p></header>
 
       <div class="sg">
         <div class="sg-t">Data tubuh &amp; detak</div>
