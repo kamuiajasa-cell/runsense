@@ -2529,6 +2529,20 @@ input[type=password],input[type=text]{margin:0}
     const structured = !!description && expectedSteps > 0 && parsedLineCount > 0;
     return { structured, expectedSteps, text: head + "\n\n" + description };
   }
+  function buildIntervalsWorkoutEvent(r, day, description) {
+    return {
+      category: "WORKOUT",
+      start_date_local: day + "T00:00:00",
+      type: r && r.stage === 1 ? "Walk" : "Run",
+      name: "RunSense · " + String(r && r.title || "Sesi"),
+      description: String(description || "")
+    };
+  }
+  function hasStructuredWorkout(event, expectedSteps) {
+    const doc = event && event.workout_doc;
+    return !!(doc && Array.isArray(doc.steps) && doc.steps.length > 0 &&
+      (!Number.isFinite(expectedSteps) || doc.steps.length >= expectedSteps));
+  }
   function setWatchStatus(msg, bad) {
     const el = $("#watchStatus");
     if (!el) return;
@@ -2568,20 +2582,14 @@ input[type=password],input[type=text]{margin:0}
       const day = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
       const built = buildWorkout(watchR);
       if (!built.structured) throw new Error("Workout belum memiliki tahapan terstruktur yang valid.");
-      const created = await icuPost("athlete/0/events", {
-        category: "WORKOUT",
-        start_date_local: day + "T00:00:00",
-        type: watchR.stage === 1 ? "Walk" : "Run",
-        name: "RunSense · " + watchR.title,
-        description: $("#watchText").value
-      });
+      const created = await icuPost("athlete/0/events", buildIntervalsWorkoutEvent(watchR, day, $("#watchText").value));
       // Baca ulang event agar status sukses hanya diberikan setelah Intervals.icu membentuk workout_doc.
       let verified = created;
       if (created && created.id != null) {
         try { verified = await icuGet("athlete/0/events/" + encodeURIComponent(created.id)); } catch (_) {}
       }
       const doc = verified && verified.workout_doc;
-      if (!doc || !Array.isArray(doc.steps) || !doc.steps.length) {
+      if (!hasStructuredWorkout(verified, built.expectedSteps)) {
         setWatchStatus("Event sudah masuk kalender Intervals.icu, tetapi struktur workout belum terbentuk. Jangan kirim ulang; periksa format workout di kalender.", true);
         send.textContent = "Perlu pemeriksaan";
         send.disabled = false;
