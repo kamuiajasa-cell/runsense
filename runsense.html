@@ -2441,30 +2441,84 @@ input[type=password],input[type=text]{margin:0}
     return res.json();
   }
 
-  /* ---------- Workout ke jam (Intervals.icu workout builder / teks siap-salin) ---------- */
+  /* ---------- Workout compiler: rekomendasi coach -> workout terstruktur Intervals.icu ---------- */
   let watchR = null;
   function buildWorkout(r) {
-    const m = String(r.duration || "").match(/\d+/);
-    const mins = m ? parseInt(m[0], 10) : 40;
-    const t = r.title || "";
-    let L = Array.isArray(r.wl) ? r.wl : null;
-    if (L) {
-      /* struktur dari engine */
-    } else if (/Sharpener/i.test(t)) {
-      L = ["Warmup", "- 10m Z2 HR", "", "2x", "- 5m Z4 HR", "- 2m Z1 HR", "", "Cooldown", "- 8m Z1 HR"];
-    } else if (/Tempo|Threshold/i.test(t)) {
-      L = ["Warmup", "- 10m Z2 HR", "", "3x", "- 6m Z4 HR", "- 2m Z1 HR", "", "Cooldown", "- 8m Z1 HR"];
-    } else if (/Shakeout/i.test(t)) {
-      L = ["Main set", "- 15m Z1 HR", "", "3x", "- 20s Z4 HR", "- 40s Z1 HR"];
-    } else if (/Long/i.test(t)) {
-      L = ["Warmup", "- 10m Z1 HR", "", "Main set", "- " + Math.max(20, mins - 15) + "m Z2 HR", "", "Cooldown", "- 5m Z1 HR"];
-    } else if (/Easy|Recovery/i.test(t)) {
-      L = ["Warmup", "- 5m Z1 HR", "", "Main set", "- " + Math.max(10, mins - 10) + "m Z" + (/Recovery/i.test(t) ? "1" : "2") + " HR", "", "Cooldown", "- 5m Z1 HR"];
+    const title = String(r && r.title || "Sesi lari");
+    const duration = String(r && r.duration || "");
+    let lines = Array.isArray(r && r.wl) ? r.wl.slice() : null;
+    let expectedSteps = 0;
+
+    // Konversi seluruh rekomendasi yang belum memiliki WL menjadi sintaks native Intervals.icu.
+    if (!lines) {
+      lines = [];
+      const steps = Array.isArray(r && r.steps) ? r.steps : [];
+      const hr = String(r && r.hr || "");
+      const zone = /zone\s*1\s*[–-]\s*2/i.test(hr) ? "Z1-Z2 HR"
+        : /zone\s*2/i.test(hr) ? "Z2 HR"
+        : /zone\s*3\s*[–-]\s*4/i.test(hr) ? "Z3-Z4 HR"
+        : /zone\s*4/i.test(hr) ? "Z4 HR"
+        : /zone\s*1/i.test(hr) ? "Z1 HR" : "";
+      const dur = (s) => {
+        const x = String(s || "");
+        const mm = x.match(/(\d+)\s*(?:mnt|menit|min)\b/i);
+        const ss = x.match(/(\d+)\s*(?:dtk|detik|sec|s)\b/i);
+        return (mm ? (+mm[1]) + "m" : "") + (ss ? (+ss[1]) + "s" : "");
+      };
+      const repeat = (n, work, rest, workCue, restCue, workTarget, restTarget) => {
+        lines.push("", String(n) + "x", "- " + workCue + " " + work + (workTarget ? " " + workTarget : ""),
+          "- " + restCue + " " + rest + (restTarget ? " " + restTarget : ""), "");
+        expectedSteps += 2;
+      };
+      for (const item of steps) {
+        if (!Array.isArray(item)) continue;
+        const label = String(item[0] || "Inti"), detail = String(item[1] || "");
+        const isWarm = /pemanasan|warm.?up/i.test(label);
+        const isCool = /pendinginan|cool.?down/i.test(label);
+        const section = isWarm ? "Warmup" : isCool ? "Cooldown" : "Main Set";
+        const runWalk = detail.match(/(\d+)\s*[×x]\s*\(\s*(\d+)\s*(?:mnt|menit|min)\s*lari\s*\+\s*(\d+)\s*(mnt|menit|min|dtk|detik|s)\s*jalan\s*\)/i);
+        if (runWalk) {
+          lines.push(section);
+          const workUnit = /^(dtk|detik|s)$/i.test(runWalk[4]) ? "s" : "m";
+          repeat(+runWalk[1], +runWalk[2] + workUnit, +runWalk[3] + (/^(dtk|detik|s)$/i.test(runWalk[4]) ? "s" : "m"),
+            "Lari", "Jalan", zone, "");
+          continue;
+        }
+        const strides = detail.match(/(\d+)\s*[×x]\s*(\d+)\s*(dtk|detik|s)\s*strides?/i);
+        if (strides && !isWarm && !isCool) {
+          const rest = detail.match(/jeda(?:\s*jalan)?\s*(\d+)\s*(?:mnt|menit|min)/i);
+          lines.push(section);
+          repeat(+strides[1], +strides[2] + "s", (rest ? +rest[1] : 1) + "m", "Strides", "Jalan", "", "");
+          continue;
+        }
+        const interval = detail.match(/(\d+)\s*[×x]\s*(\d+)\s*(?:mnt|menit|min)/i);
+        if (interval && !isWarm && !isCool) {
+          const rest = detail.match(/jeda\s*(\d+)\s*(?:mnt|menit|min)/i);
+          lines.push(section);
+          repeat(+interval[1], +interval[2] + "m", (rest ? +rest[1] : 1) + "m", "Kerja", "Pemulihan", zone || "Z3-Z4 HR", "Z1-Z2 HR");
+          continue;
+        }
+        const d = dur(detail);
+        if (!d) {
+          // Catatan non-durasi (strides/nutrisi/batas) tetap ikut terkirim sebagai catatan, bukan step palsu.
+          if (detail) lines.push("# " + label + ": " + detail);
+          continue;
+        }
+        lines.push(section, "- " + (isWarm ? "Mudah " : isCool ? "Mudah " : "") + d +
+          (isWarm ? " Z1-Z2 HR" : isCool ? " Z1 HR" : (zone ? " " + zone : "")));
+        expectedSteps++;
+      }
+    } else {
+      expectedSteps = lines.filter(x => /^\s*-\s*\d/.test(String(x))).length;
     }
-    const head = `${t} · ${r.duration}${r.pace && r.pace !== "—" ? " · " + r.pace : ""}`;
-    if (L) return { structured: true, text: head + "\n\n" + L.join("\n") };
-    // Jalan cepat / run-walk / lomba: tidak dipaksa jadi struktur, kirim sebagai langkah teks
-    return { structured: false, text: head + "\n\n" + (r.steps || []).map(([a, b]) => `${a}: ${b}`).join("\n") };
+
+    // Normalisasi spasi dan validasi: jangan pernah kirim workout kosong/setengah jadi.
+    lines = lines.map(x => String(x == null ? "" : x).trimEnd());
+    const description = lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    const parsedLineCount = (description.match(/^\s*-\s*.+$/gm) || []).length;
+    const head = title + " · " + duration + (r && r.pace && r.pace !== "—" ? " · " + r.pace : "");
+    const structured = !!description && expectedSteps > 0 && parsedLineCount > 0;
+    return { structured, expectedSteps, text: head + "\n\n" + description };
   }
   function setWatchStatus(msg, bad) {
     const el = $("#watchStatus");
@@ -2480,15 +2534,16 @@ input[type=password],input[type=text]{margin:0}
       ? "Kirim ke Intervals.icu, lalu tarik dari jam lewat sinkron Intervals. Atau salin teks ke workout builder."
       : "Sesi ini berupa langkah teks. Salin atau kirim sebagai catatan workout.";
     $("#watchText").value = w.text;
-    setWatchStatus("");
+    setWatchStatus(w.structured ? "" : "Workout belum bisa dikirim sebagai sesi terstruktur. Periksa detail sesi terlebih dahulu.", !w.structured);
     const send = $("#btnWatchSend");
-    send.disabled = false;
-    send.textContent = "Kirim ke Intervals.icu";
+    send.disabled = !w.structured;
+    send.textContent = w.structured ? "Kirim ke Intervals.icu" : "Struktur belum lengkap";
     $("#btnWatchShare").style.display = navigator.share ? "" : "none";
+    // Jalur resmi RunSense tetap melalui Intervals.icu -> Huawei Health -> jam.
     const dr = $("#btnWatchDirect");
-    if (dr) { dr.style.display = native() && toCourse(r) ? "" : "none"; dr.disabled = false; }
-    send.style.display = state.apiKey ? "" : "none";
-    if (!state.apiKey) $("#watchSub").textContent = native() ? "Tanpa Intervals.icu. Kirim langsung ke jam, atau salin teks steps." : "Tanpa Intervals.icu. Salin teks steps.";
+    if (dr) { dr.style.display = "none"; dr.disabled = true; }
+    send.style.display = state.apiKey && w.structured ? "" : "none";
+    if (!state.apiKey) $("#watchSub").textContent = "Hubungkan Intervals.icu untuk mengirim workout terstruktur. STAS bukan bagian dari jalur integrasi.";
     $("#watchModal").classList.add("show");
   }
   function closeWatch() { $("#watchModal").classList.remove("show"); }
@@ -2502,15 +2557,29 @@ input[type=password],input[type=text]{margin:0}
     try {
       const d = new Date();
       const day = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-      await icuPost("athlete/0/events", {
+      const built = buildWorkout(watchR);
+      if (!built.structured) throw new Error("Workout belum memiliki tahapan terstruktur yang valid.");
+      const created = await icuPost("athlete/0/events", {
         category: "WORKOUT",
         start_date_local: day + "T00:00:00",
         type: watchR.stage === 1 ? "Walk" : "Run",
         name: "RunSense · " + watchR.title,
         description: $("#watchText").value
       });
-      setWatchStatus("Terkirim ke kalender Intervals.icu hari ini. Sinkron jam dari Intervals/akun jam kamu.");
-      send.textContent = "Sudah terkirim";
+      // Baca ulang event agar status sukses hanya diberikan setelah Intervals.icu membentuk workout_doc.
+      let verified = created;
+      if (created && created.id != null) {
+        try { verified = await icuGet("athlete/0/events/" + encodeURIComponent(created.id)); } catch (_) {}
+      }
+      const doc = verified && verified.workout_doc;
+      if (!doc || !Array.isArray(doc.steps) || !doc.steps.length) {
+        setWatchStatus("Event sudah masuk kalender Intervals.icu, tetapi struktur workout belum terbentuk. Jangan kirim ulang; periksa format workout di kalender.", true);
+        send.textContent = "Perlu pemeriksaan";
+        send.disabled = false;
+        return;
+      }
+      setWatchStatus("Terverifikasi di Intervals.icu · " + doc.steps.length + " blok workout. Berikutnya sinkronkan Intervals.icu ke Huawei Health lalu jam.");
+      send.textContent = "Terkirim & terverifikasi";
     } catch (e) {
       const off = /fetch|network|Failed/i.test(String(e.message));
       setWatchStatus(off ? "Tidak ada koneksi. Pakai Salin teks dulu." : "Gagal kirim: " + (e.message || e) + ". Pakai Salin teks.", true);
