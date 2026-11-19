@@ -1,0 +1,26 @@
+name: RunSense regression tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test adaptive coach with synthetic data
+        run: node tests/adaptive-coach.synthetic.test.js
+      - name: Test workout pipeline with synthetic data
+        run: node tests/workout-pipeline.synthetic.test.js
