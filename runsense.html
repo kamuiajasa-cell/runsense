@@ -2527,15 +2527,16 @@ input[type=password],input[type=text]{margin:0}
       ? "Kirim ke Intervals.icu, lalu tarik dari jam lewat sinkron Intervals. Atau salin teks ke workout builder."
       : "Sesi ini berupa langkah teks. Salin atau kirim sebagai catatan workout.";
     $("#watchText").value = w.text;
-    setWatchStatus("");
+    setWatchStatus(w.structured ? "" : "Workout belum bisa dikirim sebagai sesi terstruktur. Periksa detail sesi terlebih dahulu.", !w.structured);
     const send = $("#btnWatchSend");
-    send.disabled = false;
-    send.textContent = "Kirim ke Intervals.icu";
+    send.disabled = !w.structured;
+    send.textContent = w.structured ? "Kirim ke Intervals.icu" : "Struktur belum lengkap";
     $("#btnWatchShare").style.display = navigator.share ? "" : "none";
+    // Jalur resmi RunSense tetap melalui Intervals.icu -> Huawei Health -> jam.
     const dr = $("#btnWatchDirect");
-    if (dr) { dr.style.display = native() && toCourse(r) ? "" : "none"; dr.disabled = false; }
-    send.style.display = state.apiKey ? "" : "none";
-    if (!state.apiKey) $("#watchSub").textContent = native() ? "Tanpa Intervals.icu. Kirim langsung ke jam, atau salin teks steps." : "Tanpa Intervals.icu. Salin teks steps.";
+    if (dr) { dr.style.display = "none"; dr.disabled = true; }
+    send.style.display = state.apiKey && w.structured ? "" : "none";
+    if (!state.apiKey) $("#watchSub").textContent = "Hubungkan Intervals.icu untuk mengirim workout terstruktur. STAS bukan bagian dari jalur integrasi.";
     $("#watchModal").classList.add("show");
   }
   function closeWatch() { $("#watchModal").classList.remove("show"); }
@@ -2549,15 +2550,29 @@ input[type=password],input[type=text]{margin:0}
     try {
       const d = new Date();
       const day = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-      await icuPost("athlete/0/events", {
+      const built = buildWorkout(watchR);
+      if (!built.structured) throw new Error("Workout belum memiliki tahapan terstruktur yang valid.");
+      const created = await icuPost("athlete/0/events", {
         category: "WORKOUT",
         start_date_local: day + "T00:00:00",
         type: watchR.stage === 1 ? "Walk" : "Run",
         name: "RunSense · " + watchR.title,
         description: $("#watchText").value
       });
-      setWatchStatus("Terkirim ke kalender Intervals.icu hari ini. Sinkron jam dari Intervals/akun jam kamu.");
-      send.textContent = "Sudah terkirim";
+      // Baca ulang event agar status sukses hanya diberikan setelah Intervals.icu membentuk workout_doc.
+      let verified = created;
+      if (created && created.id != null) {
+        try { verified = await icuGet("athlete/0/events/" + encodeURIComponent(created.id)); } catch (_) {}
+      }
+      const doc = verified && verified.workout_doc;
+      if (!doc || !Array.isArray(doc.steps) || !doc.steps.length) {
+        setWatchStatus("Event sudah masuk kalender Intervals.icu, tetapi struktur workout belum terbentuk. Jangan kirim ulang; periksa format workout di kalender.", true);
+        send.textContent = "Perlu pemeriksaan";
+        send.disabled = false;
+        return;
+      }
+      setWatchStatus("Terverifikasi di Intervals.icu · " + doc.steps.length + " blok workout. Berikutnya sinkronkan Intervals.icu ke Huawei Health lalu jam.");
+      send.textContent = "Terkirim & terverifikasi";
     } catch (e) {
       const off = /fetch|network|Failed/i.test(String(e.message));
       setWatchStatus(off ? "Tidak ada koneksi. Pakai Salin teks dulu." : "Gagal kirim: " + (e.message || e) + ". Pakai Salin teks.", true);
