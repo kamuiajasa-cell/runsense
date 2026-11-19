@@ -1165,7 +1165,7 @@ input[type=password],input[type=text]{margin:0}
         <div class="sgroup">
           <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><span class="srow-t">Usia</span><input type="number" inputmode="numeric" id="inAge" placeholder="—" oninput="saveProfile()"></div>
           <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M8 7h8M8 17h8"/></svg></span><span class="srow-t">Berat badan<span class="srow-s">kg · konteks Planner</span></span><input type="number" inputmode="decimal" id="inWeight" min="25" max="250" step="0.1" placeholder="—" oninput="saveProfile()"></div>
-          <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18M9 3v3M9 9v3M9 15v3M9 21h10"/></svg></span><span class="srow-t">Tinggi badan<span class="srow-s">cm · konteks Planner</span></span><input type="number" inputmode="numeric" id="inHeight" min="100" max="230" placeholder="—" oninput="saveProfile()"></div>
+          <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18M9 3v3M9 9v3M9 15v3M9 21h10"/></svg></span><span class="srow-t">Tinggi badan<span class="srow-s">cm · konteks Planner &amp; kadens</span></span><input type="number" inputmode="numeric" id="inHeight" min="100" max="230" placeholder="—" oninput="saveProfile()"></div>
           <div class="srow has-hint"><span class="sic y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z"/></svg></span><span class="srow-t">Detak istirahat<span class="srow-s">Rata-rata 28 hari</span></span><input type="number" inputmode="numeric" id="inRest" placeholder="—" oninput="saveProfile()"><div class="srow-hint" id="inRestHint"></div></div>
           <div class="srow"><span class="sic r"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="srow-t">Detak maksimal</span><input type="number" inputmode="numeric" id="inMax" placeholder="—" oninput="saveProfile()"></div>
           <div class="srow has-hint"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span><span class="srow-t">LTHR custom<span class="srow-s">bpm</span></span><input type="number" inputmode="numeric" id="inLthr" placeholder="auto" oninput="saveProfile()"><div class="srow-hint" id="autoLthr"></div></div>
@@ -5517,15 +5517,14 @@ input[type=password],input[type=text]{margin:0}
   const mdn = (x) => { const s = x.slice().sort((p, q) => p - q); return s[s.length >> 1]; };
   const m2 = (v) => (Math.round(v * 100) / 100).toString().replace(".", ",") + " m";
   const inpS = "width:31%;padding:9px 10px;border-radius:10px;border:1px solid var(--card-border);background:var(--el);color:var(--tx);font:inherit";
-  function setHT(v, ms) { const h = +v > 100 && +v < 230 ? Math.round(+v) : 0; state.height = h; try { localStorage.setItem("runsense_ht", String(h || "")); } catch (_) {} persist(); if (ms) openAct(ms); }
   function cadHTML(a) {
     const c = cadOf(a); if (a[1] !== "run" || !c) return "";
-    const st = strideOf(a), ht = +localStorage.getItem("runsense_ht") || 0, n = [];
-    if (c < 170) n.push("Kadens di bawah 170. Menaikkannya sekitar 10% dikaitkan dengan risiko cedera lebih rendah. Naikkan pelan, bukan wajib 180.");
-    if (ht) n.push("Tinggi " + ht + " cm dicatat sebagai konteks tubuh, bukan penentu cadence atau panjang langkah. Biarkan ritme langkah mengikuti kenyamanan dan teknik alami.");
-    n.push("Yang paling penting: mendarat tidak jauh di depan badan (overstride). Cara mendaratnya (tumit, tengah, depan) bukan masalah.");
+    const st = strideOf(a), ht = +state.height || 0, n = [];
+    if (ht) n.push("TB " + ht + " cm menjadi konteks ukuran tubuh saat membaca kadens dan panjang langkah. Tidak ada angka spm atau panjang langkah ideal yang otomatis ditentukan oleh tinggi badan.");
+    else n.push("TB belum diisi. Kamu bisa mengisinya satu kali di Pengaturan agar menjadi konteks tambahan saat membaca kadens dan panjang langkah.");
+    n.push("Nilai kadens bersama pace, kenyamanan, dan observasi teknik. Jangan menyimpulkan overstride hanya dari kadens atau panjang langkah; yang perlu diperhatikan adalah apakah kaki mendarat terlalu jauh di depan tubuh.");
     return `<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Kadens & langkah</span></div><div class="sa-metrics"><div class="sa-metric"><b>${c}</b><small>Langkah per menit</small></div><div class="sa-metric"><b>${st ? m2(st) : "—"}</b><small>Panjang langkah</small></div></div>` +
-      n.map((t) => `<div class="sa-note">${t}</div>`).join("") + `<div class="sa-sub">Tinggi badan (opsional, untuk membaca kadens): <input type="number" inputmode="numeric" placeholder="cm" value="${ht || ""}" onchange="setHT(this.value,${a[0]})" style="width:80px;padding:6px 8px;border-radius:8px;border:1px solid var(--card-border);background:var(--el);color:var(--tx)"></div></div></div>`;
+      n.map((t) => `<div class="sa-note">${t}</div>`).join("") + `<div class="sa-sub">Konteks tinggi badan diambil otomatis dari Pengaturan Profil.</div></div></div>`;
   }
   const TS = ld("runsense_tests", []);
   function saveTest() {
