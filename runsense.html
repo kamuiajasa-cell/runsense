@@ -1715,6 +1715,15 @@ input[type=password],input[type=text]{margin:0}
     if (au0.hrvPct != null) { sc += clamp(au0.hrvPct * 0.5, -12, 5); inputs++; }
     if (au0.sleepH != null) { inputs++; if (au0.sleepH < 5.5) sc -= 8; else if (au0.sleepH < 6.5) sc -= 3; }
     if (au0.stressD != null && au0.stressD >= 15) sc -= 4;
+    // Check-in subjektif ikut skor kesiapan hanya setelah seluruh check-in disimpan.
+    const feel = FEEL && FEEL.today ? FEEL.today[ymd()] : null;
+    if (feel && feel.savedDate === ymd()) {
+      inputs++;
+      if (feel.energy === 1) sc -= 8; else if (feel.energy === 2) sc -= 2;
+      if (feel.fatigue === 3) sc -= 8; else if (feel.fatigue === 2) sc -= 3;
+      if (feel.legs === 3) sc -= 7; else if (feel.legs === 2) sc -= 3;
+      if (feel.pain === 1) sc -= 10; else if (feel.pain === 2) sc -= 25;
+    }
     const rh = (state.wellness || []).filter((w) => w.restingHR > 30).map((w) => w.restingHR);
     if (rh.length >= 8) {
       const b = rh.slice(-31, -3).sort((p, q) => p - q);
@@ -3539,7 +3548,7 @@ input[type=password],input[type=text]{margin:0}
             ? `Sinyal tubuh jelek (${au.why}). Recovery dulu, quality dikunci.`
             : qualityCount >= 3
             ? `Sudah ${qualityCount} sesi berat minggu ini. Recovery dulu.`
-            : "Form masih negatif atau kesiapan sedang. Jaga tetap mudah.") + (rc.capped ? " Durasi dibatasi riwayat recovery/easy-mu." : "") + rw.note,
+            : "Form masih negatif atau kesiapan sedang. Jaga tetap mudah.") + (adapt.notes.length ? " Penyesuaian adaptif: "+adapt.notes.join("; ")+ "." : "") + (rc.capped ? " Durasi dibatasi riwayat recovery/easy-mu." : "") + rw.note,
         steps: [
           ["Pemanasan", "3 mnt jalan"],
           ["Inti", Math.max(5, rMin - 6) + " mnt sangat mudah, bisa ngobrol bebas"],
@@ -3613,7 +3622,7 @@ input[type=password],input[type=text]{margin:0}
       const mins = lw.mins;
       const over = wk > 0 && pl.km > 0.3 * wk;
       return { k: "wn", status: "train", title: "Long Run", duration: mins + " menit", hr: "Zone 2", pace: mp(lo) + "–" + mp(hi * 1.05) + " /km",
-        reason: "Long sesuai rencana. Pace easy plus sedikit, bukan race pace." + (pl.km ? ` Target ${cut ? Math.round(pl.km * 0.7) : pl.km} km.` : "") +
+        reason: "Long sesuai rencana. Pace easy plus sedikit, bukan race pace." + (adapt.notes.length ? " Penyesuaian adaptif: "+adapt.notes.join("; ")+ "." : "") + (pl.km ? ` Target ${cut ? Math.round(pl.km * 0.7) : pl.km} km.` : "") +
           (cut ? " Cutback: 3 minggu long tanpa turun, minggu ini dipangkas ~30%. Saran, boleh diabaikan." : "") +
           (over ? ` Long ${Math.round((pl.km / wk) * 100)}% volume minggu, di atas batas ~30%.` : "") + capNote(lc, "Long") + lw.note,
         steps: [["Pemanasan", "10 mnt jog"], ["Inti", Math.max(30, mins - 15) + " mnt easy, stabil"], ["Pendinginan", "5 mnt jalan"]],
