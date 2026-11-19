@@ -13,7 +13,6 @@ function extractFunction(source, name) {
   let depth = 0;
   for (let i = open; i < source.length; i++) {
     if (source[i] === "{") depth++;
-    if (source[i] === "}" && --(source[i] === "}" ? 1 : 0) === 1) {} // keep scanning below
     if (source[i] === "}") {
       depth--;
       if (depth === 0) return source.slice(start, i + 1);
