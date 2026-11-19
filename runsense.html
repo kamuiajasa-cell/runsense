@@ -1066,47 +1066,8 @@ input[type=password],input[type=text]{margin:0}
           <div class="hint">Ambil di Intervals.icu → Settings → Developer Settings → API key. Key hanya disimpan di perangkat ini.</div>
         </div>
 
-        <div class="fgroup">
-          <div class="label">Target utama</div>
-          <div class="chips" id="goalChips">
-            <button class="chip active" data-goal="5K">5K</button>
-            <button class="chip" data-goal="10K">10K</button>
-            <button class="chip" data-goal="Half">Half</button>
-            <button class="chip" data-goal="Marathon">Marathon</button>
-            <button class="chip" data-goal="Umum">Umum</button>
-          </div>
-        </div>
-
-        <div class="fgroup">
-          <div class="label">Gaya coaching</div>
-          <div class="style-list">
-            <div class="style-option active" data-style="moderate" onclick="selectStyle(this)">
-              <div><div class="title">Moderat</div><div class="sub">Seimbang (disarankan)</div></div>
-              <div class="check">✓</div>
-            </div>
-            <div class="style-option" data-style="conservative" onclick="selectStyle(this)">
-              <div><div class="title">Konservatif</div><div class="sub">Lebih banyak recovery</div></div>
-              <div class="check">✓</div>
-            </div>
-            <div class="style-option" data-style="aggressive" onclick="selectStyle(this)">
-              <div><div class="title">Agresif</div><div class="sub">Lebih banyak quality session</div></div>
-              <div class="check">✓</div>
-            </div>
-          </div>
-        </div>
-
         <div class="actions">
           <button class="btn btn-primary" id="btnConnect" type="button">Hubungkan &amp; Mulai</button>
-          <button class="btn btn-outline" onclick="enterDemo()">Coba Demo</button>
-        </div>
-
-        <div id="nativeSetup" data-native hidden class="fgroup">
-          <div class="label">Dari jam (aplikasi RunSense)</div>
-          <div class="actions">
-            <button class="btn btn-outline" type="button" onclick="openJam()">Atur jam</button>
-            <button class="btn btn-outline" type="button" onclick="enterWatchMode()">Pakai data jam saja</button>
-            <div class="hint">Tanpa Intervals.icu: tidak ada CTL/TSB dan workout tidak bisa dikirim ke kalender Intervals. Workout tetap bisa dikirim langsung ke jam.</div>
-          </div>
         </div>
       </div>
     </div>
