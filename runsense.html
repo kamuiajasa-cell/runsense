@@ -13,6 +13,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
+/* Mode lanjutan dan backtest disimpan di kode untuk kompatibilitas, tetapi disembunyikan dari alur utama. */
+#advBtn, #advBox { display:none !important; }
 :root, :root[data-theme="dark"] {
   --primary: #C6FF38;
   --primary-dim: rgba(198,255,56,.14);
@@ -4179,8 +4181,7 @@ input[type=password],input[type=text]{margin:0}
       if (p) { const d = Math.round(c.sec - p.sec); perfDeltas.push(d); dtxt = ' <small class="' + (d < 0 ? "prg-up" : d > 0 ? "prg-dn" : "") + '">' + (d === 0 ? "sama" : sgn(d) + " dtk") + '</small>'; }
       perfRows.push(row(lbl, fmtP(c.sec) + "/km" + dtxt + ' <small>· ' + fmt(c.km) + ' km · ' + dm(c.ms) + (useS ? ' · stream' : '') + '</small>'));
     });
-    const g = state.goalEst || {};
-    const estRow = g.current && g.current !== "—:—" ? row("Estimasi " + (state.goal || "5K") + " (algoritma)", g.current) : "";
+    const estRow = ""; // Estimasi 5K algoritmik disembunyikan: belum cukup andal untuk keputusan harian.
     let perfV = "na", perfNote = prevOk ? "Belum ada periode pembanding yang sebanding." : "Riwayat tersinkron belum mencakup seluruh " + prgR + " minggu sebelumnya, jadi perbandingan tidak ditampilkan.", perfConf = "rendah";
     if (perfDeltas.length) {
       const d = med(perfDeltas);
@@ -4420,7 +4421,7 @@ input[type=password],input[type=text]{margin:0}
     const dq = '<section class="prg-card prg-dq"><h4>Kualitas data</h4><div class="sub">' + runs.length + ' lari dipakai' + (excl > 0 ? ', ' + excl + ' dikecualikan (durasi &lt; 5 menit, jarak &lt; 1 km, atau pace tak wajar)' : '') + '. HR valid di ' + withHr + ' lari.' +
       ' Durability dihitung dari stream tiap lari panjang, bukan dari ringkasan aktivitas.</div></section>';
 
-    el.innerHTML = summary + reHtml + perfHtml + aeroHtml + durHtml + capHtml + susHtml + fmCard() + dq;
+    el.innerHTML = summary + perfHtml + durHtml + capHtml + susHtml + fmCard() + dq;
     backfillDurability(runs);
     prefetchPace(perfNeed.map(x => ({ act: x }))).then(n => { if (n) renderProgress(); });
   }
