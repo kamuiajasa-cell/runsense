@@ -1649,7 +1649,7 @@ input[type=password],input[type=text]{margin:0}
   /* Quality perlu fondasi latihan yang terbukti, bukan hanya skor kemampuan. */
   function qualityEligible() {
     const st = stage(), tol = trainingTolerance();
-    return !!(st && st.s >= 3 && tol.runs28 >= 3 && tol.lastAgeDays <= 14 && tol.activeDays28 >= 3);
+    return !!(st && st.s >= 3 && tol.runs28 >= 3 && tol.lastAgeDays <= 14 && tol.activeDays28 >= 3 && tol.p75 >= 35);
   }
 
   const fmtHm = (h) => { const m = Math.round(h * 60); return Math.floor(m / 60) + "j" + String(m % 60).padStart(2, "0"); };
@@ -3070,7 +3070,11 @@ input[type=password],input[type=text]{margin:0}
   }
   function applyCap(mins,label,boot) {
     const h=histCap(label), tol=trainingTolerance();
-    let c=h.n?h.cap:Math.min(boot,tol.typical?tol.typical*.9:boot);
+    let c;
+    if(h.n)c=h.cap;
+    else if(label==="long")c=Math.min(boot,tol.p75?tol.p75*1.1:boot);
+    else if(label==="recovery")c=Math.min(boot,tol.typical?tol.typical*.7:boot);
+    else c=Math.min(boot,tol.typical?tol.typical*1.05:boot);
     if(!h.n&&tol.lastAgeDays>14)c*=tol.lastAgeDays<=28?.9:tol.lastAgeDays<=42?.8:.7;
     c=Math.max(15,Math.floor(c));
     return {mins:Math.min(mins,c),h,capped:mins>c,cap:c,tol};
@@ -3219,9 +3223,9 @@ input[type=password],input[type=text]{margin:0}
           reason: `Kaki sakit, hari ke-${fl.dayN} dari ${FLAG_DAYS[2]}. Rest. Jangan tes kaki dengan lari. Kalau nyeri tidak turun setelah 3 hari, periksakan ke dokter atau fisioterapis.`,
           steps: [["Saran", "Kompres bila bengkak, jalan seperlunya saja"]], score, tag: "RECOVERY" };
       }
-      if (fl.dayN >= 8) return { k: "wn", status: "train", title: "Kembali lari bertahap", duration: "20 menit", hr: "Zone 1–2", pace: "Santai",
-        reason: `Kaki sakit, hari ke-${fl.dayN} dari ${FLAG_DAYS[2]}. Coba lari pendek dulu. Berhenti dan tandai Sakit lagi bila nyeri muncul.`,
-        steps: [["Pemanasan", "5 mnt jalan"], ["Inti", "5× (1 mnt lari + 2 mnt jalan), berhenti bila nyeri"], ["Pendinginan", "3 mnt jalan"]], score, stage: 1, tag: "RECOVERY" };
+      if (fl.dayN >= 8) return { k: "wn", status: "train", title: "Jalan pemulihan", duration: "20 menit", hr: "Zone 1", pace: "Santai, tanpa lari",
+        reason: `Kaki sakit, hari ke-${fl.dayN} dari ${FLAG_DAYS[2]}. Jangan otomatis kembali berlari hanya karena sudah lewat beberapa hari. Pastikan aktivitas harian dan jalan 30 menit bebas nyeri; bila belum, lanjutkan istirahat/jalan seperlunya dan pertimbangkan evaluasi tenaga kesehatan. Hapus flag sakit hanya setelah gejala benar-benar reda.`,
+        steps: [["Inti", "20 mnt jalan nyaman, hanya jika tidak menambah nyeri"], ["Batas", "Nyeri muncul/meningkat = berhenti"]], score, stage: 1, tag: "RECOVERY" };
       return { k: "wn", status: "train", title: "Jalan sangat mudah", duration: "20–30 menit", hr: "Zone 1", pace: "Santai, tanpa lari",
         reason: `Kaki sakit, hari ke-${fl.dayN} dari ${FLAG_DAYS[2]}. Jalan saja. Berhenti kalau nyeri naik. Lari lagi setelah jalan 30 menit tanpa nyeri, mulai dari easy pendek.`,
         steps: [["Inti", "20–30 mnt jalan santai"], ["Batas", "Nyeri naik = pulang"]], score, stage: 1, tag: "RECOVERY" };
@@ -3352,7 +3356,7 @@ input[type=password],input[type=text]{margin:0}
             : "Form masih negatif atau kesiapan sedang. Jaga tetap mudah.") + (rc.capped ? " Durasi dibatasi riwayat recovery/easy-mu." : "") + rw.note,
         steps: [
           ["Pemanasan", "3 mnt jalan"],
-          ["Inti", Math.max(10, rMin - 6) + " mnt sangat mudah, bisa ngobrol bebas"],
+          ["Inti", Math.max(5, rMin - 6) + " mnt sangat mudah, bisa ngobrol bebas"],
           ["Pendinginan", "3 mnt jalan"]
         ],
         score,
