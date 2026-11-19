@@ -2540,8 +2540,17 @@ input[type=password],input[type=text]{margin:0}
   }
   function hasStructuredWorkout(event, expectedSteps) {
     const doc = event && event.workout_doc;
-    return !!(doc && Array.isArray(doc.steps) && doc.steps.length > 0 &&
-      (!Number.isFinite(expectedSteps) || doc.steps.length >= expectedSteps));
+    if (!doc || !Array.isArray(doc.steps) || !doc.steps.length) return false;
+    // Intervals.icu stores a repeat group as ONE parent step with nested steps.
+    // Count leaf steps recursively; comparing only doc.steps.length rejects valid workouts.
+    const countLeaves = (steps) => (steps || []).reduce((n, step) => {
+      if (!step || typeof step !== "object") return n;
+      return n + (Array.isArray(step.steps) && step.steps.length
+        ? countLeaves(step.steps)
+        : (step.duration != null || step.distance != null ? 1 : 0));
+    }, 0);
+    const actualSteps = countLeaves(doc.steps);
+    return actualSteps > 0 && (!Number.isFinite(expectedSteps) || actualSteps >= expectedSteps);
   }
   function setWatchStatus(msg, bad) {
     const el = $("#watchStatus");
