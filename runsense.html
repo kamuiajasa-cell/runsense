@@ -5661,7 +5661,7 @@ input[type=password],input[type=text]{margin:0}
     if (PQ) return PQ.y ? `<div class="insight" style="margin-top:12px">PAR-Q: ${PQ.y} jawaban "Ya". Sebaiknya periksa ke dokter dulu sebelum menaikkan intensitas. Tes EKG saat bergerak (treadmill) bisa jadi bahan pemeriksaan.</div>` : "";
     return `<button class="link" type="button" style="margin-top:10px" onclick="pqStart()">Cek kesiapan jantung (PAR-Q, sekali saja)</button>`;
   }
-  Object.assign(window, { setHT, saveTest, pqStart, pqAns });
+  Object.assign(window, { saveTest, pqStart, pqAns });
 
   (async function init() {
     applyTheme();
