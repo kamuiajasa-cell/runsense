@@ -1119,16 +1119,7 @@ input[type=password],input[type=text]{margin:0}
       <div class="race-line" id="raceLine"></div>
       <div class="section-kicker"><span>YOUR TRAINING</span><i></i><span>01</span></div>
       <div id="mainCard"></div>
-      <div class="card" id="feelCheckinCard"></div>
       <div class="insight" id="autoLine" style="display:none"></div>
-      <div class="leg-row" id="legRow">
-        <span class="lg-l">Kaki</span>
-        <button class="chip" type="button" data-lv="0" onclick="setFlag(0)">OK</button>
-        <button class="chip" type="button" data-lv="1" onclick="setFlag(1)">Was-was</button>
-        <button class="chip" type="button" data-lv="2" onclick="setFlag(2)">Sakit</button>
-        <button class="chip" type="button" id="chipHeat" onclick="toggleHeat()">Panas</button>
-        <div class="leg-note" id="legNote"></div>
-      </div>
       <div class="card" id="vxCard" style="display:none"><div id="vxBody"></div></div>
       <div class="card" id="strCard" style="display:none"></div>
       <div class="card" id="reviewCard" style="display:none">
@@ -3184,25 +3175,37 @@ input[type=password],input[type=text]{margin:0}
   function feelSave(){ sv("runsense_feel_v1",FEEL); }
   function feelToday(){ return FEEL.today[ymd()] || {}; }
   function feelSet(k,v){
-    const f=Object.assign({},feelToday()); f[k]=+v; f.updated=Date.now();
+    const f=Object.assign({},feelToday()); f[k]=v; f.savedDate=""; f.updated=Date.now();
     FEEL.today[ymd()]=f; feelSave(); renderFeelCheckin();
-    if(state.athlete) processData();
+  }
+  function feelSaveToday(){
+    const f=Object.assign({},feelToday());
+    const required=['energy','fatigue','legs','pain','hot','rain'];
+    if(!required.every(k=>f[k]!==undefined&&f[k]!==null)){ alert('Lengkapi semua pilihan check-in terlebih dahulu.'); return; }
+    f.savedDate=ymd(); f.updated=Date.now(); FEEL.today[ymd()]=f; feelSave();
+    state.heat=f.hot?ymd():'';
+    if(state.apiKey!=="demo"){try{localStorage.setItem("runsense_heat",state.heat);}catch(_){}}
+    if(state.athlete) processData(); else renderAll();
   }
   function feelBtn(k,v,label,active){
-    return '<button type="button" class="ty-chip'+(active?' on':'')+'" onclick="feelSet(\''+k+'\','+v+')">'+label+'</button>';
+    return '<button type="button" class="ty-chip'+(active?' on':'')+'" onclick="feelSet(\\''+k+'\\','+v+')">'+label+'</button>';
   }
   function feelCheckinHTML(){
-    const f=feelToday();
+    const f=feelToday(), saved=f.savedDate===ymd();
     const group=(k,title,labels)=>'<div style="margin-top:12px"><div class="sa-note" style="font-weight:650;margin-bottom:7px">'+title+'</div><div class="ty-chips">'+labels.map((x,i)=>feelBtn(k,i+1,x,f[k]===i+1)).join('')+'</div></div>';
+    const choice=(k,title,yes,no)=>'<div style="margin-top:12px"><div class="sa-note" style="font-weight:650;margin-bottom:7px">'+title+'</div><div class="ty-chips">'+feelBtn(k,0,no,f[k]===0)+feelBtn(k,1,yes,f[k]===1)+'</div></div>';
     const pain='<div style="margin-top:12px"><div class="sa-note" style="font-weight:650;margin-bottom:7px">Ada nyeri saat ini?</div><div class="ty-chips">'+[[0,'Tidak'],[1,'Ringan'],[2,'Jelas / mengubah gerak']].map(x=>feelBtn('pain',x[0],x[1],f.pain===x[0])).join('')+'</div></div>';
-    const done=['energy','fatigue','legs','pain'].every(k=>f[k]!=null);
-    return '<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Dengarkan tubuhmu</span><span class="sa-sub">CHECK-IN</span></div><div class="sa-note">Sebelum berlari, bagaimana kondisi tubuhmu hari ini?</div>'+
+    const done=['energy','fatigue','legs','pain','hot','rain'].every(k=>f[k]!==undefined&&f[k]!==null);
+    return '<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Check-in sebelum lari</span><span class="sa-sub">KONDISI HARI INI</span></div><div class="sa-note">Isi singkat kondisi tubuh dan cuaca. Rekomendasi muncul setelah disimpan.</div>'+
       group('energy','Energi tubuh',['Rendah','Cukup','Segar'])+
       group('fatigue','Kelelahan umum',['Ringan','Sedang','Berat'])+
       group('legs','Kaki dan otot',['Ringan','Agak berat','Sangat berat'])+pain+
-      '<div class="sa-sub" style="margin-top:10px">'+(done?'Check-in tersimpan dan dipakai Planner.':'Pilih empat jawaban. Boleh dilewati jika belum ingin mengisi.')+'</div></div></div>';
+      choice('hot','Apakah terasa panas?','Ya, panas','Tidak')+
+      choice('rain','Apakah sedang hujan?','Ya, hujan','Tidak')+
+      '<div class="sa-actions" style="margin-top:14px"><button class="btn btn-primary" type="button" onclick="feelSaveToday()" '+(!done?'disabled':'')+'>Simpan check-in</button></div>'+
+      '<div class="sa-sub" style="margin-top:9px">'+(saved?'Check-in hari ini sudah disimpan.':'Lengkapi pilihan di atas, lalu tekan Simpan.')+'</div></div></div>';
   }
-  function renderFeelCheckin(){const el=$('#feelCheckinCard');if(el)el.innerHTML=feelCheckinHTML();}
+  function renderFeelCheckin(){const el=$('#feelCheckinCard');if(el)el.innerHTML='';}
   function feelLearning(){
     const xs=Object.entries(FEEL.sessions||{}).map(([k,v])=>Object.assign({ms:+k},v)).filter(x=>x.ms<Date.now()&&x.rpe>0).sort((a,b)=>b.ms-a.ms).slice(0,6);
     return {n:xs.length,recentHard:xs.length>=2&&xs.slice(0,3).filter(x=>x.rpe>=7).length>=2};
@@ -3902,7 +3905,6 @@ input[type=password],input[type=text]{margin:0}
     $("#tdDate").textContent = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" });
     renderRaceLine();
     renderBodyLine();
-    renderLegRow();
     renderFeelCheckin();
     const au = autonomic(), al = $("#autoLine");
     if (al) {
@@ -3942,7 +3944,8 @@ input[type=password],input[type=text]{margin:0}
         (hasWhy && !r.rested ? `<button class="link" type="button" onclick="toggleWhy()">${whyOpen ? "Tutup penjelasan" : "Kenapa & langkah sesi"}</button>${why}` : "") +
         lowConf + `</div>`;
     }
-    $("#mainCard").innerHTML = h;
+    const checkin=feelToday(), checkinSaved=checkin.savedDate===ymd();
+    $("#mainCard").innerHTML = checkinSaved ? h : feelCheckinHTML();
     climHome();
     strRender();
 
