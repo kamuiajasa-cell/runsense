@@ -5624,7 +5624,7 @@ input[type=password],input[type=text]{margin:0}
     if (a.length >= 2 && b.length >= 2) t += " Penurunan efisiensi median " + Math.round(md(a) * 10) / 10 + "% dengan karbo vs " + Math.round(md(b) * 10) / 10 + "% tanpa.";
     return '<div class="prg-insight">' + t + "</div>";
   }
-  Object.assign(window, { strPick, strMark, strUndo, strForm, strFa, setTT, setFU, feelSet, feelSessionSet });
+  Object.assign(window, { strPick, strMark, strUndo, strForm, strFa, setTT, setFU, feelSet, feelSaveToday, feelSessionSet });
 
   /* ---------- Kadens, panjang langkah, tes mini, PAR-Q ---------- */
   const cadN = (v) => { v = +v; return v > 0 ? (v < 120 ? v * 2 : v) : 0; };
