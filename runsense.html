@@ -2762,61 +2762,7 @@ input[type=password],input[type=text]{margin:0}
     });
     if (chart.length >= 8) out.chart = chart;
 
-    // Segmentasi fase latihan dari stream: interval kerja, recovery, pemanasan, pendinginan.
-    // Ambang adaptif memakai distribusi kecepatan bergerak; cadence dirata-ratakan hanya dari fase terkait.
-    {
-      const samples = [];
-      for (let i = 1; i < time.length; i++) {
-        const dt = Number(time[i]) - Number(time[i - 1]), dd = Number(dist[i]) - Number(dist[i - 1]);
-        if (!(dt > 0 && dt <= 10 && dd >= 0)) continue;
-        const v = velocity && velocity.length === time.length ? Number(velocity[i]) : dd / dt;
-        const h = hr && hr.length === time.length ? Number(hr[i]) : 0;
-        const c = cadence && cadence.length === time.length ? Number(cadence[i]) : 0;
-        samples.push({ t: Number(time[i]), d: Number(dist[i]), v: Number.isFinite(v) ? v : 0, h: h > 40 ? h : 0, c: c > 0 && c < 260 ? c : 0 });
-      }
-      const moving = samples.filter(x => x.v >= 0.8).map(x => x.v).sort((a,b)=>a-b);
-      if (moving.length >= 60) {
-        const percentile = p => moving[Math.min(moving.length-1, Math.floor((moving.length-1)*p))];
-        const p25=percentile(.25), p75=percentile(.75), spread=p75-p25;
-        const threshold = spread >= 0.3 ? (p25+p75)/2 : Math.max(1.8, percentile(.5)*1.12);
-        const flags = samples.map(x => x.v >= threshold);
-        // Tutup celah GPS singkat agar satu repetisi tidak terpecah.
-        for (let i=1;i<flags.length-1;i++) if (!flags[i] && flags[i-1] && flags[i+1]) flags[i]=true;
-        const bouts=[]; let st=-1;
-        for(let i=0;i<=flags.length;i++){
-          if(i<flags.length && flags[i] && st<0) st=i;
-          if((i===flags.length || !flags[i]) && st>=0){
-            const en=i-1, dur=samples[en].t-samples[st].t;
-            if(dur>=120) bouts.push({s:st,e:en,start:samples[st].t,end:samples[en].t});
-            st=-1;
-          }
-        }
-        // Gabungkan blok kerja yang dipisahkan jeda sangat singkat (<25 dtk).
-        for(let i=1;i<bouts.length;){
-          if(bouts[i].start-bouts[i-1].end<25){bouts[i-1].e=bouts[i].e;bouts[i-1].end=bouts[i].end;bouts.splice(i,1);}
-          else i++;
-        }
-        if(bouts.length>=2){
-          const summarize=(lo,hi,type,index)=>{
-            const xs=samples.filter(x=>x.t>=lo && x.t<=hi);
-            if(xs.length<2)return null;
-            const dt=Math.max(1,hi-lo), dd=Math.max(0,xs[xs.length-1].d-xs[0].d);
-            const meanOf=k=>{const z=xs.map(x=>x[k]).filter(v=>v>0);return z.length?z.reduce((a,b)=>a+b,0)/z.length:null;};
-            return {type,index,duration:dt,distance:dd,pace:dd>0?(dt/60)/(dd/1000):null,hr:meanOf("h"),maxHr:xs.reduce((m,x)=>Math.max(m,x.h),0)||null,cadence:meanOf("c")};
-          };
-          const segs=[];
-          const first=bouts[0],last=bouts[bouts.length-1],t0=samples[0].t,t1=samples[samples.length-1].t;
-          const warm=summarize(t0,first.start,"warmup",0); if(warm&&warm.duration>=90)segs.push(warm);
-          bouts.forEach((b,i)=>{
-            const work=summarize(b.start,b.end,"work",i+1);if(work)segs.push(work);
-            const next=bouts[i+1];
-            if(next){const rec=summarize(b.end,next.start,"recovery",i+1);if(rec&&rec.duration>=20)segs.push(rec);}
-          });
-          const cool=summarize(last.end,t1,"cooldown",0);if(cool&&cool.duration>=90)segs.push(cool);
-          if(segs.filter(x=>x.type==="work").length>=2)out.segments=segs;
-        }
-      }
-    }
+    // Segmentasi aktivitas memakai rencana workout kalender, bukan tebakan pace.
     const T = time[time.length - 1] - time[0];
     if (hr && hr.length === time.length) {
       if (T >= 2400) {
@@ -2845,23 +2791,64 @@ input[type=password],input[type=text]{margin:0}
     }
     return Object.keys(out).length ? out : { none: 1 };
   }
+  function parsePlannedWorkout(description) {
+    const lines=String(description||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    const plan=[]; let phase="work", repeat=1, group=[];
+    const durationOf=line=>{const m=String(line).match(/(?:^|\s)(\d+)\s*(m|s)\b/i);return m?+m[1]*(m[2].toLowerCase()==="m"?60:1):0;};
+    const flush=()=>{if(!group.length)return;for(let r=0;r<repeat;r++)group.forEach((g,i)=>plan.push({type:repeat>1?(i===0?"work":"recovery"):phase,duration:g.duration,label:g.label}));group=[];repeat=1;};
+    for(const line of lines){
+      if(/^(warmup|pemanasan)$/i.test(line)){flush();phase="warmup";continue;}
+      if(/^(main set|mainset|inti(?:\s+\d+)?)$/i.test(line)){flush();phase="work";continue;}
+      if(/^(cooldown|pendinginan)$/i.test(line)){flush();phase="cooldown";continue;}
+      const rep=line.match(/^(\d+)\s*x$/i);if(rep){flush();repeat=Math.max(1,Math.min(100,+rep[1]));continue;}
+      if(line.startsWith("-")){const d=durationOf(line);if(d>0)group.push({duration:d,label:line.replace(/^[- ]+/,"")});}
+    }
+    flush();return plan.length?plan:null;
+  }
+  function summarizeAgainstPlan(raw,description) {
+    const src=raw&&!Array.isArray(raw)&&Array.isArray(raw.streams)?raw.streams:raw;
+    const get=t=>{if(Array.isArray(src)){const o=src.find(x=>x&&(x.type===t||x.name===t));return o&&Array.isArray(o.data)?o.data:null;}const o=src&&(src[t]||src[t+".json"]);return Array.isArray(o)?o:o&&Array.isArray(o.data)?o.data:null;};
+    const time=get("time"),dist=get("distance"),hr=get("heartrate"),cad=get("cadence"),vel=get("velocity_smooth");
+    if(!time||!dist||time.length!==dist.length)return null;
+    const plan=parsePlannedWorkout(description);if(!plan)return null;
+    const samples=[];for(let i=0;i<time.length;i++)samples.push({t:+time[i],d:+dist[i],h:hr&&hr.length===time.length&&+hr[i]>40?+hr[i]:0,c:cad&&cad.length===time.length&&+cad[i]>0&&+cad[i]<260?+cad[i]:0,v:vel&&vel.length===time.length?+vel[i]:0});
+    const avg=(xs,k)=>{const v=xs.map(x=>x[k]).filter(x=>x>0&&Number.isFinite(x));return v.length?v.reduce((u,x)=>u+x,0)/v.length:null;};
+    let cursor=0;const segments=[],minutes=[];
+    plan.forEach((p,i)=>{
+      const lo=cursor,hi=cursor+p.duration;cursor=hi;const xs=samples.filter(x=>x.t>=lo&&x.t<hi);if(xs.length<2)return;
+      const d=Math.max(0,xs[xs.length-1].d-xs[0].d),dt=Math.max(1,xs[xs.length-1].t-xs[0].t);
+      segments.push({type:p.type,index:i+1,duration:p.duration,distance:d,pace:d>0?(dt/60)/(d/1000):null,hr:avg(xs,"h"),maxHr:xs.reduce((m,x)=>Math.max(m,x.h),0)||null,cadence:avg(xs,"c"),label:p.label});
+      for(let m=0;m<p.duration;m+=60){const a0=lo+m,a1=Math.min(hi,a0+60),ys=samples.filter(x=>x.t>=a0&&x.t<a1);if(ys.length<2)continue;const md=Math.max(0,ys[ys.length-1].d-ys[0].d),mt=Math.max(1,ys[ys.length-1].t-ys[0].t);minutes.push({minute:Math.floor(a0/60)+1,type:p.type,pace:md>0?(mt/60)/(md/1000):null,hr:avg(ys,"h"),cadence:avg(ys,"c"),distance:md});}
+    });
+    return segments.length?{segments,minutes,planSource:"calendar"}:null;
+  }
+  async function findRunSenseWorkout(act) {
+    const d=new Date(act[0]),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    const events=await icuGet("athlete/0/events.json?oldest="+day+"&newest="+day+"&category=WORKOUT");
+    const candidates=(Array.isArray(events)?events:[]).filter(e=>e&&e.category==="WORKOUT"&&/^RunSense\s*[·-]/i.test(String(e.name||"")));
+    if(!candidates.length)return null;
+    const name=String(act[7]||"").toLowerCase();
+    return candidates.find(e=>name.includes(String(e.name||"").replace(/^RunSense\s*[·-]\s*/i,"").toLowerCase()))||candidates[0];
+  }
   async function ensureStream(a) {
     if (!a || !a[9] || !state.apiKey || state.apiKey === "demo") return;
     const id = String(a[9]);
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
     const cached = state.sx[id];
     // Cache lama hanya menyimpan pace hasil distance/time; ambil ulang untuk memakai velocity stream.
-    if ((cached && cached.streamVersion >= 5 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 4 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if ((cached && cached.streamVersion >= 6 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 6 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
       // Endpoint Intervals.icu: singular /activity/ dan ekstensi .json.
       const raw = await icuGet(`activity/${encodeURIComponent(id)}/streams.json?types=time,distance,heartrate,velocity_smooth,cadence`);
       const summary = summarizeStream(raw, a, 30);
-      state.sx[id] = Object.assign(summary || { none: 1 }, { streamVersion: 5, checkedAt: Date.now() });
+      let planned = null;
+      try { const event = await findRunSenseWorkout(a); if (event && event.description) planned = summarizeAgainstPlan(raw, event.description); } catch (_) {}
+      state.sx[id] = Object.assign({}, summary || { none: 1 }, planned || {}, { streamVersion: 6, checkedAt: Date.now() });
     } catch (e) {
       // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
-      if (/HTTP (404|422)/.test(String(e && e.message))) state.sx[id] = { none: 1, streamVersion: 5, checkedAt: Date.now() };
+      if (/HTTP (404|422)/.test(String(e && e.message))) state.sx[id] = { none: 1, streamVersion: 6, checkedAt: Date.now() };
     }
     delete sxBusy[id];
     if (state.sx[id]) {
@@ -4803,14 +4790,14 @@ input[type=password],input[type=text]{margin:0}
       hf = `HR dari ~${a0} bpm di awal ke ~${a1} bpm di akhir (${df >= 0 ? "+" : "−"}${Math.abs(df)}), puncak ${mxv}. ` + (df >= 10 ? "Naik cukup jauh, cek tanjakan, panas, atau pace yang terlalu cepat." : df <= 3 ? "Relatif datar." : "Kenaikan wajar seiring durasi.");
     }
     const hrBlock = hrSvg ? `<div class="sa-chart-label">Detak jantung <span>bpm</span></div>${hf ? `<div class="sa-find">${hf}</div>` : ""}${hrSvg}` : "";
-    const segs = Array.isArray(sx.segments) ? sx.segments : [];
+    const segs = sx && sx.planSource === "calendar" && Array.isArray(sx.segments) ? sx.segments : [];
     const phaseName = t => t==="warmup"?"Pemanasan":t==="cooldown"?"Pendinginan":t==="recovery"?"Recovery":"Interval kerja";
     const phaseRows = segs.map(q=>{
       const pace=q.pace?mp(q.pace)+"/km":"—", hr=q.hr?Math.round(q.hr)+" bpm":"—", cad=q.cadence?Math.round(q.cadence)+" spm":"—";
       const mins=Math.floor(q.duration/60), secs=Math.round(q.duration%60);
       return `<div class="sa-segment-row"><span><b>${phaseName(q.type)}${q.index?" "+q.index:""}</b><small>${mins}:${String(secs).padStart(2,"0")} · ${saKm(q.distance/1000)} km</small></span><span><b>${pace}</b><small>HR ${hr} · Kadens ${cad}</small></span></div>`;
     }).join("");
-    const segmentBlock = segs.length ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Struktur latihan terdeteksi</span><span class="sa-pill">${segs.filter(x=>x.type==="work").length} repetisi</span></div><div class="sa-sub">Fase dipisahkan dari perubahan kecepatan stream. Cadence dihitung per fase, bukan rata-rata seluruh aktivitas.</div>${phaseRows}</div>` : "";
+    const segmentBlock = segs.length ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Struktur latihan dari menu RunSense</span><span class="sa-pill">${segs.filter(x=>x.type==="work").length} repetisi</span></div><div class="sa-sub">Target fase dibaca dari workout RunSense di kalender Intervals.icu. Data aktual diringkas per fase dan per menit; cadence bukan rata-rata seluruh aktivitas.</div>${phaseRows}</div>` : "";
     return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Pace & detak jantung</span><span class="sa-pill">per jarak</span></div>` + segmentBlock +
       `<div class="sa-read" id="saR-sess">Geser jari di grafik untuk melihat pace dan HR di titik yang sama.</div>` +
       `<div class="sa-chart-label">Pace <span>menit/km · garis lebih tinggi = lebih cepat</span></div>${pf ? `<div class="sa-find">${pf}</div>` : ""}${paceSvg}${hrBlock}` +
