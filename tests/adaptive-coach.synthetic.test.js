@@ -86,6 +86,33 @@ check("Heavy leg feedback prioritizes recovery and reduces dose", () => {
   assert.ok(c.volumeFactor < 1);
 });
 
+
+const applyFeelSource = html.match(/  function applyFeelDecision\\(r\\)\\{[\\s\\S]*?\\n  \\}/);
+assert.ok(applyFeelSource, "applyFeelDecision must exist");
+function runFeelDecision(feel) {
+  const fn = new Function("feelToday", "ymd", "feelLearning",
+    applyFeelSource[0] + "; return applyFeelDecision;"
+  )(() => feel, () => "2026-11-19", () => ({ recentHard: false }));
+  const recommendation = { status: "train", duration: "40 menit", tag: "QUALITY", score: 80, reason: "Sesi quality" };
+  return fn(recommendation);
+}
+check("Unsaved pain selection does not silently override the coach recommendation", () => {
+  const result = runFeelDecision({ pain: 2, energy: 1, fatigue: 3, savedDate: "" });
+  assert.equal(result.status, "train");
+  assert.equal(result.title, undefined);
+});
+check("Saved pain check-in safely overrides the planned workout", () => {
+  const result = runFeelDecision({ pain: 2, savedDate: "2026-11-19" });
+  assert.equal(result.status, "rest");
+  assert.match(result.title, /nyeri/i);
+});
+check("Saved low-energy and heavy-fatigue check-in reduces a quality session", () => {
+  const result = runFeelDecision({ pain: 0, energy: 1, fatigue: 3, legs: 3, savedDate: "2026-11-19" });
+  assert.equal(result.status, "train");
+  assert.equal(result.tag, "RECOVERY");
+  assert.notEqual(result.duration, "40 menit");
+});
+
 const syntaxBlocks = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
   .map(match => match[1]).filter(script => script.trim());
 for (const script of syntaxBlocks) new Function(script);
