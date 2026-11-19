@@ -3188,7 +3188,7 @@ input[type=password],input[type=text]{margin:0}
     if(state.athlete) processData(); else renderAll();
   }
   function feelBtn(k,v,label,active){
-    return '<button type="button" class="ty-chip'+(active?' on':'')+'" onclick="feelSet(\\''+k+'\\','+v+')">'+label+'</button>';
+    return '<button type="button" class="ty-chip'+(active?' on':'')+'" onclick="feelSet(\''+k+'\\','+v+')">'+label+'</button>';
   }
   function feelCheckinHTML(){
     const f=feelToday(), saved=f.savedDate===ymd();
