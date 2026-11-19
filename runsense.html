@@ -5446,13 +5446,12 @@ input[type=password],input[type=text]{margin:0}
   const mdn = (x) => { const s = x.slice().sort((p, q) => p - q); return s[s.length >> 1]; };
   const m2 = (v) => (Math.round(v * 100) / 100).toString().replace(".", ",") + " m";
   const inpS = "width:31%;padding:9px 10px;border-radius:10px;border:1px solid var(--card-border);background:var(--el);color:var(--tx);font:inherit";
-  function setHT(v, ms) { try { localStorage.setItem("runsense_ht", String(+v > 100 && +v < 230 ? +v : "")); } catch (_) {} if (ms) openAct(ms); }
+  function setHT(v, ms) { const h = +v > 100 && +v < 230 ? Math.round(+v) : 0; state.height = h; try { localStorage.setItem("runsense_ht", String(h || "")); } catch (_) {} persist(); if (ms) openAct(ms); }
   function cadHTML(a) {
     const c = cadOf(a); if (a[1] !== "run" || !c) return "";
     const st = strideOf(a), ht = +localStorage.getItem("runsense_ht") || 0, n = [];
     if (c < 170) n.push("Kadens di bawah 170. Menaikkannya sekitar 10% dikaitkan dengan risiko cedera lebih rendah. Naikkan pelan, bukan wajib 180.");
-    if (ht && ht < 160) n.push("Dengan tinggi " + ht + " cm, pelari biasanya main kadens (langkah pendek dan cepat).");
-    else if (ht >= 170) n.push("Dengan tinggi " + ht + " cm, pelari biasanya main panjang langkah. Pilih yang paling efisien buatmu.");
+    if (ht) n.push("Tinggi " + ht + " cm dicatat sebagai konteks tubuh, bukan penentu cadence atau panjang langkah. Biarkan ritme langkah mengikuti kenyamanan dan teknik alami.");
     n.push("Yang paling penting: mendarat tidak jauh di depan badan (overstride). Cara mendaratnya (tumit, tengah, depan) bukan masalah.");
     return `<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Kadens & langkah</span></div><div class="sa-metrics"><div class="sa-metric"><b>${c}</b><small>Langkah per menit</small></div><div class="sa-metric"><b>${st ? m2(st) : "—"}</b><small>Panjang langkah</small></div></div>` +
       n.map((t) => `<div class="sa-note">${t}</div>`).join("") + `<div class="sa-sub">Tinggi badan (opsional, untuk membaca kadens): <input type="number" inputmode="numeric" placeholder="cm" value="${ht || ""}" onchange="setHT(this.value,${a[0]})" style="width:80px;padding:6px 8px;border-radius:8px;border:1px solid var(--card-border);background:var(--el);color:var(--tx)"></div></div></div>`;
