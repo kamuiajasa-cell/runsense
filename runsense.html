@@ -5703,13 +5703,6 @@ input[type=password],input[type=text]{margin:0}
   window.showScreen = showScreen;
   window.selectStyle = selectStyle;
   window.connect = connect;
-  // Explicit listener for WebViews that restrict inline onclick handlers.
-  const connectButton = document.getElementById("btnConnect");
-  if (connectButton) connectButton.addEventListener("click", (event) => {
-    event.preventDefault();
-    if (typeof window.connect === "function") window.connect();
-    else showError("Aplikasi belum siap. Muat ulang halaman lalu coba lagi.");
-  });
   window.enterDemo = enterDemo;
   window.logout = logout;
   window.syncNow = syncNow;
@@ -6045,6 +6038,46 @@ input[type=password],input[type=text]{margin:0}
   window.toggleAdv = toggleAdv;
   window.saveProfile = saveProfile;
   window.cooperCalc = cooperCalc;
+})();
+</script>
+<script>
+// Handler koneksi terpisah dari aplikasi utama agar tetap hidup bila inisialisasi utama gagal.
+(function () {
+  "use strict";
+  document.addEventListener("click", function (event) {
+    var button = event.target && event.target.closest ? event.target.closest("#btnConnect") : null;
+    if (!button) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (button.dataset.busy === "1") return;
+    if (typeof window.connect === "function") {
+      button.dataset.busy = "1";
+      Promise.resolve().then(function () { return window.connect(); })
+        .finally(function () { button.dataset.busy = "0"; });
+      return;
+    }
+    var toast = document.getElementById("errorToast");
+    if (toast) {
+      toast.textContent = "RunSense belum selesai memuat JavaScript. Tutup aplikasi lalu buka ulang; jika tetap muncul, kirim pesan ini.";
+      toast.classList.add("show");
+    } else {
+      window.alert("RunSense belum selesai memuat JavaScript. Tutup aplikasi lalu buka ulang.");
+    }
+  }, true);
+
+  window.addEventListener("error", function (event) {
+    var toast = document.getElementById("errorToast");
+    if (!toast || !event.message) return;
+    toast.textContent = "Kesalahan aplikasi: " + String(event.message).slice(0, 160);
+    toast.classList.add("show");
+  });
+  window.addEventListener("unhandledrejection", function (event) {
+    var toast = document.getElementById("errorToast");
+    if (!toast) return;
+    var reason = event.reason;
+    toast.textContent = "Proses aplikasi gagal: " + String(reason && reason.message || reason || "unknown").slice(0, 160);
+    toast.classList.add("show");
+  });
 })();
 </script>
 <script>
