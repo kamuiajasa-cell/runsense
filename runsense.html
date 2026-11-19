@@ -4421,7 +4421,7 @@ input[type=password],input[type=text]{margin:0}
     const dq = '<section class="prg-card prg-dq"><h4>Kualitas data</h4><div class="sub">' + runs.length + ' lari dipakai' + (excl > 0 ? ', ' + excl + ' dikecualikan (durasi &lt; 5 menit, jarak &lt; 1 km, atau pace tak wajar)' : '') + '. HR valid di ' + withHr + ' lari.' +
       ' Durability dihitung dari stream tiap lari panjang, bukan dari ringkasan aktivitas.</div></section>';
 
-    el.innerHTML = summary + perfHtml + durHtml + capHtml + susHtml + fmCard() + dq;
+    el.innerHTML = summary + perfHtml + durHtml + capHtml + susHtml + dq;
     backfillDurability(runs);
     prefetchPace(perfNeed.map(x => ({ act: x }))).then(n => { if (n) renderProgress(); });
   }
