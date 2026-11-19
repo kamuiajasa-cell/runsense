@@ -2190,7 +2190,22 @@ input[type=password],input[type=text]{margin:0}
     let flips = 0;
     res.forEach((x, i) => { if (i && x.st !== res[i - 1].st) flips++; });
     const n = res.length;
-    $("#mTitle").textContent = "Uji estimator Max METs";
+    // Backtest retrospektif guardrail durasi easy: hanya memakai aktivitas sebelum tanggal sesi.
+    const durationSim = [];
+    runs.forEach((r, i) => {
+      const prior = runs.slice(0, i).filter(x => r[0] - x[0] <= 42 * 864e5);
+      const older = runs.slice(0, i);
+      const typical = med(prior.map(x => x[2]));
+      const last = older.length ? older[older.length - 1] : null;
+      const gap = last ? (r[0] - last[0]) / 864e5 : 999;
+      let cap = typical ? clamp(typical, 20, 35) : 25;
+      if (gap > 14) cap *= gap <= 28 ? .9 : gap <= 42 ? .8 : gap <= 60 ? .7 : .6;
+      cap = Math.max(15, Math.round(cap));
+      durationSim.push({ t:r[0], actual:r[2], cap, above:r[2] > cap + 2, gap, n:prior.length });
+    });
+    const testedDuration = durationSim.filter(x => x.n >= 2);
+    const overDuration = testedDuration.filter(x => x.above);
+    $("#mTitle").textContent = "Audit kemampuan & durasi planner";
     $("#mSub").textContent = n + " lari bisa diuji dari " + runs.length + " lari valid";
     let body;
     if (n < 10) {
@@ -2207,6 +2222,14 @@ input[type=password],input[type=text]{margin:0}
         '<div class="section-label" style="margin-top:14px">8 uji terakhir</div><div class="steps">' +
         res.slice(-8).reverse().map((x) => '<div><b>' + new Date(x.t).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + ' · ' + f1(x.km) + ' km</b><span>est ' + f1(x.est) + ' · lari ' + f1(x.run) + ' · T' + x.st + '</span></div>').join("") + '</div>';
     }
+    const durPct = testedDuration.length ? Math.round(100 * overDuration.length / testedDuration.length) : null;
+    body += '<div class="section-label" style="margin-top:16px">Simulasi batas durasi Easy</div>' +
+      (durPct == null
+        ? '<div class="insight">Belum cukup aktivitas berurutan untuk menguji batas durasi (butuh minimal 2 lari sebelumnya untuk tiap sampel).</div>'
+        : '<div class="steps"><div><b>Sampel berurutan</b><span>' + testedDuration.length + ' sesi</span></div><div><b>Sesi aktual di atas plafon Easy simulasi</b><span>' + overDuration.length + ' (' + durPct + '%)</span></div><div><b>Median plafon Easy simulasi</b><span>' + f1(med(testedDuration.map(x => x.cap))) + ' menit</span></div></div>' +
+          '<div class="insight">Simulasi ini hanya menguji guardrail durasi Easy dengan data sebelum setiap sesi (tanpa melihat masa depan). Ini bukan rekonstruksi rekomendasi lengkap: label sesi historis, nyeri, dan kesiapan harian tidak selalu tersedia. Sesi quality/long yang melewati plafon Easy bukan otomatis salah.</div>') +
+      '<div class="section-label" style="margin-top:12px">Contoh terakhir · aktual vs plafon Easy</div><div class="steps">' +
+      durationSim.slice(-6).reverse().map(x => '<div><b>' + new Date(x.t).toLocaleDateString("id-ID",{day:"numeric",month:"short"}) + ' · aktual ' + Math.round(x.actual) + ' mnt</b><span>plafon Easy simulasi ' + x.cap + ' mnt' + (x.gap > 14 ? ' · jeda ' + Math.round(x.gap) + ' hari' : '') + '</span></div>').join("") + '</div>';
     $("#mBody").innerHTML = body;
     $("#actModal").classList.add("show");
   }
