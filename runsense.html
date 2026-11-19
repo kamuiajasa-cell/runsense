@@ -1674,7 +1674,7 @@ input[type=password],input[type=text]{margin:0}
   /* Quality perlu fondasi latihan yang terbukti, bukan hanya skor kemampuan. */
   function qualityEligible() {
     const st = stage(), tol = trainingTolerance();
-    return !!(st && st.s >= 3 && tol.runs28 >= 3 && tol.lastAgeDays <= 14 && tol.activeDays28 >= 3 && tol.p75 >= 35);
+    return !!(tol.runs28 >= 6 && tol.lastAgeDays <= 10 && tol.activeDays28 >= 5 && tol.p75 >= 35);
   }
 
   const fmtHm = (h) => { const m = Math.round(h * 60); return Math.floor(m / 60) + "j" + String(m % 60).padStart(2, "0"); };
@@ -1802,6 +1802,13 @@ input[type=password],input[type=text]{margin:0}
       return { type: "long", conf: "sedang", why: f1(km) + " km, " + Math.round((km / med - 1) * 100) + "% lebih jauh dari biasamu" };
     }
 
+    // Klasifikasi utama memakai LTHR; pace/MET hanya fallback karena run-walk mengaburkan pace rata-rata.
+    const rest = restHr(), max = maxHr(), lthr = +state.lthrC || (rest > 0 && max > rest ? Math.round(rest + 0.88 * (max - rest)) : 0);
+    if (a[4] > 0 && lthr > 0 && min >= 15) {
+      const ratio = a[4] / lthr;
+      if (ratio >= 1.02 && min <= 45) return { type: "vo2", conf: "sedang", why: "HR rata-rata " + Math.round(ratio * 100) + "% LTHR" };
+      if (ratio >= 0.92) return { type: "thr", conf: "sedang", why: "HR rata-rata " + Math.round(ratio * 100) + "% LTHR" };
+    }
     // Hard by load / pace relative to capacity
     const st = stage();
     const load = loadOf(a);
@@ -3127,7 +3134,7 @@ input[type=password],input[type=text]{margin:0}
     const h=histCap(label), tol=trainingTolerance();
     let c;
     if(h.n)c=h.cap;
-    else if(label==="long")c=Math.min(boot,tol.p75?tol.p75*1.1:boot);
+    else if(label==="long")c=Math.min(boot,tol.p75?Math.max(35,tol.p75*1.3):boot);
     else if(label==="recovery")c=Math.min(boot,tol.typical?tol.typical*.7:boot);
     else c=Math.min(boot,tol.typical?tol.typical*1.05:boot);
     if(!h.n&&tol.lastAgeDays>14)c*=tol.lastAgeDays<=28?.9:tol.lastAgeDays<=42?.8:.7;
@@ -3376,7 +3383,7 @@ input[type=password],input[type=text]{margin:0}
     const ep = () => {
       const e = easyRange(score, au, heat);
       let lo = e.lo, hi = e.hi;
-      if (st.m && st.s === 3) { lo = Math.max(lo, paceOf(0.7 * st.m)); hi = lo * 1.08; }
+      /* Easy pace ditentukan dari effort dan baseline, bukan Max METs. */
       return [lo, hi];
     };
 
@@ -3480,7 +3487,7 @@ input[type=password],input[type=text]{margin:0}
     }
 
     // Stage 1 — walk
-    if (st.s === 1) {
+    if (st.s === 1 && trainingTolerance().runs28 < 3) {
       const mins = 25;
       return {
         k: "ok",
@@ -3504,7 +3511,7 @@ input[type=password],input[type=text]{margin:0}
     }
 
     // Stage 2 — run-walk
-    if (st.s === 2) {
+    if (st.s === 2 && trainingTolerance().runs28 < 4) {
       const w = wp(((Math.round(today() / 864e5) % 3) + 3) % 3, 0.75);
       const pr = st.m ? paceOf(0.9 * st.m) : 9.5;
       return {
@@ -3532,12 +3539,12 @@ input[type=password],input[type=text]{margin:0}
 
     // Rencana minggu: long (hanya tahap 3+, tidak setelah hari keras/long)
     const wk = planWeekKm();
-    if (pl && pl.t === "long" && st.s >= 3 && !fl && !yHard && !yLong) {
+    if (pl && pl.t === "long" && trainingTolerance().runs28 >= 4 && trainingTolerance().lastAgeDays <= 14 && !fl && !yHard && !yLong) {
       const [lo, hi] = ep();
       const cut = cutbackDue();
       const mins0 = pl.km > 0 ? clamp(Math.round(pl.km * (lo + hi) / 2), 35, 90) : 45;
       const mins1 = cut ? Math.max(30, Math.round(mins0 * 0.75)) : mins0;
-      const lc = applyCap(mins1, "long", 35);
+      const lc = applyCap(mins1, "long", 90);
       const lw = wkAdjust(lc.mins);
       const mins = lw.mins;
       const over = wk > 0 && pl.km > 0.3 * wk;
@@ -3566,8 +3573,7 @@ input[type=password],input[type=text]{margin:0}
       (hasPlan() ? !!(pl && pl.t === "quality") : (dow === 2 || dow === 4 || dow === 5)) &&
       !y2Long &&
       !tmrLong &&
-      qualityCount < 2 &&
-      st.s >= 3;
+      qualityCount < 2;
 
     if (wantQuality) {
       // Rotasi: tempo → cruise → VO2 (VO2 hanya form tinggi, tahap ≥ 4). Durasi kerja naik bertahap.
@@ -3853,7 +3859,7 @@ input[type=password],input[type=text]{margin:0}
     if (r.rested) return "Istirahat juga bagian dari latihan. Sampai besok.";
     if (r.walk) return "Jalan pelan saja, tanpa target. Tubuhmu tetap bergerak tanpa dibebani.";
     if (r.status === "rest") return "Tubuhmu butuh pulih dulu. Kalau mau bergerak, jalan santai saja, tanpa target.";
-    if (r.tag === "RECOVERY") return "Beban belakangan cukup berat, jadi hari ini lari sangat santai saja. Kamu harus masih bisa ngobrol bebas.";
+    if (r.tag === "RECOVERY") return r.reason && /nyeri|sakit|kaki/i.test(r.reason) ? "Ada sinyal dari kaki yang perlu dihormati. Jangan memaksakan lari; pilih istirahat atau gerak ringan tanpa nyeri." : "Beban belakangan cukup berat, jadi hari ini lari sangat santai saja. Kamu harus masih bisa ngobrol bebas.";
     if (r.tag === "TAPER") return "Menjelang race, volume diturunkan supaya kakimu segar. Jangan tergoda menambah.";
     if (r.tag === "LOMBA") return "Hari lomba. Mulai sedikit di bawah target, percepat di paruh akhir.";
     if (r.tag === "LONG") return "Lari panjang membangun daya tahan. Pelan, stabil, dan nikmati.";
@@ -3904,7 +3910,7 @@ input[type=password],input[type=text]{margin:0}
         `<div class="h-title">${skipped ? "Sesi dilewati" : todays.length ? "Sudah lari hari ini" : String(r.title || "Selesai")}</div>` +
         `<p class="h-why">${r.reason || "Sesi hari ini sudah tercatat. Pulihkan diri, besok lanjut."}</p></div>`;
     } else {
-      const tone = r.rested ? "ok" : r.status === "rest" ? "bad" : (r.k === "bad" ? "bad" : r.tag === "RECOVERY" || r.k === "wn" ? "wn" : "ok");
+      const tone = r.rested ? "ok" : r.status === "rest" ? "bad" : (r.k === "bad" ? "bad" : r.tag === "RECOVERY" ? "wn" : "ok");
       const label = r.rested || r.status === "rest" ? "ISTIRAHAT" : tone === "wn" ? "HATI-HATI" : tone === "bad" ? "ISTIRAHAT" : "SIAP";
       const title = String(r.status === "rest" ? "Istirahat hari ini" : r.title).split(" · ")[0].replace("Tempo / Threshold", "Tempo");
       const hrTxt = r.hr && r.hr !== "—" && !r.walk ? r.hr : "";
@@ -4382,7 +4388,7 @@ input[type=password],input[type=text]{margin:0}
     const reRows = [
       row("Readiness hari ini", reReady == null ? "Data belum cukup" : reReady + "/100"),
       row("Easy run pembanding", reNorm.length + " sesi · keyakinan " + reConf),
-      row("Pace setara-HR (median)", reEarlyP != null && reLateP != null ? fmtP(reEarlyP) + " → " + fmtP(reLateP) + " /km" : "Belum cukup data"),
+      row("Pace setara-HR (median)", reEarlyP != null && reLateP != null ? fmtP(reEarlyP * 60) + " → " + fmtP(reLateP * 60) + " /km" : "Belum cukup data"),
       row("Tren proxy efisiensi", reDelta != null && reNorm.length >= 4 ? sgn(reDelta,1) + "% (bagian terbaru)" : "Belum dapat dinilai"),
       row("Durability", durV === "up" ? "Baik / stabil" : durV === "flat" ? "Perlu dipantau" : durV === "dn" ? "Perlu perhatian" : "Belum cukup data"),
       row("Kekuatan · 28 hari", reStrength28.length ? reDone + " selesai · " + reSkip + " dilewati" : "Belum ada log"),
