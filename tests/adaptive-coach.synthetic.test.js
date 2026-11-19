@@ -105,7 +105,7 @@ const applyFeelSource = extractDecisionFunction(html);
 
 function runFeelDecision(feel) {
   const fn = new Function("feelToday", "ymd", "feelLearning",
-    applyFeelSource[0] + "; return applyFeelDecision;"
+    applyFeelSource + "; return applyFeelDecision;"
   )(() => feel, () => "2026-11-19", () => ({ recentHard: false }));
   const recommendation = { status: "train", duration: "40 menit", tag: "QUALITY", score: 80, reason: "Sesi quality" };
   return fn(recommendation);
