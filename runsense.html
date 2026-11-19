@@ -1108,6 +1108,7 @@ input[type=password],input[type=text]{margin:0}
       <div class="race-line" id="raceLine"></div>
       <div class="section-kicker"><span>YOUR TRAINING</span><i></i><span>01</span></div>
       <div id="mainCard"></div>
+      <div class="card" id="feelCheckinCard"></div>
       <div class="insight" id="autoLine" style="display:none"></div>
       <div class="leg-row" id="legRow">
         <span class="lg-l">Kaki</span>
@@ -3129,8 +3130,68 @@ input[type=password],input[type=text]{margin:0}
     return {mins,note:""};
   }
 
+
+  // Feel-first coaching: subjective inputs are independent of imported activity metrics.
+  function feelSave(){ sv("runsense_feel_v1",FEEL); }
+  function feelToday(){ return FEEL.today[ymd()] || {}; }
+  function feelSet(k,v){
+    const f=Object.assign({},feelToday()); f[k]=+v; f.updated=Date.now();
+    FEEL.today[ymd()]=f; feelSave(); renderFeelCheckin();
+    if(state.athlete) processData();
+  }
+  function feelBtn(k,v,label,active){
+    return '<button type="button" class="ty-chip'+(active?' on':'')+'" onclick="feelSet(\''+k+'\','+v+')">'+label+'</button>';
+  }
+  function feelCheckinHTML(){
+    const f=feelToday();
+    const group=(k,title,labels)=>'<div style="margin-top:12px"><div class="sa-note" style="font-weight:650;margin-bottom:7px">'+title+'</div><div class="ty-chips">'+labels.map((x,i)=>feelBtn(k,i+1,x,f[k]===i+1)).join('')+'</div></div>';
+    const pain='<div style="margin-top:12px"><div class="sa-note" style="font-weight:650;margin-bottom:7px">Ada nyeri saat ini?</div><div class="ty-chips">'+[[0,'Tidak'],[1,'Ringan'],[2,'Jelas / mengubah gerak']].map(x=>feelBtn('pain',x[0],x[1],f.pain===x[0])).join('')+'</div></div>';
+    const done=['energy','fatigue','legs','pain'].every(k=>f[k]!=null);
+    return '<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Dengarkan tubuhmu</span><span class="sa-sub">CHECK-IN</span></div><div class="sa-note">Sebelum berlari, bagaimana kondisi tubuhmu hari ini?</div>'+
+      group('energy','Energi tubuh',['Rendah','Cukup','Segar'])+
+      group('fatigue','Kelelahan umum',['Ringan','Sedang','Berat'])+
+      group('legs','Kaki dan otot',['Ringan','Agak berat','Sangat berat'])+pain+
+      '<div class="sa-sub" style="margin-top:10px">'+(done?'Check-in tersimpan dan dipakai Planner.':'Pilih empat jawaban. Boleh dilewati jika belum ingin mengisi.')+'</div></div></div>';
+  }
+  function renderFeelCheckin(){const el=$('#feelCheckinCard');if(el)el.innerHTML=feelCheckinHTML();}
+  function feelLearning(){
+    const xs=Object.entries(FEEL.sessions||{}).map(([k,v])=>Object.assign({ms:+k},v)).filter(x=>x.ms<Date.now()&&x.rpe>0).sort((a,b)=>b.ms-a.ms).slice(0,6);
+    return {n:xs.length,recentHard:xs.length>=2&&xs.slice(0,3).filter(x=>x.rpe>=7).length>=2};
+  }
+  function applyFeelDecision(r){
+    if(!r||r.status==='done'||r.status==='rest')return r;
+    const f=feelToday(), pain=+f.pain||0, weak=f.energy===1, tired=f.fatigue===3||f.legs===3;
+    if(pain>=2)return {k:'bad',status:'rest',title:'Istirahat — ada nyeri',duration:'—',hr:'—',pace:'—',tag:'RECOVERY',score:r.score,steps:[['Prioritas','Jangan berlari jika nyeri jelas atau mengubah cara berjalan/berlari.'],['Berikutnya','Evaluasi gejala; bila menetap atau memburuk, minta penilaian tenaga kesehatan.']],reason:'Check-in melaporkan nyeri yang jelas. Ini mengalahkan target latihan dan metrik kesiapan.'};
+    if(pain===1)return {k:'wn',status:'train',title:'Jalan atau recovery ringan',duration:'15–20 menit',hr:'Nyaman',pace:'Tanpa target',tag:'RECOVERY',score:r.score,steps:[['Pilihan','Jalan hanya jika tidak menambah nyeri.'],['Batas','Nyeri meningkat atau mengubah gerak = berhenti.']],reason:'Ada nyeri ringan. Hari ini bukan waktu mengejar target lari.'};
+    if(weak&&(tired||f.fatigue===2))return {k:'bad',status:'rest',title:'Istirahat dan pulihkan diri',duration:'—',hr:'—',pace:'—',tag:'RECOVERY',score:r.score,steps:[['Saran','Tidur, makan, dan hidrasi cukup; evaluasi kembali besok.']],reason:'Energi rendah disertai kelelahan. Respons tubuh lebih penting daripada jadwal.'};
+    if(weak||tired||feelLearning().recentHard){
+      if(r.tag==='QUALITY'||r.tag==='LONG'){
+        const base=parseInt(String(r.duration||'').match(/\d+/)?.[0]||25,10),mins=Math.max(15,Math.min(25,Math.round(base*.75)));
+        return {k:'wn',status:'train',title:'Easy diperingan',duration:mins+' menit',hr:'Ikuti napas',pace:'Sangat nyaman',tag:'RECOVERY',score:r.score,steps:[['Inti',mins+' menit mudah; boleh diselingi jalan'],['Batas','Akhiri saat usaha meningkat atau kaki tidak nyaman.']],reason:'Kondisi tubuh atau pola respons sesi terakhir menunjukkan perlu mengurangi tuntutan. Quality/long ditunda.'};
+      }
+      if(r.status==='train'&&r.duration&&/\d+/.test(r.duration)){
+        const mins=Math.max(15,Math.min(25,Math.round(parseInt(r.duration,10)*.8)));
+        r.duration=mins+' menit';r.tag='RECOVERY';r.reason=(r.reason||'')+' Check-in menunjukkan energi/otot belum optimal; durasi dipangkas dan intensitas mengikuti rasa nyaman.';
+      }
+    }
+    return r;
+  }
+  function feelSessionHTML(a){
+    if(!a||a[1]!=='run')return '';
+    const v=FEEL.sessions[a[0]]||{};
+    const opts=[[1,'1–2 sangat ringan'],[3,'3–4 ringan'],[5,'5–6 sedang'],[7,'7–8 berat'],[9,'9–10 maksimal']];
+    const rpe=opts.map(x=>'<button type="button" class="ty-chip'+(v.rpe===x[0]?' on':'')+'" onclick="feelSessionSet('+a[0]+','+"'rpe'"+','+x[0]+')">'+x[1]+'</button>').join('');
+    const legs=[[0,'Segar'],[1,'Normal'],[2,'Berat'],[3,'Sangat lelah']].map(x=>'<button type="button" class="ty-chip'+(v.legs===x[0]?' on':'')+'" onclick="feelSessionSet('+a[0]+','+"'legs'"+','+x[0]+')">'+x[1]+'</button>').join('');
+    return '<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Rasa setelah berlari</span></div><div class="sa-note">Seberapa berat lari tadi? (RPE 0–10)</div><div class="ty-chips">'+rpe+'</div><div class="sa-note" style="margin-top:12px">Kondisi kaki dan otot</div><div class="ty-chips">'+legs+'</div><div class="sa-sub" style="margin-top:9px">Tes bicara tetap dicatat di bagian terpisah. Catatan ini mengajari coach memahami respons tubuhmu.</div></div></div>';
+  }
+  function feelSessionSet(ms,k,v){
+    const x=Object.assign({},FEEL.sessions[ms]||{});x[k]=+v;x.updated=Date.now();FEEL.sessions[ms]=x;feelSave();
+    if(state.athlete)processData();openAct(ms);
+  }
+
   function designToday() {
-    const r = designTodayCore();
+    let r = designTodayCore();
+    r = applyFeelDecision(r);
     const ph = racePhase();
     if (r && ph && ph.k !== "race") {
       r.reason += ` (${{ taper: "Taper", peak: "Peak", build: "Build" }[ph.k]} · H-${ph.days})`;
@@ -3794,6 +3855,7 @@ input[type=password],input[type=text]{margin:0}
     renderRaceLine();
     renderBodyLine();
     renderLegRow();
+    renderFeelCheckin();
     const au = autonomic(), al = $("#autoLine");
     if (al) {
       al.style.display = au.warn ? "" : "none";
@@ -4683,7 +4745,7 @@ input[type=password],input[type=text]{margin:0}
       ).join("") +
       `</div>`;
 
-    body += sessionBodyHTML(act, rev) + cadHTML(act) + ttHTML(act) + fuHTML(act);
+    body += sessionBodyHTML(act, rev) + cadHTML(act) + ttHTML(act) + feelSessionHTML(act) + fuHTML(act);
     $("#mBody").innerHTML = body;
     saBind();
     if (act[1] === "run") {
@@ -5416,6 +5478,8 @@ input[type=password],input[type=text]{margin:0}
   ];
   const STR = Object.assign({ log: [], lv: {}, st: {}, sk: {}, fc: null }, ld("runsense_str", {}));
   const TT = ld("runsense_tt", {}), FU = ld("runsense_fuel", {});
+  const FEEL = ld("runsense_feel_v1", {today:{},sessions:{}});
+  FEEL.today = FEEL.today || {}; FEEL.sessions = FEEL.sessions || {};
   let strSel = null, strFo = null;
   const strTarget = () => { const p = racePhase(); return p && (p.k === "peak" || p.k === "taper") ? 1 : 2; };
   function strWeekDone() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const s = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); return STR.log.filter((e) => e.s === "done" && e.d >= s).length; }
@@ -5508,7 +5572,7 @@ input[type=password],input[type=text]{margin:0}
     if (a.length >= 2 && b.length >= 2) t += " Penurunan efisiensi median " + Math.round(md(a) * 10) / 10 + "% dengan karbo vs " + Math.round(md(b) * 10) / 10 + "% tanpa.";
     return '<div class="prg-insight">' + t + "</div>";
   }
-  Object.assign(window, { strPick, strMark, strUndo, strForm, strFa, setTT, setFU });
+  Object.assign(window, { strPick, strMark, strUndo, strForm, strFa, setTT, setFU, feelSet, feelSessionSet });
 
   /* ---------- Kadens, panjang langkah, tes mini, PAR-Q ---------- */
   const cadN = (v) => { v = +v; return v > 0 ? (v < 120 ? v * 2 : v) : 0; };
