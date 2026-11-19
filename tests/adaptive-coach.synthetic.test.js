@@ -87,7 +87,7 @@ check("Heavy leg feedback prioritizes recovery and reduces dose", () => {
 });
 
 
-const applyFeelSource = html.match(/  function applyFeelDecision\\(r\\)\\{[\\s\\S]*?\\n  \\}/);
+const applyFeelSource = html.match(/  function applyFeelDecision\(r\)\{[\s\S]*?\n  \}/);
 assert.ok(applyFeelSource, "applyFeelDecision must exist");
 function runFeelDecision(feel) {
   const fn = new Function("feelToday", "ymd", "feelLearning",
