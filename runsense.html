@@ -1513,7 +1513,7 @@ input[type=password],input[type=text]{margin:0}
   function bodyLoadContext() {
     const w = +state.weight || 0, h = +state.height || 0;
     const bmi = w > 0 && h >= 100 ? w / Math.pow(h / 100, 2) : null;
-    const hist = (state.weightHistory || []).filter(x => x && /^\\d{4}-\\d{2}-\\d{2}$/.test(x.date) && Number.isFinite(+x.weight) && x.weight >= 25 && x.weight <= 250).sort((a,b)=>a.date.localeCompare(b.date));
+    const hist = (state.weightHistory || []).filter(x => x && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && Number.isFinite(+x.weight) && x.weight >= 25 && x.weight <= 250).sort((a,b)=>a.date.localeCompare(b.date));
     const cutoff = new Date(Date.now() - 28 * 864e5).toISOString().slice(0,10);
     const recent = hist.filter(x => x.date >= cutoff);
     const first = recent[0], last = recent[recent.length - 1];
