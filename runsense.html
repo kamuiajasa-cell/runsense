@@ -786,6 +786,13 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 .sa-segment-row>span:last-child{text-align:right;flex:none}
 .sa-segment-row b{display:block;font-size:12.5px;font-weight:700}
 .sa-segment-row small{display:block;color:var(--grey);font-size:10.5px;margin-top:3px}
+.sa-minute-details{margin-top:10px;border-top:1px solid var(--card-border);padding-top:9px}
+.sa-minute-details summary{font-size:12px;font-weight:700;cursor:pointer;padding:6px 0}
+.sa-minute-head,.sa-minute-row{display:grid;grid-template-columns:1fr 1.15fr 1fr .8fr .9fr;gap:4px;align-items:center}
+.sa-minute-head{font-size:9px;color:var(--grey);padding:7px 0;border-bottom:1px solid var(--card-border)}
+.sa-minute-row{font-size:10px;padding:7px 0;border-bottom:1px solid var(--card-border);font-variant-numeric:tabular-nums}
+.sa-minute-row span{text-align:right}
+.sa-minute-row span:nth-child(2){text-align:left}
 .sa-chart-label{font-size:12px;font-weight:800;color:var(--tx);margin:10px 0 0}.sa-chart-label span{font-size:10px;font-weight:500;color:var(--grey);margin-left:5px}.sa-split{grid-template-columns:34px minmax(0,1fr) minmax(0,1fr);gap:10px;padding:10px 4px;border-top:1px solid var(--nav-border);font-size:13px;color:var(--grey)}.sa-split b{color:var(--tx);font-weight:800}.sa-split span:nth-child(2){color:var(--tx);font-weight:800}
 .sa-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.sa-metric{background:var(--el);border-radius:12px;padding:10px}.sa-metric b{display:block;font-size:17px}.sa-metric small{font-size:10px;color:var(--grey)}.sa-note{font-size:12px;line-height:1.55;color:var(--light-grey);margin-top:9px}.sa-pill{font-size:9px;color:var(--grey);background:var(--el);padding:5px 8px;border-radius:20px;white-space:nowrap}
 .sa-split{display:grid;grid-template-columns:28px 1fr 1fr;gap:8px;padding:7px 2px;border-top:1px solid var(--nav-border);font-size:12px;color:var(--grey)}.sa-split b{color:var(--tx)}.sa-split span:nth-child(2){color:var(--tx);font-weight:700}
@@ -4797,7 +4804,12 @@ input[type=password],input[type=text]{margin:0}
       const mins=Math.floor(q.duration/60), secs=Math.round(q.duration%60);
       return `<div class="sa-segment-row"><span><b>${phaseName(q.type)}${q.index?" "+q.index:""}</b><small>${mins}:${String(secs).padStart(2,"0")} · ${saKm(q.distance/1000)} km</small></span><span><b>${pace}</b><small>HR ${hr} · Kadens ${cad}</small></span></div>`;
     }).join("");
-    const segmentBlock = segs.length ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Struktur latihan dari menu RunSense</span><span class="sa-pill">${segs.filter(x=>x.type==="work").length} repetisi</span></div><div class="sa-sub">Target fase dibaca dari workout RunSense di kalender Intervals.icu. Data aktual diringkas per fase dan per menit; cadence bukan rata-rata seluruh aktivitas.</div>${phaseRows}</div>` : "";
+    const minuteRows = (Array.isArray(sx.minutes) ? sx.minutes : []).map(q=>{
+      const phase=phaseName(q.type), pace=q.pace?mp(q.pace)+"/km":"—", hr=q.hr?Math.round(q.hr)+" bpm":"—", cad=q.cadence?Math.round(q.cadence)+" spm":"—";
+      return `<div class="sa-minute-row"><b>Menit ${q.minute}</b><span>${phase}</span><span>${pace}</span><span>${hr}</span><span>${cad}</span></div>`;
+    }).join("");
+    const minuteBlock = minuteRows ? `<details class="sa-minute-details"><summary>Rincian aktual per menit (${sx.minutes.length} menit)</summary><div class="sa-minute-head"><span>Menit</span><span>Fase</span><span>Pace</span><span>HR</span><span>Kadens</span></div>${minuteRows}</details>` : "";
+    const segmentBlock = segs.length ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Struktur latihan dari menu RunSense</span><span class="sa-pill">${segs.filter(x=>x.type==="work").length} repetisi</span></div><div class="sa-sub">Target fase dibaca dari workout RunSense di kalender Intervals.icu. Data aktual diringkas per fase dan per menit; cadence bukan rata-rata seluruh aktivitas.</div>${phaseRows}${minuteBlock}</div>` : "";
     return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Pace & detak jantung</span><span class="sa-pill">per jarak</span></div>` + segmentBlock +
       `<div class="sa-read" id="saR-sess">Geser jari di grafik untuk melihat pace dan HR di titik yang sama.</div>` +
       `<div class="sa-chart-label">Pace <span>menit/km · garis lebih tinggi = lebih cepat</span></div>${pf ? `<div class="sa-find">${pf}</div>` : ""}${paceSvg}${hrBlock}` +
