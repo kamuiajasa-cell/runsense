@@ -3730,7 +3730,7 @@ input[type=password],input[type=text]{margin:0}
         duration: q.dur + " menit total",
         hr: q.hr,
         pace: q.pace,
-        reason: q.why + qNote + ` Quality ke-${n28 + 1} dalam 28 hari. Bukan all-out, kerja terkontrol.` + (heat ? " Panas: ikuti HR, bukan pace. Pace boleh melambat." : ""),
+        reason: q.why + qNote + (adapt.successfulQuality < 2 ? " Dosis quality belum dinaikkan: tunggu dua respons sesi berturut-turut dengan RPE ≤6 dan kaki tidak berat; isi evaluasi setelah lari." : " Dua respons quality terakhir terkendali; level kerja boleh naik bertahap.") + (adapt.notes.length ? " Penyesuaian adaptif: "+adapt.notes.join("; ")+ "." : "") + ` Quality ke-${n28 + 1} dalam 28 hari. Bukan all-out, kerja terkontrol.` + (heat ? " Panas: ikuti HR, bukan pace. Pace boleh melambat." : ""),
         steps: [["Pemanasan", "10 mnt easy + strides"], ["Inti", q.core], ["Pendinginan", "8 mnt easy"]],
         wl: q.wl,
         score,
