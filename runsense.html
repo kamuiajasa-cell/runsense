@@ -1374,6 +1374,30 @@ input[type=password],input[type=text]{margin:0}
 <div class="error-toast" id="errorToast"></div>
 
 <script>
+// Tangkap error sejak sebelum skrip utama diparse/dijalankan (termasuk SyntaxError).
+(function () {
+  function report(message, source, line, column) {
+    var detail = String(message || "Kesalahan JavaScript tidak diketahui");
+    if (source) detail += " · " + String(source).split("/").pop();
+    if (line) detail += ":" + line + (column ? ":" + column : "");
+    window.__runsenseBootError = detail;
+    var toast = document.getElementById("errorToast");
+    if (toast) {
+      toast.textContent = "JavaScript gagal dimuat: " + detail.slice(0, 220);
+      toast.classList.add("show");
+    }
+  }
+  window.addEventListener("error", function (event) {
+    report(event.message || (event.error && event.error.message) || "Script error", event.filename, event.lineno, event.colno);
+  }, true);
+  window.onerror = function (message, source, line, column) {
+    report(message, source, line, column);
+    return false;
+  };
+  window.__runsenseMainScriptRequested = true;
+})();
+</script>
+<script>
 (function () {
   "use strict";
 
@@ -6057,11 +6081,12 @@ input[type=password],input[type=text]{margin:0}
       return;
     }
     var toast = document.getElementById("errorToast");
+    var detail = window.__runsenseBootError || (window.__runsenseMainScriptRequested ? "Skrip utama tidak menyelesaikan inisialisasi; tidak ada error yang tertangkap." : "Bootstrap JavaScript tidak berjalan.");
     if (toast) {
-      toast.textContent = "RunSense belum selesai memuat JavaScript. Tutup aplikasi lalu buka ulang; jika tetap muncul, kirim pesan ini.";
+      toast.textContent = "RunSense belum siap: " + detail;
       toast.classList.add("show");
     } else {
-      window.alert("RunSense belum selesai memuat JavaScript. Tutup aplikasi lalu buka ulang.");
+      window.alert("RunSense belum siap: " + detail);
     }
   }, true);
 
