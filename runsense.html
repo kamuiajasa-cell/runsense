@@ -1866,6 +1866,13 @@ input[type=password],input[type=text]{margin:0}
     const S_next = sec("Lanjut");
 
     const push = (section, k, text) => section.notes.push({ k, text });
+    const feelAfter = FEEL.sessions[a[0]] || {};
+    if (feelAfter.rpe || feelAfter.legs != null) {
+      const fNotes = [];
+      if (feelAfter.rpe) fNotes.push("RPE " + feelAfter.rpe + "/10 (" + (feelAfter.rpe >= 7 ? "berat" : feelAfter.rpe >= 5 ? "sedang" : "ringan") + ").");
+      if (feelAfter.legs != null) fNotes.push("Kaki setelah lari: " + (["segar", "normal", "berat", "sangat lelah"][feelAfter.legs] || "—") + ".");
+      push(S_next, "g", "Respons tubuh: " + fNotes.join(" "));
+    }
     const why = []; // alasan singkat untuk judul
 
     // —— Summary line ——
