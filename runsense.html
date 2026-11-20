@@ -2836,15 +2836,15 @@ input[type=password],input[type=text]{margin:0}
     const cadenceWindows=new Map();
     samples.forEach(x=>{if(x.c>0){const k=Math.floor(x.t/5);const w=cadenceWindows.get(k)||{sum:0,n:0};w.sum+=x.c;w.n++;cadenceWindows.set(k,w);}});
     const isRunSample=(x,p)=>{const w=cadenceWindows.get(Math.floor(x.t/5));return !isWalk(p)&&!!w&&w.n>0&&(w.sum/w.n)>135;};
-    let cursor=0;const segments=[],minutes=[];
+    let cursor=0;const segments=[],minutes=[],cadenceChecks=[];
     plan.forEach((p,i)=>{
       const lo=cursor,hi=cursor+(Number(p.duration)||0);cursor=hi;if(hi<=lo)return;
       const xs=samples.filter(x=>x.t>=lo&&x.t<hi);if(xs.length<2)return;
-      const d=Math.max(0,xs[xs.length-1].d-xs[0].d),dt=Math.max(1,xs[xs.length-1].t-xs[0].t),running=xs.filter(x=>isRunSample(x,p));
+      const d=Math.max(0,xs[xs.length-1].d-xs[0].d),dt=Math.max(1,xs[xs.length-1].t-xs[0].t),running=xs.filter(x=>isRunSample(x,p));\n      cadenceWindows.forEach((w,k)=>{const t=k*5;if(t<lo||t>=hi||!w.n)return;const mean=w.sum/w.n,run=!isWalk(p)&&mean>135;cadenceChecks.push({second:t,phase:p.type,label:p.label||"",cadence:mean,samples:w.n,status:isWalk(p)?"fase jalan/recovery":run?"lari":"jalan/di bawah 135"});});
       segments.push({type:p.type,index:i+1,duration:hi-lo,distance:d,pace:d>0?(dt/60)/(d/1000):null,hr:avg(xs,"h"),maxHr:xs.reduce((m,x)=>Math.max(m,x.h),0)||null,cadence:avg(running,"c"),cadenceSamples:running.filter(x=>x.c>0).length,label:p.label,cadenceBasis:"running-only"});
       for(let m=0;m<hi-lo;m+=60){const a0=lo+m,a1=Math.min(hi,a0+60),ys=samples.filter(x=>x.t>=a0&&x.t<a1);if(ys.length<2)continue;const runYs=ys.filter(x=>isRunSample(x,p)),md=Math.max(0,ys[ys.length-1].d-ys[0].d),mt=Math.max(1,ys[ys.length-1].t-ys[0].t);minutes.push({minute:Math.floor(a0/60)+1,type:p.type,pace:md>0?(mt/60)/(md/1000):null,hr:avg(ys,"h"),cadence:avg(runYs,"c"),cadenceSamples:runYs.filter(x=>x.c>0).length,distance:md});}
     });
-    return segments.length?{segments,minutes,planSource:"local-plan",cadenceBasis:"running-only"}:null;
+    return segments.length?{segments,minutes,cadenceChecks,planSource:"local-plan",cadenceBasis:"running-only"}:null;
   }
     async function findRunSenseWorkout(act) {
     const d=new Date(act[0]),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -2860,7 +2860,7 @@ input[type=password],input[type=text]{margin:0}
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
     const cached = state.sx[id];
     // Cache lama hanya menyimpan pace hasil distance/time; ambil ulang untuk memakai velocity stream.
-    if ((cached && cached.streamVersion>=11 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 11 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if ((cached && cached.streamVersion>=12 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 12 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
@@ -2883,7 +2883,7 @@ input[type=password],input[type=text]{margin:0}
       } catch (_) {}
       state.sx[id] = Object.assign({}, summary || { none: 1 }, planned || {}, {
         intervals:actualIntervals, planDate:savedPlan?dayKey:null,
-        streamVersion:11, checkedAt:Date.now()
+        streamVersion:12, checkedAt:Date.now()
       });
     } catch (e) {
       // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
@@ -5851,12 +5851,20 @@ input[type=password],input[type=text]{margin:0}
   const inpS = "width:31%;padding:9px 10px;border-radius:10px;border:1px solid var(--card-border);background:var(--el);color:var(--tx);font:inherit";
   function cadHTML(a) {
     const c = cadOf(a); if (a[1] !== "run" || !c) return "";
-    const st = strideOf(a), ht = +state.height || 0, n = [];
+    const st = strideOf(a), ht = +state.height || 0, n = [], sx = a[9] && state.sx ? state.sx[String(a[9])] : null;
     if (ht) n.push("TB " + ht + " cm menjadi konteks ukuran tubuh saat membaca kadens dan panjang langkah. Tidak ada angka spm atau panjang langkah ideal yang otomatis ditentukan oleh tinggi badan.");
     else n.push("TB belum diisi. Kamu bisa mengisinya satu kali di Pengaturan agar menjadi konteks tambahan saat membaca kadens dan panjang langkah.");
     n.push("Nilai kadens bersama pace, kenyamanan, dan observasi teknik. Jangan menyimpulkan overstride hanya dari kadens atau panjang langkah; yang perlu diperhatikan adalah apakah kaki mendarat terlalu jauh di depan tubuh.");
-    return `<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Kadens & langkah</span></div><div class="sa-metrics"><div class="sa-metric"><b>${c}</b><small>Langkah per menit</small></div><div class="sa-metric"><b>${st ? m2(st) : "—"}</b><small>Panjang langkah</small></div></div>` +
-      n.map((t) => `<div class="sa-note">${t}</div>`).join("") + `<div class="sa-sub">Konteks tinggi badan diambil otomatis dari Pengaturan Profil.</div></div></div>`;
+    const phaseName = t => t==="warmup"?"Pemanasan":t==="cooldown"?"Pendinginan":t==="recovery"?"Recovery":"Interval kerja";
+    const segRows = (sx && Array.isArray(sx.segments) ? sx.segments : []).map(q => {
+      const cad = q.cadence != null ? Math.round(q.cadence)+" spm" : "—";
+      return `<div class="sa-segment-row"><span><b>${phaseName(q.type)} ${q.index||""}</b><small>${Math.floor(q.duration/60)}:${String(Math.round(q.duration%60)).padStart(2,"0")} · ${q.cadenceSamples||0} sampel lari</small></span><span><b>${cad}</b><small>Kadens saat berlari saja</small></span></div>`;
+    }).join("");
+    const checks = sx && Array.isArray(sx.cadenceChecks) ? sx.cadenceChecks : [];
+    const checkRows = checks.map(q => `<div class="sa-minute-row" style="grid-template-columns:.8fr 1fr 1fr 1fr"><b>${Math.floor(q.second/60)}:${String(q.second%60).padStart(2,"0")}</b><span>${phaseName(q.phase)}</span><span>${Math.round(q.cadence)} spm</span><span>${q.status}</span></div>`).join("");
+    const analysis = segRows ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Kadens per segmen</span></div><div class="sa-sub">Pemeriksaan dilakukan per jendela 5 detik. Rerata di atas 135 spm dihitung sebagai lari; di bawah atau sama dengan 135 spm sebagai jalan. Fase recovery/jalan tetap dikecualikan dari kadens lari.</div>${segRows}${checkRows ? `<details class="sa-minute-details"><summary>Pemeriksaan tiap 5 detik (${checks.length} jendela)</summary><div class="sa-minute-head" style="grid-template-columns:.8fr 1fr 1fr 1fr"><span>Waktu</span><span>Fase</span><span>Kadens</span><span>Klasifikasi</span></div>${checkRows}</details>` : ""}</div>` : `<div class="sa-note">Rincian per segmen belum tersedia. Sinkronkan aktivitas ke Intervals.icu dan buka ulang detail aktivitas agar stream sensor dan rencana segmennya diproses.</div>`;
+    return `<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Kadens & langkah</span></div><div class="sa-metrics"><div class="sa-metric"><b>${c}</b><small>Langkah per menit · ringkasan sumber</small></div><div class="sa-metric"><b>${st ? m2(st) : "—"}</b><small>Panjang langkah</small></div></div>` +
+      analysis + n.map((t) => `<div class="sa-note">${t}</div>`).join("") + `<div class="sa-sub">Konteks tinggi badan diambil otomatis dari Pengaturan Profil.</div></div></div>`;
   }
   const TS = ld("runsense_tests", []);
   function saveTest() {
