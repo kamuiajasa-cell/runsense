@@ -2823,6 +2823,46 @@ input[type=password],input[type=text]{margin:0}
     }
     flush();return plan.length?plan:null;
   }
+
+  /* Fallback untuk lari tanpa rencana tersimpan: klasifikasi hanya dari rerata kadens tiap 5 detik. */
+  function summarizeCadenceOnly(raw) {
+    const src=raw&&!Array.isArray(raw)&&Array.isArray(raw.streams)?raw.streams:raw;
+    const get=t=>{if(Array.isArray(src)){const o=src.find(x=>x&&(x.type===t||x.name===t));return o&&Array.isArray(o.data)?o.data:null;}const o=src&&(src[t]||src[t+".json"]);return Array.isArray(o)?o:o&&Array.isArray(o.data)?o.data:null;};
+    const time=get("time"),dist=get("distance"),hr=get("heartrate"),cad=get("cadence");
+    if(!time||!dist||!cad||time.length!==dist.length||time.length!==cad.length||time.length<10)return null;
+    const buckets=new Map();
+    for(let i=0;i<time.length;i++){
+      const t=Number(time[i]),c=Number(cad[i]),d=Number(dist[i]),h=hr&&hr.length===time.length?Number(hr[i]):0;
+      if(!Number.isFinite(t)||!Number.isFinite(d))continue;
+      const k=Math.floor(t/5),b=buckets.get(k)||{second:k*5,sum:0,n:0,ds:[],hs:[]};
+      if(Number.isFinite(c)&&c>0&&c<260){b.sum+=c;b.n++;}
+      if(Number.isFinite(h)&&h>40)b.hs.push(h);
+      b.ds.push(d);buckets.set(k,b);
+    }
+    const ordered=[...buckets.values()].filter(b=>b.n>0).sort((a,b)=>a.second-b.second);
+    if(!ordered.length)return null;
+    const checks=ordered.map(b=>({second:b.second,phase:(b.sum/b.n)>135?"run":"walk",cadence:b.sum/b.n,samples:b.n,status:(b.sum/b.n)>135?"lari":"jalan/≤135"}));
+    const groups=[];
+    for(const b of ordered){
+      const type=(b.sum/b.n)>135?"run":"walk",last=groups[groups.length-1];
+      if(last&&last.type===type&&b.second<=last.end+5){last.end=b.second;last.buckets.push(b);}
+      else groups.push({type,start:b.second,end:b.second,buckets:[b]});
+    }
+    const segments=groups.map((g,i)=>{
+      const bs=g.buckets,sec=Math.min(5,g.end-g.start+5),samples=bs.reduce((n,b)=>n+b.n,0);
+      const vals=bs.flatMap(b=>b.ds),hs=bs.flatMap(b=>b.hs),cs=bs.flatMap(b=>b.n?[b.sum/b.n]:[]);
+      const distance=vals.length>1?Math.max(0,vals[vals.length-1]-vals[0]):0;
+      const cadence=g.type==="run"&&cs.length?cs.reduce((a,b)=>a+b,0)/cs.length:null;
+      return {type:g.type,index:i+1,duration:sec,distance,pace:distance>0?(sec/60)/(distance/1000):null,
+        hr:hs.length?hs.reduce((a,b)=>a+b,0)/hs.length:null,cadence,cadenceSamples:g.type==="run"?samples:0,
+        cadenceBasis:"running-only"};
+    });
+    const runs=segments.filter(x=>x.type==="run"),runN=runs.reduce((n,x)=>n+x.cadenceSamples,0);
+    return {segments,cadenceChecks:checks,cadenceBasis:"running-only",planSource:"cadence-5s",
+      runOnly:{min:runs.reduce((n,x)=>n+x.duration,0)/60,km:runs.reduce((n,x)=>n+x.distance,0)/1000,
+        cadence:runN?Math.round(runs.reduce((n,x)=>n+(x.cadence||0)*x.cadenceSamples,0)/runN):null}};
+  }
+
   function summarizeAgainstPlan(raw,description,storedSegments) {
     const src=raw&&!Array.isArray(raw)&&Array.isArray(raw.streams)?raw.streams:raw;
     const get=t=>{if(Array.isArray(src)){const o=src.find(x=>x&&(x.type===t||x.name===t));return o&&Array.isArray(o.data)?o.data:null;}const o=src&&(src[t]||src[t+".json"]);return Array.isArray(o)?o:o&&Array.isArray(o.data)?o.data:null;};
@@ -2861,7 +2901,7 @@ input[type=password],input[type=text]{margin:0}
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
     const cached = state.sx[id];
     // Cache lama hanya menyimpan pace hasil distance/time; ambil ulang untuk memakai velocity stream.
-    if ((cached && cached.streamVersion>=12 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 12 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if ((cached && cached.streamVersion>=13 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 13 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
@@ -2871,6 +2911,7 @@ input[type=password],input[type=text]{margin:0}
       const actDay = new Date(a[0]), dayKey = actDay.getFullYear()+"-"+String(actDay.getMonth()+1).padStart(2,"0")+"-"+String(actDay.getDate()).padStart(2,"0");
       const savedPlan = state.workouts && state.workouts[dayKey];
       let planned = savedPlan && savedPlan.text ? summarizeAgainstPlan(raw, savedPlan.text, savedPlan.segments) : null;
+      const cadenceOnly = planned ? null : summarizeCadenceOnly(raw);
       // Simpan interval aktual yang dihitung Intervals.icu, mengikuti pola RunNow2 (S.icuD[id].iv).
       let actualIntervals = [];
       try {
@@ -2882,9 +2923,9 @@ input[type=password],input[type=text]{margin:0}
           intensity:v.intensity||"",load:v.training_load||0
         }));
       } catch (_) {}
-      state.sx[id] = Object.assign({}, summary || { none: 1 }, planned || {}, {
+      state.sx[id] = Object.assign({}, summary || { none: 1 }, planned || cadenceOnly || {}, {
         intervals:actualIntervals, planDate:savedPlan?dayKey:null,
-        streamVersion:12, checkedAt:Date.now()
+        streamVersion:13, checkedAt:Date.now()
       });
     } catch (e) {
       // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
@@ -4831,7 +4872,7 @@ input[type=password],input[type=text]{margin:0}
     }
     const hrBlock = hrSvg ? `<div class="sa-chart-label">Detak jantung <span>bpm</span></div>${hf ? `<div class="sa-find">${hf}</div>` : ""}${hrSvg}` : "";
     const segs = sx && sx.planSource === "local-plan" && Array.isArray(sx.segments) ? sx.segments : [];
-    const phaseName = t => t==="warmup"?"Pemanasan":t==="cooldown"?"Pendinginan":t==="recovery"?"Recovery":"Interval kerja";
+    const phaseName = t => t==="warmup"?"Pemanasan":t==="cooldown"?"Pendinginan":t==="recovery"?"Recovery":t==="walk"?"Jalan":t==="run"?"Lari":"Interval kerja";
     const phaseRows = segs.map(q=>{
       const pace=q.pace?mp(q.pace)+"/km":"—", hr=q.hr?Math.round(q.hr)+" bpm":"—", cad=q.cadence?Math.round(q.cadence)+" spm":"—";
       const mins=Math.floor(q.duration/60), secs=Math.round(q.duration%60);
