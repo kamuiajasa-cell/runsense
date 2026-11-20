@@ -2835,7 +2835,7 @@ input[type=password],input[type=text]{margin:0}
     if(!time||!dist||!cad||time.length!==dist.length||time.length!==cad.length||time.length<10)return null;
     const buckets=new Map();
     for(let i=0;i<time.length;i++){
-      const t=Number(time[i]),c=Number(cad[i]),d=Number(dist[i]),h=hr&&hr.length===time.length?Number(hr[i]):0;
+      const t=Number(time[i]),c=Number(cad[i])*2,d=Number(dist[i]),h=hr&&hr.length===time.length?Number(hr[i]):0;
       if(!Number.isFinite(t)||!Number.isFinite(d))continue;
       const k=Math.floor(t/5),b=buckets.get(k)||{second:k*5,sum:0,n:0,ds:[],hs:[]};
       if(Number.isFinite(c)&&c>0&&c<260){b.sum+=c;b.n++;}
@@ -2873,7 +2873,7 @@ input[type=password],input[type=text]{margin:0}
     const time=get("time"),dist=get("distance"),hr=get("heartrate"),cad=get("cadence"),vel=get("velocity_smooth");
     if(!time||!dist||time.length!==dist.length)return null;
     const plan=Array.isArray(storedSegments)&&storedSegments.length?storedSegments:parsePlannedWorkout(description);if(!plan)return null;
-    const samples=[];for(let i=0;i<time.length;i++)samples.push({t:+time[i],d:+dist[i],h:hr&&hr.length===time.length&&+hr[i]>40?+hr[i]:0,c:cad&&cad.length===time.length&&+cad[i]>0&&+cad[i]<260?+cad[i]:0,v:vel&&vel.length===time.length?+vel[i]:0});
+    const samples=[];for(let i=0;i<time.length;i++)samples.push({t:+time[i],d:+dist[i],h:hr&&hr.length===time.length&&+hr[i]>40?+hr[i]:0,c:cad&&cad.length===time.length&&+cad[i]>0&&+cad[i]<130?(+cad[i]*2):0,v:vel&&vel.length===time.length?+vel[i]:0});
     const avg=(xs,k)=>{const v=xs.map(x=>x[k]).filter(x=>x>0&&Number.isFinite(x));return v.length?v.reduce((u,x)=>u+x,0)/v.length:null;};
     const isWalk=p=>/walk|jalan|recovery walk|jalan kaki|istirahat|rest/i.test(String(p.label||""))||/walk|jalan|rest/i.test(String(p.type||""));
     // Klasifikasi memakai rerata kadens dalam jendela 5 detik, bukan satu titik sensor.
@@ -2907,7 +2907,7 @@ input[type=password],input[type=text]{margin:0}
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
     const cached = state.sx[id];
     // Cache lama hanya menyimpan pace hasil distance/time; ambil ulang untuk memakai velocity stream.
-    if ((cached && cached.streamVersion>=13 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 13 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if ((cached && cached.streamVersion>=14 && cached.chart && cached.splits) || (cached && cached.streamVersion>=14 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
@@ -2931,7 +2931,7 @@ input[type=password],input[type=text]{margin:0}
       } catch (_) {}
       state.sx[id] = Object.assign({}, summary || { none: 1 }, planned || cadenceOnly || {}, {
         intervals:actualIntervals, planDate:savedPlan?dayKey:null,
-        streamVersion:13, checkedAt:Date.now()
+        streamVersion:14, checkedAt:Date.now()
       });
     } catch (e) {
       // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
@@ -5914,7 +5914,7 @@ input[type=password],input[type=text]{margin:0}
     const checks = sx && Array.isArray(sx.cadenceChecks) ? sx.cadenceChecks : [];
     const checkRows = checks.map(q => `<div class="sa-minute-row" style="grid-template-columns:.8fr 1fr 1fr 1fr"><b>${Math.floor(q.second/60)}:${String(q.second%60).padStart(2,"0")}</b><span>${phaseName(q.phase)}</span><span>${Math.round(q.cadence)} spm</span><span>${q.status}</span></div>`).join("");
     const cd=sx&&sx.cadenceDiagnostics?sx.cadenceDiagnostics:null;
-    const diagnosticLine=cd?`<div class="sa-sub">Data sensor: ${cd.validSamples} sampel valid · rentang ${cd.min==null?"—":Math.round(cd.min)+"–"+Math.round(cd.max)+" spm"} · rerata ${cd.mean==null?"—":Math.round(cd.mean)+" spm"}. Jendela lari ${cd.runWindows}, jalan ${cd.walkWindows}.</div>`:"";
+    const diagnosticLine=cd?`<div class="sa-sub">Data sensor: ${cd.validSamples} sampel valid · stream dikonversi ×2: ${cd.min==null?"—":Math.round(cd.min)+"–"+Math.round(cd.max)+" spm"} · rerata ${cd.mean==null?"—":Math.round(cd.mean)+" spm"}. Jendela lari ${cd.runWindows}, jalan ${cd.walkWindows}.</div>`:"";
     const analysis = segRows ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Kadens per segmen</span></div><div class="sa-sub">Pemeriksaan dilakukan per jendela 5 detik. Rerata di atas 135 spm dihitung sebagai lari; di bawah atau sama dengan 135 spm sebagai jalan. Fase recovery/jalan tetap dikecualikan dari kadens lari.</div>${diagnosticLine}${segRows}${checkRows ? `<details class="sa-minute-details"><summary>Pemeriksaan tiap 5 detik (${checks.length} jendela)</summary><div class="sa-minute-head" style="grid-template-columns:.8fr 1fr 1fr 1fr"><span>Waktu</span><span>Fase</span><span>Kadens</span><span>Klasifikasi</span></div>${checkRows}</details>` : ""}</div>` : `<div class="sa-note">Rincian per segmen belum tersedia. Sinkronkan aktivitas ke Intervals.icu dan buka ulang detail aktivitas agar stream sensor dan rencana segmennya diproses.</div>`;
     return `<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Kadens & langkah</span></div><div class="sa-metrics"><div class="sa-metric"><b>${runCadence == null ? "—" : runCadence}</b><small>Kadens lari saja (spm)</small></div><div class="sa-metric"><b>${st ? m2(st) : "—"}</b><small>Panjang langkah</small></div></div>` +
       analysis + n.map((t) => `<div class="sa-note">${t}</div>`).join("") + `<div class="sa-sub">Konteks tinggi badan diambil otomatis dari Pengaturan Profil.</div></div></div>`;
