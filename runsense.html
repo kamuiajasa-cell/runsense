@@ -2823,24 +2823,27 @@ input[type=password],input[type=text]{margin:0}
     }
     flush();return plan.length?plan:null;
   }
-  function summarizeAgainstPlan(raw,description) {
+  function summarizeAgainstPlan(raw,description,storedSegments) {
     const src=raw&&!Array.isArray(raw)&&Array.isArray(raw.streams)?raw.streams:raw;
     const get=t=>{if(Array.isArray(src)){const o=src.find(x=>x&&(x.type===t||x.name===t));return o&&Array.isArray(o.data)?o.data:null;}const o=src&&(src[t]||src[t+".json"]);return Array.isArray(o)?o:o&&Array.isArray(o.data)?o.data:null;};
     const time=get("time"),dist=get("distance"),hr=get("heartrate"),cad=get("cadence"),vel=get("velocity_smooth");
     if(!time||!dist||time.length!==dist.length)return null;
-    const plan=parsePlannedWorkout(description);if(!plan)return null;
+    const plan=Array.isArray(storedSegments)&&storedSegments.length?storedSegments:parsePlannedWorkout(description);if(!plan)return null;
     const samples=[];for(let i=0;i<time.length;i++)samples.push({t:+time[i],d:+dist[i],h:hr&&hr.length===time.length&&+hr[i]>40?+hr[i]:0,c:cad&&cad.length===time.length&&+cad[i]>0&&+cad[i]<260?+cad[i]:0,v:vel&&vel.length===time.length?+vel[i]:0});
     const avg=(xs,k)=>{const v=xs.map(x=>x[k]).filter(x=>x>0&&Number.isFinite(x));return v.length?v.reduce((u,x)=>u+x,0)/v.length:null;};
+    const isWalk=p=>/walk|jalan|recovery walk|jalan kaki|istirahat|rest/i.test(String(p.label||""))||/walk|jalan|rest/i.test(String(p.type||""));
+    const isRunSample=(x,p)=>!isWalk(p)&&x.v>=1.8;
     let cursor=0;const segments=[],minutes=[];
     plan.forEach((p,i)=>{
-      const lo=cursor,hi=cursor+p.duration;cursor=hi;const xs=samples.filter(x=>x.t>=lo&&x.t<hi);if(xs.length<2)return;
-      const d=Math.max(0,xs[xs.length-1].d-xs[0].d),dt=Math.max(1,xs[xs.length-1].t-xs[0].t);
-      segments.push({type:p.type,index:i+1,duration:p.duration,distance:d,pace:d>0?(dt/60)/(d/1000):null,hr:avg(xs,"h"),maxHr:xs.reduce((m,x)=>Math.max(m,x.h),0)||null,cadence:avg(xs,"c"),label:p.label});
-      for(let m=0;m<p.duration;m+=60){const a0=lo+m,a1=Math.min(hi,a0+60),ys=samples.filter(x=>x.t>=a0&&x.t<a1);if(ys.length<2)continue;const md=Math.max(0,ys[ys.length-1].d-ys[0].d),mt=Math.max(1,ys[ys.length-1].t-ys[0].t);minutes.push({minute:Math.floor(a0/60)+1,type:p.type,pace:md>0?(mt/60)/(md/1000):null,hr:avg(ys,"h"),cadence:avg(ys,"c"),distance:md});}
+      const lo=cursor,hi=cursor+(Number(p.duration)||0);cursor=hi;if(hi<=lo)return;
+      const xs=samples.filter(x=>x.t>=lo&&x.t<hi);if(xs.length<2)return;
+      const d=Math.max(0,xs[xs.length-1].d-xs[0].d),dt=Math.max(1,xs[xs.length-1].t-xs[0].t),running=xs.filter(x=>isRunSample(x,p));
+      segments.push({type:p.type,index:i+1,duration:hi-lo,distance:d,pace:d>0?(dt/60)/(d/1000):null,hr:avg(xs,"h"),maxHr:xs.reduce((m,x)=>Math.max(m,x.h),0)||null,cadence:avg(running,"c"),cadenceSamples:running.filter(x=>x.c>0).length,label:p.label,cadenceBasis:"running-only"});
+      for(let m=0;m<hi-lo;m+=60){const a0=lo+m,a1=Math.min(hi,a0+60),ys=samples.filter(x=>x.t>=a0&&x.t<a1);if(ys.length<2)continue;const runYs=ys.filter(x=>isRunSample(x,p)),md=Math.max(0,ys[ys.length-1].d-ys[0].d),mt=Math.max(1,ys[ys.length-1].t-ys[0].t);minutes.push({minute:Math.floor(a0/60)+1,type:p.type,pace:md>0?(mt/60)/(md/1000):null,hr:avg(ys,"h"),cadence:avg(runYs,"c"),cadenceSamples:runYs.filter(x=>x.c>0).length,distance:md});}
     });
-    return segments.length?{segments,minutes,planSource:"local-plan"}:null;
+    return segments.length?{segments,minutes,planSource:"local-plan",cadenceBasis:"running-only"}:null;
   }
-  async function findRunSenseWorkout(act) {
+    async function findRunSenseWorkout(act) {
     const d=new Date(act[0]),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
     const events=await icuGet("athlete/0/events.json?oldest="+day+"&newest="+day+"&category=WORKOUT");
     const candidates=(Array.isArray(events)?events:[]).filter(e=>e&&e.category==="WORKOUT"&&/^RunSense\s*[·-]/i.test(String(e.name||"")));
@@ -2854,7 +2857,7 @@ input[type=password],input[type=text]{margin:0}
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
     const cached = state.sx[id];
     // Cache lama hanya menyimpan pace hasil distance/time; ambil ulang untuk memakai velocity stream.
-    if ((cached && cached.streamVersion >= 7 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 6 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if ((cached && cached.streamVersion>=8 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 6 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
@@ -2863,7 +2866,7 @@ input[type=password],input[type=text]{margin:0}
       const summary = summarizeStream(raw, a, 30);
       const actDay = new Date(a[0]), dayKey = actDay.getFullYear()+"-"+String(actDay.getMonth()+1).padStart(2,"0")+"-"+String(actDay.getDate()).padStart(2,"0");
       const savedPlan = state.workouts && state.workouts[dayKey];
-      let planned = savedPlan && savedPlan.text ? summarizeAgainstPlan(raw, savedPlan.text) : null;
+      let planned = savedPlan && savedPlan.text ? summarizeAgainstPlan(raw, savedPlan.text, savedPlan.segments) : null;
       // Simpan interval aktual yang dihitung Intervals.icu, mengikuti pola RunNow2 (S.icuD[id].iv).
       let actualIntervals = [];
       try {
@@ -2877,11 +2880,11 @@ input[type=password],input[type=text]{margin:0}
       } catch (_) {}
       state.sx[id] = Object.assign({}, summary || { none: 1 }, planned || {}, {
         intervals:actualIntervals, planDate:savedPlan?dayKey:null,
-        streamVersion:7, checkedAt:Date.now()
+        streamVersion:8, checkedAt:Date.now()
       });
     } catch (e) {
       // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
-      if (/HTTP (404|422)/.test(String(e && e.message))) state.sx[id] = { none: 1, streamVersion: 7, checkedAt: Date.now() };
+      if (/HTTP (404|422)/.test(String(e && e.message))) state.sx[id] = { none: 1, streamVersion:8, checkedAt: Date.now() };
     }
     delete sxBusy[id];
     if (state.sx[id]) {
