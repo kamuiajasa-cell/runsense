@@ -2832,7 +2832,10 @@ input[type=password],input[type=text]{margin:0}
     const samples=[];for(let i=0;i<time.length;i++)samples.push({t:+time[i],d:+dist[i],h:hr&&hr.length===time.length&&+hr[i]>40?+hr[i]:0,c:cad&&cad.length===time.length&&+cad[i]>0&&+cad[i]<260?+cad[i]:0,v:vel&&vel.length===time.length?+vel[i]:0});
     const avg=(xs,k)=>{const v=xs.map(x=>x[k]).filter(x=>x>0&&Number.isFinite(x));return v.length?v.reduce((u,x)=>u+x,0)/v.length:null;};
     const isWalk=p=>/walk|jalan|recovery walk|jalan kaki|istirahat|rest/i.test(String(p.label||""))||/walk|jalan|rest/i.test(String(p.type||""));
-    const isRunSample=(x,p)=>!isWalk(p)&&x.c>135;
+    // Klasifikasi memakai rerata kadens dalam jendela 5 detik, bukan satu titik sensor.
+    const cadenceWindows=new Map();
+    samples.forEach(x=>{if(x.c>0){const k=Math.floor(x.t/5);const w=cadenceWindows.get(k)||{sum:0,n:0};w.sum+=x.c;w.n++;cadenceWindows.set(k,w);}});
+    const isRunSample=(x,p)=>{const w=cadenceWindows.get(Math.floor(x.t/5));return !isWalk(p)&&!!w&&w.n>0&&(w.sum/w.n)>135;};
     let cursor=0;const segments=[],minutes=[];
     plan.forEach((p,i)=>{
       const lo=cursor,hi=cursor+(Number(p.duration)||0);cursor=hi;if(hi<=lo)return;
@@ -2857,7 +2860,7 @@ input[type=password],input[type=text]{margin:0}
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
     const cached = state.sx[id];
     // Cache lama hanya menyimpan pace hasil distance/time; ambil ulang untuk memakai velocity stream.
-    if ((cached && cached.streamVersion>=8 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 6 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if ((cached && cached.streamVersion>=11 && cached.chart && cached.splits) || (cached && cached.streamVersion >= 11 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
@@ -2880,11 +2883,11 @@ input[type=password],input[type=text]{margin:0}
       } catch (_) {}
       state.sx[id] = Object.assign({}, summary || { none: 1 }, planned || {}, {
         intervals:actualIntervals, planDate:savedPlan?dayKey:null,
-        streamVersion:10, checkedAt:Date.now()
+        streamVersion:11, checkedAt:Date.now()
       });
     } catch (e) {
       // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
-      if (/HTTP (404|422)/.test(String(e && e.message))) state.sx[id] = { none: 1, streamVersion:10, checkedAt: Date.now() };
+      if (/HTTP (404|422)/.test(String(e && e.message))) state.sx[id] = { none: 1, streamVersion:11, checkedAt: Date.now() };
     }
     delete sxBusy[id];
     if (state.sx[id]) {
@@ -4846,7 +4849,7 @@ input[type=password],input[type=text]{margin:0}
       return `<div class="sa-segment-row"><span><b>${typ} ${i+1}</b><small>${Math.floor(sec/60)}:${String(Math.round(sec%60)).padStart(2,"0")} · ${dist>0?(dist/1000).toFixed(2)+" km":"jarak —"}</small></span><span><b>${pace}</b><small>HR ${q.hr?Math.round(q.hr)+" bpm":"—"} · Kadens ${q.cadenceRunningOnly?(q.cadence?Math.round(q.cadence)+" spm":"—")+" (lari)":(q.cadence?Math.round(q.cadence)+" spm":"—")}</small></span></div>`;
     }).join("");
     const actualIntervalBlock = actualIntervalRows ? `<details class="sa-minute-details"><summary>Interval aktual dari Intervals.icu (${actualIntervals.length} segmen)</summary>${actualIntervalRows}</details>` : "";
-    const segmentBlock = segs.length || actualIntervalRows ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Struktur latihan tersimpan</span><span class="sa-pill">${segs.length?segs.filter(x=>x.type==="work").length:actualIntervals.length} segmen</span></div><div class="sa-sub">Rencana dibaca dari penyimpanan lokal RunSense. Kadens dihitung hanya dari sampel saat berlari (kadens >135 spm); fase jalan/pemulihan berjalan tidak dicampur. Rincian menit memakai stream sensor.</div>${phaseRows}${minuteBlock}${actualIntervalBlock}</div>` : "";
+    const segmentBlock = segs.length || actualIntervalRows ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Struktur latihan tersimpan</span><span class="sa-pill">${segs.length?segs.filter(x=>x.type==="work").length:actualIntervals.length} segmen</span></div><div class="sa-sub">Rencana dibaca dari penyimpanan lokal RunSense. Kadens dihitung hanya dari sampel saat berlari (rerata kadens per jendela 5 detik >135 spm); fase jalan/pemulihan berjalan tidak dicampur. Rincian menit memakai stream sensor.</div>${phaseRows}${minuteBlock}${actualIntervalBlock}</div>` : "";
     return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Pace & detak jantung</span><span class="sa-pill">per jarak</span></div>` + segmentBlock +
       `<div class="sa-read" id="saR-sess">Geser jari di grafik untuk melihat pace dan HR di titik yang sama.</div>` +
       `<div class="sa-chart-label">Pace <span>menit/km · garis lebih tinggi = lebih cepat</span></div>${pf ? `<div class="sa-find">${pf}</div>` : ""}${paceSvg}${hrBlock}` +
