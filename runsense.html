@@ -1961,9 +1961,12 @@ input[type=password],input[type=text]{margin:0}
       } else {
         push(S_int, "g", "Detak rata-rata " + Math.round(hr) + " bpm (~" + Math.round(ratio * 100) + "% LTHR).");
       }
-      if (maxH > hr + 15) {
-        why.push("detak sempat melonjak");
-        push(S_ex, "y", "Detak jantung sempat naik sampai " + Math.round(maxH) + ", mungkin karena tanjakan atau sempat ngebut.");
+      // Lonjakan puncak HR hanya ditandai sebagai sinyal untuk ditinjau pada sesi
+      // easy/long. Pada threshold, VO2max, dan race, HR tinggi memang dapat
+      // menjadi bagian dari stimulus yang direncanakan; jangan otomatis dianggap masalah.
+      if ((det.type === "easy" || det.type === "long") && maxH > hr + 15) {
+        why.push("puncak detak lebih tinggi dari rata-rata");
+        push(S_ex, "y", "Puncak detak mencapai " + Math.round(maxH) + " bpm, lebih tinggi dari rata-rata " + Math.round(hr) + " bpm. Periksa grafik HR untuk melihat apakah kenaikannya hanya sesaat atau bertahan.");
       }
     } else if (hr > 0 && rst > 0 && mx > rst) {
       const hrr = (hr - rst) / (mx - rst);
