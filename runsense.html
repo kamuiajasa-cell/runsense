@@ -2840,7 +2840,8 @@ input[type=password],input[type=text]{margin:0}
     plan.forEach((p,i)=>{
       const lo=cursor,hi=cursor+(Number(p.duration)||0);cursor=hi;if(hi<=lo)return;
       const xs=samples.filter(x=>x.t>=lo&&x.t<hi);if(xs.length<2)return;
-      const d=Math.max(0,xs[xs.length-1].d-xs[0].d),dt=Math.max(1,xs[xs.length-1].t-xs[0].t),running=xs.filter(x=>isRunSample(x,p));\n      cadenceWindows.forEach((w,k)=>{const t=k*5;if(t<lo||t>=hi||!w.n)return;const mean=w.sum/w.n,run=!isWalk(p)&&mean>135;cadenceChecks.push({second:t,phase:p.type,label:p.label||"",cadence:mean,samples:w.n,status:isWalk(p)?"fase jalan/recovery":run?"lari":"jalan/di bawah 135"});});
+      const d=Math.max(0,xs[xs.length-1].d-xs[0].d),dt=Math.max(1,xs[xs.length-1].t-xs[0].t),running=xs.filter(x=>isRunSample(x,p));
+      cadenceWindows.forEach((w,k)=>{const t=k*5;if(t<lo||t>=hi||!w.n)return;const mean=w.sum/w.n,run=!isWalk(p)&&mean>135;cadenceChecks.push({second:t,phase:p.type,label:p.label||"",cadence:mean,samples:w.n,status:isWalk(p)?"fase jalan/recovery":run?"lari":"jalan/di bawah 135"});});
       segments.push({type:p.type,index:i+1,duration:hi-lo,distance:d,pace:d>0?(dt/60)/(d/1000):null,hr:avg(xs,"h"),maxHr:xs.reduce((m,x)=>Math.max(m,x.h),0)||null,cadence:avg(running,"c"),cadenceSamples:running.filter(x=>x.c>0).length,label:p.label,cadenceBasis:"running-only"});
       for(let m=0;m<hi-lo;m+=60){const a0=lo+m,a1=Math.min(hi,a0+60),ys=samples.filter(x=>x.t>=a0&&x.t<a1);if(ys.length<2)continue;const runYs=ys.filter(x=>isRunSample(x,p)),md=Math.max(0,ys[ys.length-1].d-ys[0].d),mt=Math.max(1,ys[ys.length-1].t-ys[0].t);minutes.push({minute:Math.floor(a0/60)+1,type:p.type,pace:md>0?(mt/60)/(md/1000):null,hr:avg(ys,"h"),cadence:avg(runYs,"c"),cadenceSamples:runYs.filter(x=>x.c>0).length,distance:md});}
     });
