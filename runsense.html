@@ -2845,6 +2845,7 @@ input[type=password],input[type=text]{margin:0}
     const ordered=[...buckets.values()].filter(b=>b.n>0).sort((a,b)=>a.second-b.second);
     if(!ordered.length)return null;
     const checks=ordered.map(b=>({second:b.second,phase:(b.sum/b.n)>135?"run":"walk",cadence:b.sum/b.n,samples:b.n,status:(b.sum/b.n)>135?"lari":"jalan/≤135"}));
+    const cadenceDiagnostics={validSamples:ordered.reduce((n,b)=>n+b.n,0),windows:ordered.length,runWindows:ordered.filter(b=>b.sum/b.n>135).length,walkWindows:ordered.filter(b=>b.sum/b.n<=135).length,min:Math.min(...ordered.map(b=>b.sum/b.n)),max:Math.max(...ordered.map(b=>b.sum/b.n)),mean:ordered.reduce((n,b)=>n+b.sum,0)/ordered.reduce((n,b)=>n+b.n,0)};
     const groups=[];
     for(const b of ordered){
       const type=(b.sum/b.n)>135?"run":"walk",last=groups[groups.length-1];
@@ -2861,7 +2862,7 @@ input[type=password],input[type=text]{margin:0}
         cadenceBasis:"running-only"};
     });
     const runs=segments.filter(x=>x.type==="run"),runN=runs.reduce((n,x)=>n+x.cadenceSamples,0);
-    return {segments,cadenceChecks:checks,cadenceBasis:"running-only",planSource:"cadence-5s",
+    return {segments,cadenceChecks:checks,cadenceDiagnostics,cadenceBasis:"running-only",planSource:"cadence-5s",
       runOnly:{min:runs.reduce((n,x)=>n+x.duration,0)/60,km:runs.reduce((n,x)=>n+x.distance,0)/1000,
         cadence:runN?Math.round(runs.reduce((n,x)=>n+(x.cadence||0)*x.cadenceSamples,0)/runN):null}};
   }
@@ -2888,7 +2889,9 @@ input[type=password],input[type=text]{margin:0}
       segments.push({type:p.type,index:i+1,duration:hi-lo,distance:d,pace:d>0?(dt/60)/(d/1000):null,hr:avg(xs,"h"),maxHr:xs.reduce((m,x)=>Math.max(m,x.h),0)||null,cadence:avg(running,"c"),cadenceSamples:running.filter(x=>x.c>0).length,label:p.label,cadenceBasis:"running-only"});
       for(let m=0;m<hi-lo;m+=60){const a0=lo+m,a1=Math.min(hi,a0+60),ys=samples.filter(x=>x.t>=a0&&x.t<a1);if(ys.length<2)continue;const runYs=ys.filter(x=>isRunSample(x,p)),md=Math.max(0,ys[ys.length-1].d-ys[0].d),mt=Math.max(1,ys[ys.length-1].t-ys[0].t);minutes.push({minute:Math.floor(a0/60)+1,type:p.type,pace:md>0?(mt/60)/(md/1000):null,hr:avg(ys,"h"),cadence:avg(runYs,"c"),cadenceSamples:runYs.filter(x=>x.c>0).length,distance:md});}
     });
-    return segments.length?{segments,minutes,cadenceChecks,planSource:"local-plan",cadenceBasis:"running-only"}:null;
+    const cadenceValues=samples.map(x=>x.c).filter(x=>x>0&&Number.isFinite(x));
+    const cadenceDiagnostics={validSamples:cadenceValues.length,windows:cadenceWindows.size,runWindows:[...cadenceWindows.values()].filter(w=>w.sum/w.n>135).length,walkWindows:[...cadenceWindows.values()].filter(w=>w.sum/w.n<=135).length,min:cadenceValues.length?Math.min(...cadenceValues):null,max:cadenceValues.length?Math.max(...cadenceValues):null,mean:cadenceValues.length?cadenceValues.reduce((a,b)=>a+b,0)/cadenceValues.length:null};
+    return segments.length?{segments,minutes,cadenceChecks,cadenceDiagnostics,planSource:"local-plan",cadenceBasis:"running-only"}:null;
   }
     async function findRunSenseWorkout(act) {
     const d=new Date(act[0]),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -5910,7 +5913,9 @@ input[type=password],input[type=text]{margin:0}
     }).join("");
     const checks = sx && Array.isArray(sx.cadenceChecks) ? sx.cadenceChecks : [];
     const checkRows = checks.map(q => `<div class="sa-minute-row" style="grid-template-columns:.8fr 1fr 1fr 1fr"><b>${Math.floor(q.second/60)}:${String(q.second%60).padStart(2,"0")}</b><span>${phaseName(q.phase)}</span><span>${Math.round(q.cadence)} spm</span><span>${q.status}</span></div>`).join("");
-    const analysis = segRows ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Kadens per segmen</span></div><div class="sa-sub">Pemeriksaan dilakukan per jendela 5 detik. Rerata di atas 135 spm dihitung sebagai lari; di bawah atau sama dengan 135 spm sebagai jalan. Fase recovery/jalan tetap dikecualikan dari kadens lari.</div>${segRows}${checkRows ? `<details class="sa-minute-details"><summary>Pemeriksaan tiap 5 detik (${checks.length} jendela)</summary><div class="sa-minute-head" style="grid-template-columns:.8fr 1fr 1fr 1fr"><span>Waktu</span><span>Fase</span><span>Kadens</span><span>Klasifikasi</span></div>${checkRows}</details>` : ""}</div>` : `<div class="sa-note">Rincian per segmen belum tersedia. Sinkronkan aktivitas ke Intervals.icu dan buka ulang detail aktivitas agar stream sensor dan rencana segmennya diproses.</div>`;
+    const cd=sx&&sx.cadenceDiagnostics?sx.cadenceDiagnostics:null;
+    const diagnosticLine=cd?`<div class="sa-sub">Data sensor: ${cd.validSamples} sampel valid · rentang ${cd.min==null?"—":Math.round(cd.min)+"–"+Math.round(cd.max)+" spm"} · rerata ${cd.mean==null?"—":Math.round(cd.mean)+" spm"}. Jendela lari ${cd.runWindows}, jalan ${cd.walkWindows}.</div>`:"";
+    const analysis = segRows ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Kadens per segmen</span></div><div class="sa-sub">Pemeriksaan dilakukan per jendela 5 detik. Rerata di atas 135 spm dihitung sebagai lari; di bawah atau sama dengan 135 spm sebagai jalan. Fase recovery/jalan tetap dikecualikan dari kadens lari.</div>${diagnosticLine}${segRows}${checkRows ? `<details class="sa-minute-details"><summary>Pemeriksaan tiap 5 detik (${checks.length} jendela)</summary><div class="sa-minute-head" style="grid-template-columns:.8fr 1fr 1fr 1fr"><span>Waktu</span><span>Fase</span><span>Kadens</span><span>Klasifikasi</span></div>${checkRows}</details>` : ""}</div>` : `<div class="sa-note">Rincian per segmen belum tersedia. Sinkronkan aktivitas ke Intervals.icu dan buka ulang detail aktivitas agar stream sensor dan rencana segmennya diproses.</div>`;
     return `<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Kadens & langkah</span></div><div class="sa-metrics"><div class="sa-metric"><b>${runCadence == null ? "—" : runCadence}</b><small>Kadens lari saja (spm)</small></div><div class="sa-metric"><b>${st ? m2(st) : "—"}</b><small>Panjang langkah</small></div></div>` +
       analysis + n.map((t) => `<div class="sa-note">${t}</div>`).join("") + `<div class="sa-sub">Konteks tinggi badan diambil otomatis dari Pengaturan Profil.</div></div></div>`;
   }
