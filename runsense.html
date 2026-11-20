@@ -2849,7 +2849,7 @@ input[type=password],input[type=text]{margin:0}
       else groups.push({type,start:b.second,end:b.second,buckets:[b]});
     }
     const segments=groups.map((g,i)=>{
-      const bs=g.buckets,sec=Math.min(5,g.end-g.start+5),samples=bs.reduce((n,b)=>n+b.n,0);
+      const bs=g.buckets,sec=g.end-g.start+5,samples=bs.reduce((n,b)=>n+b.n,0);
       const vals=bs.flatMap(b=>b.ds),hs=bs.flatMap(b=>b.hs),cs=bs.flatMap(b=>b.n?[b.sum/b.n]:[]);
       const distance=vals.length>1?Math.max(0,vals[vals.length-1]-vals[0]):0;
       const cadence=g.type==="run"&&cs.length?cs.reduce((a,b)=>a+b,0)/cs.length:null;
