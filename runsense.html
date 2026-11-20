@@ -4835,7 +4835,15 @@ input[type=password],input[type=text]{margin:0}
       return `<div class="sa-minute-row"><b>Menit ${q.minute}</b><span>${phase}</span><span>${pace}</span><span>${hr}</span><span>${cad}</span></div>`;
     }).join("");
     const minuteBlock = minuteRows ? `<details class="sa-minute-details"><summary>Rincian aktual per menit (${sx.minutes.length} menit)</summary><div class="sa-minute-head"><span>Menit</span><span>Fase</span><span>Pace</span><span>HR</span><span>Kadens</span></div>${minuteRows}</details>` : "";
-    const segmentBlock = segs.length ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Struktur latihan dari menu RunSense</span><span class="sa-pill">${segs.filter(x=>x.type==="work").length} repetisi</span></div><div class="sa-sub">Target fase dibaca dari rencana segmen yang RunSense simpan saat workout dibuat. Setelah lari, data aktual dicocokkan per fase dan per menit; cadence bukan rata-rata seluruh aktivitas.</div>${phaseRows}${minuteBlock}</div>` : "";
+    const actualIntervals = Array.isArray(sx.intervals) ? sx.intervals : [];
+    const actualIntervalRows = actualIntervals.map((q,i)=>{
+      const typ=/RECOVERY|REST/i.test(String(q.type||""))?"Recovery":/WARM/i.test(String(q.type||""))?"Pemanasan":/COOL/i.test(String(q.type||""))?"Pendinginan":"Kerja";
+      const sec=Number(q.duration)||0, dist=Number(q.distance)||0, vel=Number(q.velocity)||0;
+      const pace=vel>0?mp(1000/vel/60)+"/km":(dist>0&&sec>0?mp(sec/60/(dist/1000))+"/km":"—");
+      return `<div class="sa-segment-row"><span><b>${typ} ${i+1}</b><small>${Math.floor(sec/60)}:${String(Math.round(sec%60)).padStart(2,"0")} · ${dist>0?(dist/1000).toFixed(2)+" km":"jarak —"}</small></span><span><b>${pace}</b><small>HR ${q.hr?Math.round(q.hr)+" bpm":"—"} · Kadens ${q.cadence?Math.round(q.cadence)+" spm":"—"}</small></span></div>`;
+    }).join("");
+    const actualIntervalBlock = actualIntervalRows ? `<details class="sa-minute-details"><summary>Interval aktual dari Intervals.icu (${actualIntervals.length} segmen)</summary>${actualIntervalRows}</details>` : "";
+    const segmentBlock = segs.length || actualIntervalRows ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Struktur latihan tersimpan</span><span class="sa-pill">${segs.length?segs.filter(x=>x.type==="work").length:actualIntervals.length} segmen</span></div><div class="sa-sub">Rencana dibaca dari penyimpanan lokal RunSense. Hasil aktual juga disimpan per segmen dari Intervals.icu; rincian menit memakai stream sensor.</div>${phaseRows}${minuteBlock}${actualIntervalBlock}</div>` : "";
     return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Pace & detak jantung</span><span class="sa-pill">per jarak</span></div>` + segmentBlock +
       `<div class="sa-read" id="saR-sess">Geser jari di grafik untuk melihat pace dan HR di titik yang sama.</div>` +
       `<div class="sa-chart-label">Pace <span>menit/km · garis lebih tinggi = lebih cepat</span></div>${pf ? `<div class="sa-find">${pf}</div>` : ""}${paceSvg}${hrBlock}` +
