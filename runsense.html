@@ -5851,8 +5851,11 @@ input[type=password],input[type=text]{margin:0}
   const m2 = (v) => (Math.round(v * 100) / 100).toString().replace(".", ",") + " m";
   const inpS = "width:31%;padding:9px 10px;border-radius:10px;border:1px solid var(--card-border);background:var(--el);color:var(--tx);font:inherit";
   function cadHTML(a) {
-    const c = cadOf(a); if (a[1] !== "run" || !c) return "";
+    const c = cadOf(a); if (a[1] !== "run") return "";
     const st = strideOf(a), ht = +state.height || 0, n = [], sx = a[9] && state.sx ? state.sx[String(a[9])] : null;
+    const runSegs = sx && Array.isArray(sx.segments) ? sx.segments.filter(q => Number(q.cadence) > 0 && Number(q.cadenceSamples) > 0) : [];
+    const runN = runSegs.reduce((v, q) => v + Number(q.cadenceSamples || 0), 0);
+    const runCadence = runN ? Math.round(runSegs.reduce((v, q) => v + Number(q.cadence) * Number(q.cadenceSamples || 0), 0) / runN) : null;
     if (ht) n.push("TB " + ht + " cm menjadi konteks ukuran tubuh saat membaca kadens dan panjang langkah. Tidak ada angka spm atau panjang langkah ideal yang otomatis ditentukan oleh tinggi badan.");
     else n.push("TB belum diisi. Kamu bisa mengisinya satu kali di Pengaturan agar menjadi konteks tambahan saat membaca kadens dan panjang langkah.");
     n.push("Nilai kadens bersama pace, kenyamanan, dan observasi teknik. Jangan menyimpulkan overstride hanya dari kadens atau panjang langkah; yang perlu diperhatikan adalah apakah kaki mendarat terlalu jauh di depan tubuh.");
