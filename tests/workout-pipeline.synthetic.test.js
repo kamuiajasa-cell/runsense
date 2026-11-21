@@ -28,7 +28,8 @@ const buildIntervalsWorkoutEvent = new Function(extractFunction("buildIntervalsW
 const hasStructuredWorkout = new Function(extractFunction("hasStructuredWorkout") + "; return hasStructuredWorkout;")();
 const mergeActsSource = extractFunction("mergeActs");
 const ZONE_PCT = { 1: [50, 70], 2: [70, 80], 3: [80, 87], 4: [87, 93], 5: [93, 100] };
-const toCourse = new Function("ZONE_PCT", extractFunction("toCourse") + "; return toCourse;")(ZONE_PCT);
+// toCourse calls buildWorkout, which in turn uses the production text parser.
+const toCourse = new Function("ZONE_PCT", extractFunction("parsePlannedWorkout") + ";" + extractFunction("buildWorkout") + ";" + extractFunction("toCourse") + "; return toCourse;")(ZONE_PCT);
 
 const results = [];
 function test(name, fn) {
