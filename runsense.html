@@ -479,6 +479,7 @@ input[type="number"]:focus{border-color:var(--primary)}
 .plan-row select,.plan-row input,#raceDate{background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:10px;color:var(--ink);font-size:14px;font-family:inherit;outline:none}
 .plan-row select{flex:1}
 .plan-row input{width:72px}
+.plan-strength{font-size:10.5px;color:var(--muted);margin:-3px 0 7px 42px;line-height:1.25}.plan-strength:has(+.plan-row){display:none}
 .race-line{display:flex;justify-content:space-between;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;padding:10px 0;border-bottom:1.5px solid var(--line);margin-bottom:6px}
 .race-line button{background:none;border:0;color:var(--accent);font:inherit;font-weight:700;cursor:pointer;padding:0}
 .watch-status{font-size:13px;margin:8px 0;min-height:18px;color:var(--muted)}
@@ -3307,9 +3308,11 @@ input[type=password],input[type=text]{margin:0}
     if (!g) return;
     g.innerHTML = PLAN_DAYS.map(([d, n]) => {
       const p = state.plan[d] || {};
+      const strength = strDayEntry(d);
+      const strengthText = strength ? (strength.s === "done" ? "Strength ✓ " : "Strength · skip ") + strMenuName(strength.m) : "Strength —";
       return `<div class="plan-row"><b>${n}</b><select onchange="setPlan(${d},'t',this.value)">` +
         PLAN_TY.map(([v, l]) => `<option value="${v}"${(p.t || "auto") === v ? " selected" : ""}>${l}</option>`).join("") +
-        `</select><input type="number" min="0" max="60" step="1" inputmode="numeric" placeholder="km" value="${p.km || ""}" onchange="setPlan(${d},'km',this.value)" /></div>`;
+        `</select><input type="number" min="0" max="60" step="1" inputmode="numeric" placeholder="km" value="${p.km || ""}" onchange="setPlan(${d},'km',this.value)" /></div><div class="plan-strength">${strengthText}</div>`;
     }).join("");
     const rd = $("#raceDate");
     if (rd) rd.value = state.race || "";
@@ -3621,6 +3624,9 @@ input[type=password],input[type=text]{margin:0}
     const heavyLegs=recentFeel.filter(x=>x.legs>=2).length;
     const todayFeel=FEEL&&FEEL.today?FEEL.today[ymd()]:null;
     const todayLegsHeavy=!!(todayFeel&&todayFeel.savedDate===ymd()&&todayFeel.legs>=2);
+    const strength = strengthLoad48h();
+    // Tahap awal strength tidak memengaruhi coach; baru dosis kaki menengah-tinggi dalam 48 jam diberi guardrail ringan.
+    const strengthCaution = strength.caution;
     // Tanggapan spesifik sesi quality: RPE/kaki menentukan apakah dosis boleh naik.
     const qualitySessions=acts.filter(a=>["thr","vo2","race"].includes(detectType(a).type)).sort((a,b)=>b[0]-a[0]).slice(0,4);
     const qualityFeedback=qualitySessions.map(a=>({a,fb:(FEEL.sessions||{})[a[0]]||null}));
@@ -3641,7 +3647,8 @@ input[type=password],input[type=text]{margin:0}
     if(hardRpe>=2){volumeFactor=Math.min(volumeFactor,.85);notes.push("2+ sesi terakhir terasa berat (RPE ≥7)");}
     if(heavyLegs>=2||todayLegsHeavy){volumeFactor=Math.min(volumeFactor,.85);notes.push("otot/kaki melaporkan beban berat");}
     if(qualityCaution){volumeFactor=Math.min(volumeFactor,.85);notes.push("respons sesi quality terakhir berat; dosis berikutnya diturunkan");}
-    return {acute,prevWeekly,ratio,hard7:hard.length,hardRpe,heavyLegs,avgRpe,qualityCaution,qualityProgressionLevel,successfulQuality,volumeFactor,qualityLock:hard.length>=2||hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||(ratio!=null&&ratio>1.5),recoveryBias:hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||(avgRpe!=null&&avgRpe>=7&&recentFeel.length>=2),notes};
+    if(strengthCaution){volumeFactor=Math.min(volumeFactor,.9);notes.push("dosis strength kaki menengah–tinggi dalam 48 jam");}
+    return {acute,prevWeekly,ratio,hard7:hard.length,hardRpe,heavyLegs,avgRpe,qualityCaution,qualityProgressionLevel,successfulQuality,volumeFactor,strengthLoad48h:strength.legLoad,strengthCaution,qualityLock:hard.length>=2||hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||strengthCaution||(ratio!=null&&ratio>1.5),recoveryBias:hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||(avgRpe!=null&&avgRpe>=7&&recentFeel.length>=2),notes};
   }
   function applyFeelDecision(r){
     if(!r||r.status==='done'||r.status==='rest')return r;
@@ -6035,7 +6042,7 @@ input[type=password],input[type=text]{margin:0}
   function strMark(s) {
     const m = strMenus().find((x) => x.id === strSel); if (!m) return;
     const t = ymd(); STR.prev = JSON.stringify({ log: STR.log, lv: STR.lv, st: STR.st, sk: STR.sk }); STR.up = null;
-    STR.log = STR.log.filter((e) => e.d !== t); STR.log.push({ d: t, m: m.id, s });
+    STR.log = STR.log.filter((e) => e.d !== t); STR.log.push({ d: t, m: m.id, s, lv: m.mv.map((_, i) => STR.lv[m.id + ":" + i] || 0) });
     if (s === "done") {
       STR.sk[m.id] = 0; STR.st[m.id] = (STR.st[m.id] || 0) + 1;
       const ph = racePhase();
@@ -6080,6 +6087,30 @@ input[type=password],input[type=text]{margin:0}
     if (!STR.log.length) return "";
     const d = STR.log.filter((e) => e.s === "done" && e.d >= yAgo(28)).length, s = STR.log.filter((e) => e.s === "skip" && e.d >= yAgo(28)).length;
     return '<div class="prg-row"><span>Kekuatan, 4 minggu</span><b>' + d + " sudah · " + s + " skip</b></div>";
+  }
+  // Catatan strength kalender: tanggal dihitung relatif ke minggu Senin–Minggu yang sedang ditampilkan.
+  function strMenuName(id) { const m = STR_MENU.find(x => x.id === id); return m ? m.n : "Strength"; }
+  function strDayEntry(dow) {
+    const now = new Date(), monday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7) + ((dow + 6) % 7));
+    const key = monday.getFullYear()+"-"+String(monday.getMonth()+1).padStart(2,"0")+"-"+String(monday.getDate()).padStart(2,"0");
+    return STR.log.filter(e => e.d === key).slice(-1)[0] || null;
+  }
+  // Beban strength adalah heuristik paparan, bukan skor cedera. Tahap awal sengaja nyaris netral.
+  function strengthLoad48h() {
+    const now = Date.now(), weights = { hip:1, calf:1.2, leg:1.25, core:0.1, drill:0.55 };
+    let legLoad = 0, total = 0, sessions = [];
+    STR.log.filter(e => e.s === "done").forEach(e => {
+      const ms = new Date(e.d+"T12:00:00").getTime(), age = now-ms;
+      if (!Number.isFinite(ms) || age < -12*3600000 || age > 48*3600000) return;
+      const m = STR_MENU.find(x => x.id === e.m); if (!m) return;
+      const levels = Array.isArray(e.lv) ? e.lv : m.mv.map((_,i) => STR.lv[e.m+":"+i] || 0);
+      const level = levels.length ? levels.reduce((a,b)=>a+(+b||0),0)/levels.length : 0;
+      const dose = (weights[e.m] || 0.5) * (1 + level*0.45);
+      total += dose; if (["hip","calf","leg","drill"].includes(e.m)) legLoad += dose;
+      sessions.push({m:e.m,dose,age});
+    });
+    return { legLoad, total, sessions, caution: legLoad >= 3.4 };
   }
   /* Tes bicara: 2 dari 3 easy terakhir terputus → rentang easy dilonggarkan 5% */
   function ttK() {
