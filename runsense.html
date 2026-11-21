@@ -3624,7 +3624,8 @@ input[type=password],input[type=text]{margin:0}
     const heavyLegs=recentFeel.filter(x=>x.legs>=2).length;
     const todayFeel=FEEL&&FEEL.today?FEEL.today[ymd()]:null;
     const todayLegsHeavy=!!(todayFeel&&todayFeel.savedDate===ymd()&&todayFeel.legs>=2);
-    const strength = strengthLoad48h();
+    // Guard typeof keeps isolated synthetic tests of adaptiveContext() independent of the UI strength module.
+    const strength = typeof strengthLoad48h === "function" ? strengthLoad48h() : { legLoad: 0, caution: false };
     // Tahap awal strength tidak memengaruhi coach; baru dosis kaki menengah-tinggi dalam 48 jam diberi guardrail ringan.
     const strengthCaution = strength.caution;
     // Tanggapan spesifik sesi quality: RPE/kaki menentukan apakah dosis boleh naik.
