@@ -22,7 +22,8 @@ function extractFunction(name) {
   throw new Error("unclosed production function " + name);
 }
 
-const buildWorkout = new Function(extractFunction("buildWorkout") + "; return buildWorkout;")();
+// buildWorkout uses the production text parser; include that dependency in this isolated harness.
+const buildWorkout = new Function(extractFunction("parsePlannedWorkout") + ";" + extractFunction("buildWorkout") + "; return buildWorkout;")();
 const buildIntervalsWorkoutEvent = new Function(extractFunction("buildIntervalsWorkoutEvent") + "; return buildIntervalsWorkoutEvent;")();
 const hasStructuredWorkout = new Function(extractFunction("hasStructuredWorkout") + "; return hasStructuredWorkout;")();
 const mergeActsSource = extractFunction("mergeActs");
