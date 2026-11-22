@@ -6525,7 +6525,7 @@ input[type=password],input[type=text]{margin:0}
     const r = curRec || state.recommendation || {}, now = Date.now();
     const dur = Math.min(150, parseInt(r.duration) || 40);
     const c = clAvg(o, now, now + dur * 60e3);
-    if (!c) { el.innerHTML = `<b>Cuaca</b> · data belum tersedia. Coach memakai logika latihan biasa.`; return; }
+    if (!c) { el.innerHTML = `<div style="padding:18px;border:1px solid var(--border,#e5e7eb);border-radius:22px;background:var(--card,#fff)"><b>Cuaca</b><p style="margin:8px 0 0;color:var(--light-grey)">Data belum tersedia. Coach memakai logika latihan biasa.</p></div>`; return; }
     const st = clStat(c), P = clProfile(), cls = clCls(c), pc = P.cmp[cls];
     const off = r.rested || r.status === "rest" || r.status === "done";
     const hard = r.tag === "QUALITY", lng = r.tag === "LONG";
@@ -6540,26 +6540,49 @@ input[type=password],input[type=text]{margin:0}
     if (!off && st.k !== "ok") tx += pc ? ` Di kondisi ${cls}, HR easy-mu biasanya sekitar ${pc.d > 0 ? "+" : ""}${pc.d} bpm dibanding saat sejuk (pace sebanding, ${pc.n} sesi, ${pc.conf}).` : " Data pribadi belum cukup, jadi panduan memakai effort dan HR, bukan angka pace.";
     if (!off && st.k !== "ok") tx += " Berhenti dan cari pertolongan bila pusing, bingung, atau lemas berat.";
     const sl = off ? [] : clSlots(o, dur, c), stale = now - o.t > 45 * 60e3;
-    el.innerHTML = `<div class="label" style="margin-bottom:6px">Kalau lari sekarang · ${cH(now)}</div>` +
-      `<p style="font-size:14px;margin-bottom:4px"><b style="color:var(--${st.k === "ok" ? "primary" : st.k === "wn" ? "yellow" : "red"})">${st.lb}</b> · suhu ${Math.round(c.t != null ? c.t : c.at)}°C${c.t != null && c.at != null ? " (terasa " + Math.round(c.at) + "°C)" : ""}, lembap ${Math.round(c.rh)}%${c.p >= 0.3 ? ", hujan" : ""}</p>` +
-      `<p style="font-size:13px;color:var(--light-grey)">${tx}</p>` +
-      `<p style="font-size:11.5px;color:var(--grey);margin-top:6px">${clPersTxt()}</p>` +
-      (sl.length ? `<div class="label" style="margin:10px 0 4px">${sl[0].better || st.k !== "ok" ? "Jam lari yang lebih nyaman" : "Jam lari terbaik (sekarang pun sudah oke)"}</div>` + sl.map((s) => `<p style="font-size:13px">• ${s.txt}</p>`).join("") : "") +
-      `<p style="font-size:11px;color:var(--grey);margin-top:8px">Estimasi model ${o.src}, bukan pengukuran di tubuhmu${stale ? " · cache " + cH(o.t) : ""} · lokasi ${CL.loc.name || (CL.loc.manual ? "manual" : "terakhir")} · <a href="#" onclick="clLoc();return false" style="color:var(--primary)">ganti</a></p>`;
+    const temp = Math.round(c.t != null ? c.t : c.at);
+    const feels = c.at != null ? Math.round(c.at) : null;
+    const weatherLabel = c.code >= 95 ? "BADAI / PETIR" : c.p >= 2 ? "HUJAN" : c.p >= 0.3 ? "GERIMIS" : cls.toUpperCase();
+    const statusColor = st.k === "ok" ? "var(--primary,#249447)" : st.k === "wn" ? "var(--yellow,#c58a16)" : "var(--red,#d94848)";
+    const wind = c.w != null ? Math.round(c.w * 10) / 10 : null;
+    el.innerHTML =
+      `<section style="padding:20px 18px 16px;border:1px solid var(--border,#e5e7eb);border-radius:24px;background:var(--card,#fff);box-shadow:0 1px 2px rgba(15,23,42,.04);color:var(--text,inherit)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px">
+          <b style="font-size:14px;letter-spacing:1.1px;color:var(--primary,#249447)">CUACA &amp; KONTEKS LARI</b>
+          <span style="font-size:12px;font-weight:750;letter-spacing:.5px;color:${statusColor}">${weatherLabel}</span>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:5px;line-height:1;margin-bottom:12px">
+          <strong style="font-size:clamp(38px,10vw,50px);font-weight:800;letter-spacing:-1.8px">${temp}</strong>
+          <strong style="font-size:25px;font-weight:700;padding-bottom:4px">°C</strong>
+        </div>
+        <div style="font-size:14px;line-height:1.65;color:var(--light-grey,#667085);margin-bottom:17px">
+          ${feels != null ? `Terasa ${feels}°C` : "Suhu saat ini"}${c.rh != null ? ` · RH ${Math.round(c.rh)}%` : ""}${wind != null ? ` · angin ${wind} km/j` : ""}${c.p >= 0.1 ? ` · hujan ${Math.round(c.p * 10) / 10} mm` : ""}
+        </div>
+        <div style="font-size:12px;color:var(--grey,#8490a2);margin-bottom:14px">${o.src || "Open-Meteo"} · lokasi perangkat · ${cH(now)}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--border,#e5e7eb);padding-top:13px">
+          <span style="font-size:12px;color:var(--light-grey,#667085);line-height:1.45;flex:1">${st.lb}. ${tx}</span>
+          <button type="button" onclick="climRefresh()" style="border:0;background:transparent;color:var(--primary,#249447);font:inherit;font-weight:700;font-size:14px;white-space:nowrap;padding:8px 0;cursor:pointer">Perbarui cuaca</button>
+        </div>
+        <div style="font-size:11px;color:var(--grey,#8490a2);margin-top:13px;line-height:1.5">
+          Estimasi Open-Meteo, bukan pengukuran di tubuhmu${stale ? " · cache " + cH(o.t) : ""} · lokasi ${CL.loc.name || (CL.loc.manual ? "manual" : "perangkat")} · <a href="#" onclick="clLoc();return false" style="color:var(--primary)">ubah lokasi</a>
+        </div>
+      </section>` +
+      (sl.length ? `<div style="padding:12px 4px 2px"><div class="label" style="margin:0 0 6px">${sl[0].better || st.k !== "ok" ? "Jam lari yang lebih nyaman" : "Jam lari terbaik (sekarang pun sudah oke)"}</div>` + sl.map((x) => `<p style="font-size:13px;margin:5px 0">• ${x.txt}</p>`).join("") + `</div>` : "") +
+      `<div style="font-size:11.5px;color:var(--grey,#8490a2);padding:7px 4px 0">${clPersTxt()}</div>`;
   }
   climReady = true;
   try { if (state.athlete && $("#mainCard")) climHome(); } catch (_) {}
   function climHome() {
     const mc = $("#mainCard"); if (!mc) return;
     let el = $("#climCard");
-    if (!el) { el = document.createElement("div"); el.id = "climCard"; el.className = "insight"; el.style.margin = "12px 0"; mc.insertAdjacentElement("afterend", el); }
+    if (!el) { el = document.createElement("div"); el.id = "climCard"; el.style.margin = "12px 0"; mc.insertAdjacentElement("afterend", el); }
     if (state.apiKey === "demo") { el.style.display = "none"; return; }
     const go = async () => {
       clMatch();
-      if (!CL.loc) { el.style.display = ""; el.innerHTML = `<b>Cuaca</b> · belum aktif, coach memakai logika latihan biasa. <a href="#" onclick="clLoc();return false" style="color:var(--primary)">Pilih lokasi</a>`; return; }
+      if (!CL.loc) { el.style.display = ""; el.innerHTML = `<div style="padding:18px;border:1px solid var(--border,#e5e7eb);border-radius:22px;background:var(--card,#fff)"><b>Cuaca</b> · belum aktif, coach memakai logika latihan biasa. <a href="#" onclick="clLoc();return false" style="color:var(--primary)">Pilih lokasi</a></div>`; return; }
       const o = await wxGet(CL.loc.lat, CL.loc.lon, "fc");
       el.style.display = "";
-      if (!o) el.innerHTML = `<b>Cuaca</b> · gagal dimuat dan belum ada cache. Penyesuaian cuaca belum tersedia.`; else climPaint(el, o);
+      if (!o) el.innerHTML = `<div style="padding:18px;border:1px solid var(--border,#e5e7eb);border-radius:22px;background:var(--card,#fff)"><b>Cuaca</b> · gagal dimuat dan belum ada cache. Penyesuaian cuaca belum tersedia. <button type="button" onclick="climRefresh()">Coba lagi</button></div>`; else climPaint(el, o);
       clMatch();
     };
     if (!CL.loc && !clGeo && navigator.geolocation) {
@@ -6567,6 +6590,15 @@ input[type=password],input[type=text]{margin:0}
       navigator.geolocation.getCurrentPosition((p) => { CL.loc = { lat: +p.coords.latitude.toFixed(2), lon: +p.coords.longitude.toFixed(2), t: Date.now() }; clSave(); go(); }, () => go(), { timeout: 6000, maximumAge: 3600e3 });
     } else go();
   }
+  async function climRefresh() {
+    if (!CL.loc) { climHome(); return; }
+    const k = "fc" + CL.loc.lat.toFixed(1) + "," + CL.loc.lon.toFixed(1);
+    delete CL.wx[k]; clSave();
+    const el = $("#climCard");
+    if (el) el.innerHTML = '<div style="padding:16px;color:var(--light-grey)">Memperbarui cuaca…</div>';
+    climHome();
+  }
+  window.climRefresh = climRefresh;
   async function clLoc() {
     const n = prompt("Nama kota untuk cuaca (mis. Jakarta):"); if (!n) return;
     try {
