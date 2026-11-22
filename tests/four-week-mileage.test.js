@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const html = fs.readFileSync(path.join(__dirname, "..", "runsense.html"), "utf8");
-const start = html.indexOf("  function fourWeekMileageBaseline(){");
+const start = html.indexOf("  function fourWeekMileageBaseline() {");
 assert.ok(start >= 0, "fourWeekMileageBaseline must exist");
 const open = html.indexOf("{", start); let depth = 0, end = -1;
 for(let i=open;i<html.length;i++){if(html[i]==="{")depth++;else if(html[i]==="}"&&--depth===0){end=i+1;break;}}
