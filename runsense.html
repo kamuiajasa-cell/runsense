@@ -3719,7 +3719,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const qualityProgressionLevel=Math.min(3,Math.floor(successfulQuality/2));
     let volumeFactor=1,notes=[];
     // Kenaikan menit mingguan hanya dipotong oleh wkAdjust(); jangan dihitung dua kali.
-    if(ratio!=null&&ratio>1.5)notes.push("menit lari 7 hari >150% rerata 3 minggu");
+    if(ratio!=null&&ratio>1.5)notes.push("menit lari 7 hari >150% rerata 4 minggu");
     else if(ratio!=null&&ratio>1.3)notes.push("volume mingguan meningkat cepat");
     else if(ratio!=null&&ratio>=1.10)notes.push("plafon progresi +10% dari rata-rata 4 minggu tercapai");
     if(hard.length>=2){volumeFactor=Math.min(volumeFactor,.85);notes.push("2+ sesi intens dalam 7 hari");}
