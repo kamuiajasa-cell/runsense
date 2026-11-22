@@ -3388,14 +3388,15 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const wc = weeklyCtx();
     const hardN = PLAN_DAYS.filter((d) => ((state.plan[d[0]] || {}).t) === "quality").length;
     const runDays = PLAN_DAYS.filter((d) => ["easy", "quality", "long"].includes((state.plan[d[0]] || {}).t)).length;
-    const wkKm = (() => {
-      const D = 864e5, now = Date.now(); let k = 0;
-      (state.acts || []).forEach((x) => { const age = now - x[0]; if (x[1] === "run" && age > 7 * D && age <= 28 * D) k += x[3]; });
-      return k / 3;
-    })();
-    if (wkKm > 0 && tot > 0) {
+    const mileageBase = fourWeekMileageBaseline();
+    const wkKm = mileageBase.average;
+    if (mileageBase.total > 0 && tot > 0) {
+      const safeTarget = wkKm * 1.10;
       const pctUp = Math.round((tot / wkKm - 1) * 100);
-      if (tot > wkKm * WK_HI) msgs.push("Rencana " + tot + " km, " + pctUp + "% di atas rata-rata 3 minggu sebelumnya (" + Math.round(wkKm) + " km). Ini pemicu evaluasi, bukan ambang cedera. Durasi sesi tetap dibatasi riwayat.");
+      msgs.push("Baseline 4 minggu: " + wkKm.toFixed(1) + " km/minggu (" + mileageBase.weeks.map(v => v.toFixed(1)).join(" / ") + " km). Batas target progresi +10%: " + safeTarget.toFixed(1) + " km/minggu.");
+      if (tot > safeTarget + 0.05) msgs.push("Rencana " + tot.toFixed(1) + " km, " + pctUp + "% di atas rata-rata 4 minggu. Turunkan target ke maksimal " + safeTarget.toFixed(1) + " km atau tahan volume; +10% adalah plafon, bukan kewajiban.");
+    } else if (mileageBase.hasHistory && tot > 0) {
+      msgs.push("Tidak ada volume lari pada 4 minggu lengkap terakhir. Jangan menerapkan kenaikan +10% dari nol; mulai kembali dengan dosis ringan dan tahan progresi sampai ada riwayat baru.");
     }
     if (wc.ratio != null && wc.ratio > WK_HI) msgs.push("Beban 7 hari terakhir sudah " + Math.round((wc.ratio - 1) * 100) + "% di atas kebiasaan. Rekomendasi durasi dikurangi.");
     if (hardN >= 3) msgs.push(hardN + " sesi quality dalam sepekan. Pertimbangkan kurangi.");
@@ -3601,18 +3602,34 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     ? ` Durasi dibatasi toleransi aktual: plafon ${lb.toLowerCase()} sekitar ${r.cap} menit; median sesi sejenis ${r.h.n?Math.round(r.h.median)+" menit":"belum cukup data"}${r.h.src==="90h"?", dengan riwayat yang lebih lama":""}.`
     : "";
 
-  /* Konteks beban 7 hari vs rata-rata 3 minggu sebelumnya; konteks, bukan prediksi cedera. */
+  /* Baseline mileage: empat minggu kalender lengkap sebelum minggu berjalan.
+     Minggu kosong dipertahankan sebagai 0 agar jeda tidak menaikkan baseline. */
+  function fourWeekMileageBaseline() {
+    const D = 864e5, now = new Date();
+    now.setHours(0,0,0,0);
+    now.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const currentWeekStart = now.getTime();
+    const weeks = [0,0,0,0];
+    let hasHistory = false;
+    (state.acts || []).forEach((x) => {
+      if (x[1] !== "run" || !(Number(x[3]) > 0)) return;
+      hasHistory = true;
+      const weekIndex = Math.floor((currentWeekStart - 1 - x[0]) / (7 * D));
+      if (weekIndex >= 1 && weekIndex <= 4) weeks[weekIndex - 1] += Number(x[3]) || 0;
+    });
+    const total = weeks.reduce((a,b)=>a+b,0);
+    return { weeks, total, average: total / 4, hasHistory };
+  }
+
+  /* Beban 7 hari dibanding rerata 4 minggu kalender sebelumnya; guardrail, bukan diagnosis cedera. */
   function weeklyCtx() {
     const now = Date.now(), D = 864e5;
-    let cur = 0, prev = 0, wk = new Set();
+    let cur = 0;
     (state.acts || []).forEach((x) => {
-      if (x[1] !== "run") return;
-      const age = now - x[0];
-      if (age <= 7 * D) cur += x[2];
-      else if (age <= 28 * D) { prev += x[2]; wk.add(Math.floor((age - 7 * D) / (7 * D))); }
+      if (x[1] === "run" && now - x[0] >= 0 && now - x[0] <= 7 * D) cur += Number(x[3]) || 0;
     });
-    const avg = prev / 3;
-    return { cur, avg, ratio: avg > 0 && wk.size >= 2 ? cur / avg : null };
+    const avg = fourWeekMileageBaseline().average;
+    return { cur, avg, ratio: avg > 0 ? cur / avg : null };
   }
   const WK_HI = 1.3; /* pemicu evaluasi planner, bukan batas cedera tervalidasi */
   function wkAdjust(mins) {
@@ -3673,8 +3690,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   /* Gabungan paparan beban, frekuensi, dan RPE; guardrail coaching, bukan diagnosis cedera. */
   function adaptiveContext(){
     const now=Date.now(),D=864e5,acts=(state.acts||[]).filter(a=>a[1]==="run"&&a[2]>=8&&a[3]>=1.5&&a[0]<=now);
-    const recent=acts.filter(a=>now-a[0]<=7*D),previous=acts.filter(a=>now-a[0]>7*D&&now-a[0]<=28*D);
-    const acute=recent.reduce((s,a)=>s+a[2],0),prevWeekly=previous.reduce((s,a)=>s+a[2],0)/3,ratio=prevWeekly>0?acute/prevWeekly:null;
+    const recent=acts.filter(a=>now-a[0]<=7*D);
+    const acute=recent.reduce((s,a)=>s+a[2],0),prevWeekly=fourWeekMileageBaseline().average,ratio=prevWeekly>0?acute/prevWeekly:null;
     const hard=recent.filter(a=>["thr","vo2","race"].includes(detectType(a).type));
     const fl=feelLearning(),recentFeel=fl.sessions.filter(x=>now-x.ms<=14*D),hardRpe=recentFeel.filter(x=>x.rpe>=7).length;
     const avgRpe=recentFeel.length?recentFeel.reduce((s,x)=>s+x.rpe,0)/recentFeel.length:null;
