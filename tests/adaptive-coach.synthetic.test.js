@@ -45,14 +45,14 @@ function evaluate(entries, feedback = [], today = {}) {
       const d = new Date(fixedNow); d.setHours(0,0,0,0);
       d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime();
     })();
-    const weeks = [0,0,0,0];
+    const weeks = [0,0,0,0], durationWeeks = [0,0,0,0];
     for (const x of state.acts) {
       if (x[1] !== "run" || !(Number(x[3]) > 0)) continue;
       const weekIndex = Math.ceil((weekStart - x[0]) / (7 * DAY));
-      if (weekIndex >= 1 && weekIndex <= 4) weeks[weekIndex - 1] += Number(x[3]) || 0;
+      if (weekIndex >= 1 && weekIndex <= 4) { weeks[weekIndex - 1] += Number(x[3]) || 0; durationWeeks[weekIndex - 1] += Number(x[2]) || 0; }
     }
     const total = weeks.reduce((a,b)=>a+b,0);
-    return { weeks, total, average: total / 4, hasHistory: state.acts.some(x=>x[1]==="run"&&x[3]>0) };
+    return { weeks, total, average: total / 4, durationAverage: durationWeeks.reduce((a,b)=>a+b,0) / 4, hasHistory: state.acts.some(x=>x[1]==="run"&&x[3]>0) };
   };
   const adaptiveContext = new Function("state", "FEEL", "feelLearning", "detectType", "ymd", "fourWeekMileageBaseline", "Date",
     "return (" + fnSource + ")"
