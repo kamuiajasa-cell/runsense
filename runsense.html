@@ -6545,6 +6545,10 @@ input[type=password],input[type=text]{margin:0}
     const weatherLabel = c.code >= 95 ? "BADAI / PETIR" : c.p >= 2 ? "HUJAN" : c.p >= 0.3 ? "GERIMIS" : cls.toUpperCase();
     const statusColor = st.k === "ok" ? "var(--primary,#249447)" : st.k === "wn" ? "var(--yellow,#c58a16)" : "var(--red,#d94848)";
     const wind = c.w != null ? Math.round(c.w * 10) / 10 : null;
+    const slotsHTML = sl.length ? `<div style="margin-top:15px;padding-top:14px;border-top:1px solid var(--border,#e5e7eb)">
+          <div style="font-size:13px;font-weight:750;color:var(--text,inherit);margin-bottom:8px">${sl[0].better || st.k !== "ok" ? "Jam lari yang lebih nyaman" : "Jam lari terbaik (sekarang pun sudah oke)"}</div>
+          ${sl.map((x) => `<p style="font-size:13px;line-height:1.5;margin:6px 0;color:var(--light-grey,#667085)">• ${x.txt}</p>`).join("")}
+        </div>` : "";
     el.innerHTML =
       `<section style="padding:20px 18px 16px;border:1px solid var(--border,#e5e7eb);border-radius:24px;background:var(--card,#fff);box-shadow:0 1px 2px rgba(15,23,42,.04);color:var(--text,inherit)">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px">
@@ -6558,18 +6562,20 @@ input[type=password],input[type=text]{margin:0}
         <div style="font-size:14px;line-height:1.65;color:var(--light-grey,#667085);margin-bottom:17px">
           ${feels != null ? `Terasa ${feels}°C` : "Suhu saat ini"}${c.rh != null ? ` · RH ${Math.round(c.rh)}%` : ""}${wind != null ? ` · angin ${wind} km/j` : ""}${c.p >= 0.1 ? ` · hujan ${Math.round(c.p * 10) / 10} mm` : ""}
         </div>
-        <div style="font-size:12px;color:var(--light-grey,#667085);line-height:1.55;margin:0 0 10px">${clPersTxt()}</div>
-        <div style="font-size:12px;color:var(--grey,#8490a2);margin-bottom:14px">${o.src || "Open-Meteo"} · lokasi perangkat · ${cH(now)}</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--border,#e5e7eb);padding-top:13px">
-          <span style="font-size:12px;color:var(--light-grey,#667085);line-height:1.45;flex:1">${st.lb}. ${tx}</span>
+        <div style="font-size:12px;color:var(--grey,#8490a2);margin-bottom:12px">${o.src || "Open-Meteo"} · lokasi perangkat · ${cH(now)}</div>
+        ${slotsHTML}
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-top:1px solid var(--border,#e5e7eb);padding-top:13px;margin-top:14px">
+          <span style="font-size:12px;color:var(--light-grey,#667085);line-height:1.5;flex:1">${st.lb}. ${tx}</span>
           <button type="button" onclick="climRefresh()" style="border:0;background:transparent;color:var(--primary,#249447);font:inherit;font-weight:700;font-size:14px;white-space:nowrap;padding:8px 0;cursor:pointer">Perbarui cuaca</button>
         </div>
         <div style="font-size:11px;color:var(--grey,#8490a2);margin-top:13px;line-height:1.5">
           Estimasi Open-Meteo, bukan pengukuran di tubuhmu${stale ? " · cache " + cH(o.t) : ""} · lokasi ${CL.loc.name || (CL.loc.manual ? "manual" : "perangkat")} · <a href="#" onclick="clLoc();return false" style="color:var(--primary)">ubah lokasi</a>
         </div>
-      </section>` +
-      (sl.length ? `<div style="padding:12px 4px 2px"><div class="label" style="margin:0 0 6px">${sl[0].better || st.k !== "ok" ? "Jam lari yang lebih nyaman" : "Jam lari terbaik (sekarang pun sudah oke)"}</div>` + sl.map((x) => `<p style="font-size:13px;margin:5px 0">• ${x.txt}</p>`).join("") + `</div>` : "") +
-      ``;
+        <details style="margin-top:12px;border-top:1px solid var(--border,#e5e7eb);padding-top:10px">
+          <summary style="font-size:12px;font-weight:650;color:var(--light-grey,#667085);cursor:pointer;list-style-position:inside">Dasar ambang suhu pribadi</summary>
+          <div style="font-size:12px;color:var(--light-grey,#667085);line-height:1.55;padding:8px 2px 0">${clPersTxt()}</div>
+        </details>
+      </section>`;
   }
   climReady = true;
   try { if (state.athlete && $("#mainCard")) climHome(); } catch (_) {}
