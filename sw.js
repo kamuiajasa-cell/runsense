@@ -1,5 +1,5 @@
 // RunSense service worker v2: selalu ambil versi terbaru dari server, cache hanya cadangan offline.
-const CACHE = "runsense-v3";
+const CACHE = "runsense-v4";
 const ASSETS = [
   "./runsense.html",
   "./manifest.webmanifest",
@@ -36,10 +36,17 @@ self.addEventListener("fetch", (e) => {
   e.respondWith(
     fetch(req, { cache: "no-store" })
       .then((res) => {
-        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+        if (res.ok && res.type !== "opaque") {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        }
         return res;
       })
-      .catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || caches.match("./runsense.html")))
+      .catch(() => caches.match(req, { ignoreSearch: true }).then((cached) => {
+        if (cached) return cached;
+        // HTML shell fallback hanya untuk navigasi dokumen, bukan gambar/API/aset lain.
+        return req.mode === "navigate" ? caches.match("./runsense.html") : Response.error();
+      }))
   );
 });
 
