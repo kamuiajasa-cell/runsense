@@ -5098,7 +5098,8 @@ input[type=password],input[type=text]{margin:0}
     const phaseRows = segs.map(q=>{
       const pace=q.pace?mp(q.pace)+"/km":"—", hr=q.hr?Math.round(q.hr)+" bpm":"—", cad=q.cadence?Math.round(q.cadence)+" spm":"—";
       const mins=Math.floor(q.duration/60), secs=Math.round(q.duration%60);
-      return `<div class="sa-segment-row"><span><b>${phaseName(q.type)}${q.index?" "+q.index:""}</b><small>${mins}:${String(secs).padStart(2,"0")} · ${saKm(q.distance/1000)} km</small></span><span><b>${pace}</b><small>HR ${hr} · Kadens ${cad}</small></span></div>`;
+      const target=q.label?String(q.label).replace(/^[- ]+/,""):"Target pace tidak ditetapkan";
+      return `<div class="sa-segment-row"><span><b>${phaseName(q.type)}${q.index?" "+q.index:""}</b><small>${mins}:${String(secs).padStart(2,"0")} · ${saKm(q.distance/1000)} km</small><small>Target: ${target}</small></span><span><b>${pace}</b><small>Aktual · HR ${hr} · Kadens ${cad}</small></span></div>`;
     }).join("");
     const minuteRows = (Array.isArray(sx.minutes) ? sx.minutes : []).map(q=>{
       const phase=phaseName(q.type), pace=q.pace?mp(q.pace)+"/km":"—", hr=q.hr?Math.round(q.hr)+" bpm":"—", cad=q.cadence?Math.round(q.cadence)+" spm":"—";
@@ -5212,10 +5213,9 @@ input[type=password],input[type=text]{margin:0}
     const caution=notes.find(n=>n.k==="r")||notes.find(n=>n.k==="y");
     const positive=notes.find(n=>n.k==="g"&&(n.title==="Intensitas"||n.title==="Eksekusi"));
     const next=notes.find(n=>n.title==="Lanjut");
-    if(!rev||(!rev.headline&&!caution&&!positive&&!next))return "";
+    if(!rev||(!caution&&!positive&&!next))return "";
     const line=(label,n)=>n?`<div class="sa-note"><b>${label}:</b> ${n.text}</div>`:"";
     return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Kesimpulan Coach</span><span class="sa-pill">ringkasan sesi</span></div>
-      ${rev.headline?`<div class="review-note ${rev.tone||"g"}" style="font-weight:750;margin-bottom:9px">${rev.headline}</div>`:""}
       ${line("Yang berjalan baik",positive)}
       ${line("Perlu diperhatikan",caution)}
       ${line("Langkah berikutnya",next)}
