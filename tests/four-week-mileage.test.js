@@ -25,4 +25,14 @@ assert.equal(baseline.total,40);
 assert.equal(baseline.average,10);
 assert.match(html,/Batas target progresi \+10%/);
 assert.match(html,/Minggu kosong dipertahankan sebagai 0/);
+const adjustStart=html.indexOf("function wkAdjust(mins) {");
+assert.ok(adjustStart>=0,"wkAdjust must exist");
+let adjustEnd=-1, adjustDepth=0, adjustOpen=html.indexOf("{",adjustStart);
+for(let i=adjustOpen;i<html.length;i++){if(html[i]==="{")adjustDepth++;else if(html[i]==="}"&&--adjustDepth===0){adjustEnd=i+1;break;}}
+const adjustSource=html.slice(adjustStart,adjustEnd);
+const adjust=new Function("weeklyCtx","WK_HI","return ("+adjustSource+");")(()=>({ratio:1.10}),1.10);
+const held=adjust(30);
+assert.equal(held.mins,27,"at the +10% ceiling, coach dose should be reduced");
+assert.match(held.note,/\+10%/);
+
 console.log("PASS RunSense four-week mileage baseline (calendar boundaries, zero week, excludes current/old weeks)");
