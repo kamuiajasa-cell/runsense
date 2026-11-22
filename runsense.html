@@ -6558,6 +6558,7 @@ input[type=password],input[type=text]{margin:0}
         <div style="font-size:14px;line-height:1.65;color:var(--light-grey,#667085);margin-bottom:17px">
           ${feels != null ? `Terasa ${feels}°C` : "Suhu saat ini"}${c.rh != null ? ` · RH ${Math.round(c.rh)}%` : ""}${wind != null ? ` · angin ${wind} km/j` : ""}${c.p >= 0.1 ? ` · hujan ${Math.round(c.p * 10) / 10} mm` : ""}
         </div>
+        <div style="font-size:12px;color:var(--light-grey,#667085);line-height:1.55;margin:0 0 10px">${clPersTxt()}</div>
         <div style="font-size:12px;color:var(--grey,#8490a2);margin-bottom:14px">${o.src || "Open-Meteo"} · lokasi perangkat · ${cH(now)}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--border,#e5e7eb);padding-top:13px">
           <span style="font-size:12px;color:var(--light-grey,#667085);line-height:1.45;flex:1">${st.lb}. ${tx}</span>
@@ -6568,7 +6569,7 @@ input[type=password],input[type=text]{margin:0}
         </div>
       </section>` +
       (sl.length ? `<div style="padding:12px 4px 2px"><div class="label" style="margin:0 0 6px">${sl[0].better || st.k !== "ok" ? "Jam lari yang lebih nyaman" : "Jam lari terbaik (sekarang pun sudah oke)"}</div>` + sl.map((x) => `<p style="font-size:13px;margin:5px 0">• ${x.txt}</p>`).join("") + `</div>` : "") +
-      `<div style="font-size:11.5px;color:var(--grey,#8490a2);padding:7px 4px 0">${clPersTxt()}</div>`;
+      ``;
   }
   climReady = true;
   try { if (state.athlete && $("#mainCard")) climHome(); } catch (_) {}
