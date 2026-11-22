@@ -3609,16 +3609,20 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     now.setHours(0,0,0,0);
     now.setDate(now.getDate() - ((now.getDay() + 6) % 7));
     const currentWeekStart = now.getTime();
-    const weeks = [0,0,0,0];
+    const weeks = [0,0,0,0], durationWeeks = [0,0,0,0];
     let hasHistory = false;
     (state.acts || []).forEach((x) => {
       if (x[1] !== "run" || !(Number(x[3]) > 0)) return;
       hasHistory = true;
       const weekIndex = Math.ceil((currentWeekStart - x[0]) / (7 * D));
-      if (weekIndex >= 1 && weekIndex <= 4) weeks[weekIndex - 1] += Number(x[3]) || 0;
+      if (weekIndex >= 1 && weekIndex <= 4) {
+        weeks[weekIndex - 1] += Number(x[3]) || 0;
+        durationWeeks[weekIndex - 1] += Number(x[2]) || 0;
+      }
     });
     const total = weeks.reduce((a,b)=>a+b,0);
-    return { weeks, total, average: total / 4, hasHistory };
+    const durationTotal = durationWeeks.reduce((a,b)=>a+b,0);
+    return { weeks, total, average: total / 4, durationAverage: durationTotal / 4, hasHistory };
   }
 
   /* Beban 7 hari dibanding rerata 4 minggu kalender sebelumnya; guardrail, bukan diagnosis cedera. */
@@ -3691,7 +3695,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   function adaptiveContext(){
     const now=Date.now(),D=864e5,acts=(state.acts||[]).filter(a=>a[1]==="run"&&Number(a[3])>0&&a[0]<=now);
     const recent=acts.filter(a=>now-a[0]<=7*D);
-    const acute=recent.reduce((s,a)=>s+a[2],0),prevWeekly=fourWeekMileageBaseline().average,ratio=prevWeekly>0?acute/prevWeekly:null;
+    const acute=recent.reduce((s,a)=>s+a[2],0),prevWeekly=fourWeekMileageBaseline().durationAverage,ratio=prevWeekly>0?acute/prevWeekly:null;
     const hard=recent.filter(a=>["thr","vo2","race"].includes(detectType(a).type));
     const fl=feelLearning(),recentFeel=fl.sessions.filter(x=>now-x.ms<=14*D),hardRpe=recentFeel.filter(x=>x.rpe>=7).length;
     const avgRpe=recentFeel.length?recentFeel.reduce((s,x)=>s+x.rpe,0)/recentFeel.length:null;
