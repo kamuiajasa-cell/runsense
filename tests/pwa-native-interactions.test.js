@@ -29,8 +29,17 @@ check("Back navigation handles modal state and restores tab scroll",()=>{
 check("Haptics are feature-detected",()=>{
  assert.match(html,/navigator\.vibrate\(10\)/);assert.match(html,/!navigator\.vibrate/);
 });
-check("Long history rows defer offscreen rendering",()=>{
- assert.match(html,/\.hist-card\s*\{[^}]*content-visibility:\s*auto/s);
+check("Actual history cards defer offscreen rendering",()=>{
+ assert.match(html,/\.hcard\s*\{[^}]*content-visibility:\s*auto/s);
+ assert.doesNotMatch(html,/\.hist-card\s*\{[^}]*content-visibility/s);
+});
+check("Modal Back does not trigger a second history.back",()=>{
+ assert.match(html,/rsClosingModalFromPop\s*=\s*true/);
+ assert.match(html,/!rsClosingModalFromPop\s*&&\s*history\.state/);
+});
+check("Touch transitions avoid layout-bound geometry",()=>{
+ const transitions=[...html.matchAll(/transition\s*:\s*([^;}]+)/g)].map(x=>x[1]).join(" ");
+ assert.doesNotMatch(transitions,/(^|[,\\s])(top|left|width|height|margin|padding)\\s*(,|$)/);
 });
 check("Service worker updates shell cache and uses navigation-only HTML fallback",()=>{
  assert.match(sw,/runsense-v4/);assert.match(sw,/req\.mode === "navigate"/);
