@@ -3631,13 +3631,13 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const avg = fourWeekMileageBaseline().average;
     return { cur, avg, ratio: avg > 0 ? cur / avg : null };
   }
-  const WK_HI = 1.3; /* pemicu evaluasi planner, bukan batas cedera tervalidasi */
+  const WK_HI = 1.10; /* plafon progresi mingguan +10%; bukan ambang cedera tervalidasi */
   function wkAdjust(mins) {
     const w=weeklyCtx();
     if(w.ratio==null)return {mins,note:""};
-    if(w.ratio>1.5)return {mins:Math.max(15,Math.round(mins*.75)),note:` Beban 7 hari ${Math.round((w.ratio-1)*100)}% di atas kebiasaan; durasi dipangkas ~25%.`};
-    if(w.ratio>WK_HI)return {mins:Math.max(15,Math.round(mins*.85)),note:` Beban 7 hari ${Math.round((w.ratio-1)*100)}% di atas kebiasaan; durasi dipangkas ~15%.`};
-    if(w.ratio>1.15)return {mins:Math.max(15,Math.round(mins*.9)),note:" Beban mingguan mulai meningkat; durasi ditahan sedikit."};
+    if(w.ratio>1.5)return {mins:Math.max(15,Math.round(mins*.75)),note:` Beban 7 hari ${Math.round((w.ratio-1)*100)}% di atas rata-rata 4 minggu; durasi dipangkas ~25%.`};
+    if(w.ratio>1.3)return {mins:Math.max(15,Math.round(mins*.85)),note:` Beban 7 hari ${Math.round((w.ratio-1)*100)}% di atas rata-rata 4 minggu; durasi dipangkas ~15%.`};
+    if(w.ratio>=WK_HI)return {mins:Math.max(15,Math.round(mins*.9)),note:" Batas progresi +10% dari rata-rata 4 minggu sudah tercapai; dosis sesi ditahan/dikurangi."};
     return {mins,note:""};
   }
 
@@ -3717,7 +3717,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     // Kenaikan menit mingguan hanya dipotong oleh wkAdjust(); jangan dihitung dua kali.
     if(ratio!=null&&ratio>1.5)notes.push("menit lari 7 hari >150% rerata 3 minggu");
     else if(ratio!=null&&ratio>1.3)notes.push("volume mingguan meningkat cepat");
-    else if(ratio!=null&&ratio>1.15)notes.push("volume mingguan mulai meningkat");
+    else if(ratio!=null&&ratio>=1.10)notes.push("plafon progresi +10% dari rata-rata 4 minggu tercapai");
     if(hard.length>=2){volumeFactor=Math.min(volumeFactor,.85);notes.push("2+ sesi intens dalam 7 hari");}
     if(hardRpe>=2){volumeFactor=Math.min(volumeFactor,.85);notes.push("2+ sesi terakhir terasa berat (RPE ≥7)");}
     if(heavyLegs>=2||todayLegsHeavy){volumeFactor=Math.min(volumeFactor,.85);notes.push("otot/kaki melaporkan beban berat");}
