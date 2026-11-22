@@ -5157,6 +5157,71 @@ input[type=password],input[type=text]{margin:0}
       `<div class="sa-bars">${bars}</div><div class="sa-read" id="saR-ld">Sentuh batang untuk melihat beban tiap hari. Batang terang = hari sesi ini.</div></div>`;
   }
 
+  /* Ringkasan beban sebelum sesi: acute 7d dibanding rerata mingguan 28d sebelumnya.
+     Ini deskripsi perubahan beban, bukan prediksi cedera atau ambang medis. */
+  function saLoadTrendHTML(act) {
+    const DAY=864e5, end=act[0], start=end-28*DAY, acuteStart=end-7*DAY;
+    const prior=(state.acts||[]).filter(x=>x[0]<end&&x[0]>=start);
+    const weekBins=[0,0,0,0];
+    prior.forEach(x=>{const age=Math.floor((end-x[0])/DAY);if(age>=0&&age<28)weekBins[3-Math.floor(age/7)]+=loadOf(x);});
+    const acute=weekBins[3], chronicTotal=weekBins.reduce((a,b)=>a+b,0), chronic=chronicTotal/4;
+    const activeWeeks=weekBins.filter(x=>x>0).length;
+    const total=prior.reduce((n,x)=>n+loadOf(x),0);
+    const fmt=n=>Math.round(n).toString();
+    let detail="";
+    if(activeWeeks<3||chronic<=0){
+      detail="Belum cukup sebaran data 28 hari sebelum sesi untuk membandingkan beban akut dan kebiasaan mingguan. Angka tidak dipaksakan.";
+    } else {
+      const ratio=acute/chronic;
+      const label=ratio<0.8?"lebih rendah":ratio<=1.3?"dekat dengan kebiasaan":"lebih tinggi";
+      detail="Beban 7 hari sebelum sesi "+label+" dibanding rerata mingguan 28 hari sebelumnya. Ini alat pemantauan perubahan beban, bukan prediksi cedera; baca bersama RPE, kondisi kaki, tidur, dan respons HR.";
+    }
+    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Beban akut & kebiasaan 4 minggu</span><span class="sa-pill">sebelum sesi</span></div>
+      <div class="sa-metrics"><div class="sa-metric"><b>${fmt(acute)} TL</b><small>7 hari sebelum sesi</small></div><div class="sa-metric"><b>${fmt(chronic)} TL/minggu</b><small>Rerata 28 hari sebelumnya</small></div></div>
+      <div class="sa-find">${detail}</div>
+      <div class="sa-sub">${prior.length} aktivitas tercatat · ${activeWeeks}/4 minggu memiliki beban. TL dari Intervals.icu bila tersedia; selain itu estimasi RunSense.</div></div>`;
+  }
+
+  /* Tren performa: median tiga sesi terbaru vs tiga sebelumnya, hanya sesi sejenis
+     dan jarak yang relatif sebanding. Ini sinyal tren, bukan uji kebugaran terkontrol. */
+  function saProgressTrendHTML(act) {
+    if(!act||act[1]!=="run"||!(act[3]>0))return "";
+    const type=detectType(act).type, DAY=864e5;
+    const same=(state.acts||[]).filter(x=>x[1]==="run"&&x[0]<=act[0]&&x[0]>=act[0]-90*DAY&&x[3]>=act[3]*0.65&&x[3]<=act[3]*1.35&&x[2]>=8&&detectType(x).type===type)
+      .sort((a,b)=>b[0]-a[0]).slice(0,6);
+    if(same.length<6)return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Tren progres sesi sejenis</span><span class="sa-pill">90 hari</span></div><div class="sa-note">Belum ada enam sesi ${VX_LB[type]||type} dengan jarak sebanding dalam 90 hari. Tren belum disimpulkan agar tidak bertumpu pada sampel sedikit.</div></div>`;
+    const recent=same.slice(0,3), earlier=same.slice(3,6);
+    const med=xs=>{const a=xs.slice().sort((u,v)=>u-v);return a[Math.floor(a.length/2)];};
+    const rp=med(recent.map(actPace)), ep=med(earlier.map(actPace));
+    const rh=med(recent.map(x=>+x[4]||0).filter(x=>x>0)), eh=med(earlier.map(x=>+x[4]||0).filter(x=>x>0));
+    const dp=Math.round((rp-ep)*60), dh=rh&&eh?Math.round(rh-eh):null;
+    const paceText=dp===0?"pace median relatif tetap":dp<0?"pace median lebih cepat "+Math.abs(dp)+" dtk/km":"pace median lebih lambat "+dp+" dtk/km";
+    const hrText=dh==null?"HR belum cukup untuk dibandingkan":dh===0?"HR median relatif tetap":dh>0?"HR median naik "+dh+" bpm":"HR median turun "+Math.abs(dh)+" bpm";
+    let note=paceText+"; "+hrText+".";
+    if(type==="easy"&&dh!=null) note+=" Jika rute, elevasi, cuaca, dan effort mirip, kombinasi ini dapat menjadi sinyal perubahan efisiensi; bukan bukti tunggal kebugaran.";
+    else note+=" Perubahan ini perlu dibaca bersama tujuan sesi, cuaca, elevasi, dan kualitas data.";
+    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Tren progres sesi sejenis</span><span class="sa-pill">6 sesi · 90 hari</span></div>
+      <div class="sa-metrics"><div class="sa-metric"><b>${mp(ep)}/km → ${mp(rp)}/km</b><small>Median pace · 3 sesi lama ke 3 terbaru</small></div><div class="sa-metric"><b>${eh?Math.round(eh)+" → "+(rh?Math.round(rh):"—"):"—"} bpm</b><small>Median HR</small></div></div>
+      <div class="sa-note">${note}</div><div class="sa-sub">Sesi dipilih berdasarkan jenis dan jarak ±35%; bukan perbandingan laboratorium atau rute identik.</div></div>`;
+  }
+
+  /* Kesimpulan menyatukan temuan, sinyal yang perlu diperhatikan, dan tindak lanjut. */
+  function saCoachSummaryHTML(rev) {
+    const sections=rev&&Array.isArray(rev.sections)?rev.sections:[];
+    const notes=sections.flatMap(x=>(x.notes||[]).map(n=>({title:x.title,...n})));
+    const caution=notes.find(n=>n.k==="r")||notes.find(n=>n.k==="y");
+    const positive=notes.find(n=>n.k==="g"&&(n.title==="Intensitas"||n.title==="Eksekusi"));
+    const next=notes.find(n=>n.title==="Lanjut");
+    if(!rev||(!rev.headline&&!caution&&!positive&&!next))return "";
+    const line=(label,n)=>n?`<div class="sa-note"><b>${label}:</b> ${n.text}</div>`:"";
+    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Kesimpulan Coach</span><span class="sa-pill">ringkasan sesi</span></div>
+      ${rev.headline?`<div class="review-note ${rev.tone||"g"}" style="font-weight:750;margin-bottom:9px">${rev.headline}</div>`:""}
+      ${line("Yang berjalan baik",positive)}
+      ${line("Perlu diperhatikan",caution)}
+      ${line("Langkah berikutnya",next)}
+      <div class="sa-sub">Kesimpulan dibangun dari data sesi dan catatan yang tersedia. Bagian yang datanya tidak cukup tidak disimpulkan.</div></div>`;
+  }
+
   function sessionBodyHTML(act, rev) {
     const sx = act[9] && state.sx ? state.sx[String(act[9])] : null;
     SA.sess = null;
@@ -5170,12 +5235,14 @@ input[type=password],input[type=text]{margin:0}
       const e1 = saExecHTML(act, sx) + saZonesHTML(act, sx) + saNotes(rev, "Eksekusi");
       h += saSec("Eksekusi", "Bagaimana lari ini dijalankan (pace) dan bagaimana tubuh merespons (detak jantung).", e1);
     }
-    const c1 = saLoadHTML(act) + climAct(act) + saNotes(rev, "Beban & konteks");
-    if (c1) h += saSec("Beban & konteks", "Seberapa besar beban sesi ini dalam seminggu dan kondisi saat berlari.", c1);
-    const ad = sessionAdaptationHTML(act);
-    if (ad) h += saSec("Dibanding sesi sejenis", "", ad);
+    const c1 = saLoadHTML(act) + saLoadTrendHTML(act) + climAct(act) + saNotes(rev, "Beban & konteks");
+    if (c1) h += saSec("Beban & konteks", "Beban sesi, perubahan beban sebelum sesi, dan kondisi saat berlari.", c1);
+    const ad = sessionAdaptationHTML(act) + saProgressTrendHTML(act);
+    if (ad) h += saSec("Dibanding sesi sejenis", "Efisiensi dan tren beberapa sesi dengan jenis serta jarak yang sebanding.", ad);
     const nx = saNotes(rev, "Lanjut");
     if (nx) h += saSec("Lanjut", "", nx);
+    const coach = saCoachSummaryHTML(rev);
+    if (coach) h += saSec("Kesimpulan terpadu", "Ringkasan temuan utama dan tindak lanjut berdasarkan data yang tersedia.", coach);
     return `<div class="sa-flow">${h}</div>`;
   }
 
