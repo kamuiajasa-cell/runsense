@@ -1061,6 +1061,37 @@ input[type=password],input[type=text]{margin:0}
 .home-hero .page-title { line-height:1.02; }
 .progress-hero [data-hero-sub] { max-width:34rem; }
 .progress-layout .filter-dock { margin-bottom:12px; }
+
+
+/* Native-like touch, safe-area and rendering behavior */
+html, body {
+  overscroll-behavior-y: contain;
+  -webkit-tap-highlight-color: transparent;
+}
+body { padding-top: env(safe-area-inset-top, 0px); }
+.app { min-height: calc(100dvh - env(safe-area-inset-top, 0px)); }
+.screen { overscroll-behavior-y: contain; padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px)); }
+button, [role="button"], .nav-item, .chip, .style-option, .iconbtn, .ty-chip, .fchips button {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+input, textarea, select, [contenteditable="true"], .modal, .hint, .insight, .review-note, .sa-card, .sa-note {
+  -webkit-user-select: text;
+  user-select: text;
+}
+button:active, [role="button"]:active, .style-option:active { transform: translate3d(0,0,0) scale(.975); }
+.nav-item:active, .chip:active { opacity: .82; }
+.hist-card { content-visibility: auto; contain-intrinsic-size: auto 176px; }
+.modal-bg, .modal { overscroll-behavior: contain; }
+.modal { max-height: min(85dvh, var(--rs-visible-height, 85dvh)); }
+.bottom-nav { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+body.rs-keyboard-open .bottom-nav { display: none !important; }
+body.rs-keyboard-open .screen { padding-bottom: 24px; }
+@media (prefers-reduced-motion: reduce) {
+  button, [role="button"], .style-option { transition: none !important; }
+}
 </style>
 </head>
 <body>
@@ -2421,14 +2452,35 @@ input[type=password],input[type=text]{margin:0}
     if (p && sub) p.textContent = sub;
   }
 
-  function showScreen(name) {
-    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
-    $("#screen-" + name).classList.add("active");
+  const rsScrollPositions = Object.create(null);
+  let rsCurrentScreen = (document.querySelector(".screen.active") || {}).id || "screen-setup";
+  try { if ("scrollRestoration" in history) history.scrollRestoration = "manual"; } catch (_) {}
+  function showScreen(name, options) {
+    const target = document.getElementById("screen-" + name);
+    if (!target) return;
+    const previous = rsCurrentScreen.replace(/^screen-/, "");
+    if (rsCurrentScreen) rsScrollPositions[rsCurrentScreen] = window.scrollY || window.pageYOffset || 0;
+    if (!(options && options.fromPop) && previous !== name) {
+      const nextState = { rsView: name };
+      try {
+        if (previous === "setup" || !history.state || !history.state.rsView) history.replaceState(nextState, "", location.href);
+        else history.pushState(nextState, "", location.href);
+      } catch (_) {}
+    }
+    document.querySelectorAll(".screen").forEach((screen) => screen.classList.remove("active"));
+    target.classList.add("active");
     document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.screen === name));
-    window.scrollTo(0, 0);
+    rsCurrentScreen = target.id;
     rotateHero(name);
+    requestAnimationFrame(() => window.scrollTo(0, rsScrollPositions[target.id] || 0));
     if (name === "progress" && window.renderProgress) renderProgress();
   }
+  window.addEventListener("popstate", (event) => {
+    const modal = document.querySelector(".modal-bg.show");
+    if (modal) { modal.classList.remove("show"); return; }
+    const view = event.state && event.state.rsView;
+    if (view && document.getElementById("screen-" + view)) showScreen(view, { fromPop: true });
+  });
 
   function selectStyle(el) {
     document.querySelectorAll(".style-option").forEach((o) => o.classList.remove("active"));
@@ -6779,14 +6831,65 @@ input[type=password],input[type=text]{margin:0}
 })();
 </script>
 <script>
+// Native-like interaction layer: modal-aware Android Back, keyboard viewport, haptics and scroll state.
+(function () {
+  "use strict";
+  try {
+    var active = document.querySelector(".screen.active");
+    if (!history.state || !history.state.rsView) history.replaceState({ rsView: active ? active.id.replace(/^screen-/, "") : "setup" }, "", location.href);
+  } catch (_) {}
+
+  var modalObserver = new MutationObserver(function (records) {
+    records.forEach(function (record) {
+      var el = record.target;
+      if (!el.classList || !el.classList.contains("modal-bg")) return;
+      var isOpen = el.classList.contains("show");
+      if (isOpen && !(history.state && history.state.rsModal === el.id)) {
+        try {
+          var view = history.state && history.state.rsView || "home";
+          history.pushState({ rsView: view, rsModal: el.id }, "", location.href);
+        } catch (_) {}
+      } else if (!isOpen && history.state && history.state.rsModal === el.id) {
+        try { history.back(); } catch (_) {}
+      }
+    });
+  });
+  document.querySelectorAll(".modal-bg").forEach(function (el) {
+    modalObserver.observe(el, { attributes: true, attributeFilter: ["class"] });
+  });
+
+  function updateViewport() {
+    var vv = window.visualViewport;
+    var height = vv && vv.height ? vv.height : window.innerHeight;
+    document.documentElement.style.setProperty("--rs-visible-height", Math.max(240, Math.round(height)) + "px");
+    var focused = document.activeElement;
+    var editable = focused && /^(INPUT|TEXTAREA|SELECT)$/.test(focused.tagName);
+    var keyboard = !!(editable && vv && (window.innerHeight - vv.height > 110 || vv.offsetTop > 40));
+    document.body.classList.toggle("rs-keyboard-open", keyboard);
+  }
+  ["resize", "orientationchange", "focusin", "focusout"].forEach(function (eventName) {
+    window.addEventListener(eventName, function () { requestAnimationFrame(updateViewport); }, { passive: true });
+  });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", updateViewport, { passive: true });
+    window.visualViewport.addEventListener("scroll", updateViewport, { passive: true });
+  }
+  updateViewport();
+
+  document.addEventListener("click", function (event) {
+    var control = event.target && event.target.closest ? event.target.closest("button:not(:disabled), [role=button]") : null;
+    if (!control || !navigator.vibrate) return;
+    try { navigator.vibrate(10); } catch (_) {}
+  }, { passive: true });
+})();
+</script>
+<script>
 // PWA: service worker (hanya jalan di http/https; di file:// atau WebView tanpa dukungan dilewati diam-diam)
 (function () {
   if (!("serviceWorker" in navigator) || !/^https?:$/.test(location.protocol)) return;
-  // Muat ulang sekali bila service worker baru mengambil alih (supaya update langsung terlihat)
-  var hadCtl = !!navigator.serviceWorker.controller, reloaded = false;
+  // Controller baru mengambil alih tanpa reload paksa; perubahan terlihat pada navigasi berikutnya.
   navigator.serviceWorker.addEventListener("controllerchange", function () {
-    if (!hadCtl || reloaded) { hadCtl = true; return; }
-    reloaded = true; location.reload();
+    window.dispatchEvent(new CustomEvent("runsense:serviceworker-ready"));
   });
   window.addEventListener("load", function () {
     navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
