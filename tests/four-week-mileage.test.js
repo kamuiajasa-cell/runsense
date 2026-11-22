@@ -24,7 +24,7 @@ assert.deepEqual(baseline.weeks,[10,0,20,10]);
 assert.equal(baseline.total,40);
 assert.equal(baseline.average,10);
 assert.match(html,/Batas target progresi \+10%/);
-assert.match(html,/Minggu kosong dipertahankan sebagai 0/);
+assert.match(html,/Minggu kosong dipertahankan sebagai 0/);\nassert.match(html,/rerata 4 minggu/);
 const adjustStart=html.indexOf("function wkAdjust(mins) {");
 assert.ok(adjustStart>=0,"wkAdjust must exist");
 let adjustEnd=-1, adjustDepth=0, adjustOpen=html.indexOf("{",adjustStart);
