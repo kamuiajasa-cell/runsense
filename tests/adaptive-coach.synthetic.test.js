@@ -40,9 +40,23 @@ function evaluate(entries, feedback = [], today = {}) {
   });
   const detectType = activity => ({ type: typeByTimestamp.get(activity[0]) || "easy" });
   const ymd = () => "2026-11-19";
-  const adaptiveContext = new Function("state", "FEEL", "feelLearning", "detectType", "ymd", "Date",
+  const fourWeekMileageBaseline = () => {
+    const weekStart = (() => {
+      const d = new Date(fixedNow); d.setHours(0,0,0,0);
+      d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime();
+    })();
+    const weeks = [0,0,0,0];
+    for (const x of state.acts) {
+      if (x[1] !== "run" || !(Number(x[3]) > 0)) continue;
+      const weekIndex = Math.ceil((weekStart - x[0]) / (7 * DAY));
+      if (weekIndex >= 1 && weekIndex <= 4) weeks[weekIndex - 1] += Number(x[3]) || 0;
+    }
+    const total = weeks.reduce((a,b)=>a+b,0);
+    return { weeks, total, average: total / 4, hasHistory: state.acts.some(x=>x[1]==="run"&&x[3]>0) };
+  };
+  const adaptiveContext = new Function("state", "FEEL", "feelLearning", "detectType", "ymd", "fourWeekMileageBaseline", "Date",
     "return (" + fnSource + ")"
-  )(state, FEEL, feelLearning, detectType, ymd, { now: () => fixedNow }) ;
+  )(state, FEEL, feelLearning, detectType, ymd, fourWeekMileageBaseline, { now: () => fixedNow }) ;
   FEEL.today[ymd()] = today;
   return adaptiveContext();
 }
