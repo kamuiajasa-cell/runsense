@@ -1086,7 +1086,7 @@ button:active, [role="button"]:active, .style-option:active { transform: transla
 .hist-card { content-visibility: auto; contain-intrinsic-size: auto 176px; }
 .modal-bg, .modal { overscroll-behavior: contain; }
 .modal { max-height: min(85dvh, var(--rs-visible-height, 85dvh)); }
-.bottom-nav { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+.bottom-nav { padding-bottom: 8px; }
 body.rs-keyboard-open .bottom-nav { display: none !important; }
 body.rs-keyboard-open .screen { padding-bottom: 24px; }
 @media (prefers-reduced-motion: reduce) {
@@ -6864,7 +6864,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     document.documentElement.style.setProperty("--rs-visible-height", Math.max(240, Math.round(height)) + "px");
     var focused = document.activeElement;
     var editable = focused && /^(INPUT|TEXTAREA|SELECT)$/.test(focused.tagName);
-    var keyboard = !!(editable && vv && (window.innerHeight - vv.height > 110 || vv.offsetTop > 40));
+    var keyboard = !!(editable && vv && (window.innerHeight - vv.height > 110 || window.screen.height - vv.height > 180 || vv.offsetTop > 40));
     document.body.classList.toggle("rs-keyboard-open", keyboard);
   }
   ["resize", "orientationchange", "focusin", "focusout"].forEach(function (eventName) {
