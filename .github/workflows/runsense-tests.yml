@@ -24,3 +24,5 @@ jobs:
         run: node tests/adaptive-coach.synthetic.test.js
       - name: Test workout pipeline with synthetic data
         run: node tests/workout-pipeline.synthetic.test.js
+      - name: Test session analysis with synthetic data
+        run: node tests/session-analysis.synthetic.test.js
