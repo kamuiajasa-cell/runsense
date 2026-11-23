@@ -36,4 +36,17 @@ const held=adjust(30);
 assert.equal(held.mins,27,"at the +10% ceiling, coach dose should be reduced");
 assert.match(held.note,/\+10%/);
 
-console.log("PASS RunSense four-week mileage baseline (calendar boundaries, zero week, excludes current/old weeks)");
+const trimStart=html.indexOf("function trimQualityWork(q, targetMins) {");
+assert.ok(trimStart>=0,"quality mileage cap must alter the actual interval prescription");
+let trimEnd=-1,trimDepth=0,trimOpen=html.indexOf("{",trimStart);
+for(let i=trimOpen;i<html.length;i++){if(html[i]==="{")trimDepth++;else if(html[i]==="}"&&--trimDepth===0){trimEnd=i+1;break;}}
+const trimSource=html.slice(trimStart,trimEnd);
+const trim=new Function("return ("+trimSource+");")();
+const quality={dur:38,core:"4×5 mnt threshold",wl:["Warmup","- 10m Z2 HR","","4x","- 5m Z4 HR","- 1m Z1 HR"]};
+trim(quality,34);
+assert.equal(quality.dur,34,"quality total duration must be reduced to the weekly guardrail");
+assert.equal(quality.wl[4],"- 4m Z4 HR","watch workout work interval must be reduced too");
+assert.equal(quality.core,"4×4 mnt threshold","displayed main set must match the watch workout");
+assert.match(html,/if \(qw\.mins < q\.dur\) trimQualityWork\(q, qw\.mins\)/);
+
+console.log("PASS RunSense four-week mileage baseline and quality-dose cap (calendar boundaries, zero week, synchronized intervals)");
