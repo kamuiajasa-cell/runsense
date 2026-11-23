@@ -6010,7 +6010,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         state.workouts[day] = { day, title: String(watchR.title || "Sesi lari"), text: bw.text, segments: bw.segments || [], steps: [], eventId: null, savedAt: Date.now(), via: "huawei-direct" };
         persist();
       } catch (_) {}
-      setWatchStatus("Terkirim. Cek di aplikasi latihan lari di jam. Zona HR mengikuti 7 zona LTHR seperti Interval.icu.");
+      setWatchStatus("Terkirim. Cek di aplikasi latihan lari di jam. Analisis zona HR RunSense memakai 7 zona LTHR; zona bawaan jam diatur terpisah di aplikasi jam.");
     } catch (e) {
       setWatchStatus("Gagal: " + String((e && e.message) || e) + ". Pakai Salin teks.", true);
     }
