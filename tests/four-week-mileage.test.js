@@ -12,17 +12,28 @@ const DAY=864e5, fixed=Date.UTC(2026,10,23,12);
 class FixedDate extends Date { constructor(...args){super(...(args.length?args:[fixed]));} }
 const weekStart=Date.UTC(2026,10,23);
 const state={acts:[
-  [weekStart-7*DAY+12*3600e3,"run",30,10],
-  [weekStart-14*DAY+12*3600e3,"run",30,0],
-  [weekStart-21*DAY+12*3600e3,"run",30,20],
-  [weekStart-28*DAY+12*3600e3,"run",30,10],
+  // Chronological W1..W4 = 12, 0, 8, 4; baseline is returned newest-first.
+  [weekStart-7*DAY+12*3600e3,"run",30,4],
+  [weekStart-14*DAY+12*3600e3,"run",30,8],
+  [weekStart-21*DAY+12*3600e3,"run",30,0],
+  [weekStart-28*DAY+12*3600e3,"run",30,12],
   [weekStart+12*3600e3,"run",30,99],
   [weekStart-35*DAY+12*3600e3,"run",30,100]
 ]};
 const baseline=new Function("state","Date","return ("+source+");")(state,FixedDate)();
-assert.deepEqual(baseline.weeks,[10,0,20,10]);
-assert.equal(baseline.total,40);
-assert.equal(baseline.average,10);
+assert.deepEqual(baseline.weeks,[4,8,0,12]);
+assert.equal(baseline.total,24);
+assert.equal(baseline.average,6);
+assert.equal(baseline.activeWeeks,3);
+assert.equal(baseline.confidence,"high");
+const forecastStart=html.indexOf("  function rollingMileageForecast(baseline, count) {");
+assert.ok(forecastStart>=0,"rollingMileageForecast must exist");
+let forecastEnd=-1,forecastDepth=0,forecastOpen=html.indexOf("{",forecastStart);
+for(let i=forecastOpen;i<html.length;i++){if(html[i]==="{")forecastDepth++;else if(html[i]==="}"&&--forecastDepth===0){forecastEnd=i+1;break;}}
+const forecastFn=new Function("return ("+html.slice(forecastStart,forecastEnd)+");")();
+assert.deepEqual(forecastFn(baseline,12),[6.6,5.1,6.5,6.1,6.7,6.7,7.2,7.3,7.7,7.9,8.3,8.6]);
+const sparse={...baseline,weeks:[0,4,8,0],total:12,average:3,activeWeeks:2,confidence:"low"};
+assert.deepEqual(forecastFn(sparse,5),[3,3,3,3,3],"sparse history must hold at its rolling average until more consistent data exists");
 assert.match(html,/Batas target progresi \+10%/);
 assert.match(html,/Minggu kosong dipertahankan sebagai 0/);
 assert.match(html,/rerata 4 minggu/);
