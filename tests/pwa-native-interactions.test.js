@@ -35,7 +35,7 @@ check("Actual history cards defer offscreen rendering",()=>{
 });
 check("Modal Back does not trigger a second history.back",()=>{
  assert.match(html,/rsClosingModalFromPop\s*=\s*true/);
- assert.match(html,/!rsClosingModalFromPop\s*&&\s*history\.state/);
+ assert.match(html,/!window\.rsClosingModalFromPop\s*&&\s*history\.state/);
 });
 check("Touch transitions avoid layout-bound geometry",()=>{
  const transitions=[...html.matchAll(/transition\s*:\s*([^;}]+)/g)].map(x=>x[1]).join(" ");
