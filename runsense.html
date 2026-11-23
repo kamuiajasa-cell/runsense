@@ -1831,6 +1831,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   }
 
   /* ---------- Simple session type detection (no stream) ---------- */
+  /* Satu sumber kebenaran LTHR untuk seluruh analisis dan target zona.
+     Urutan: nilai manual, LTHR profil Intervals.icu, lalu estimasi 88% HRR.
+     HRR hanya mengestimasi nilai LTHR saat data ambang belum tersedia; pembagian zona
+     tetap selalu dihitung dari LTHR, tidak pernah langsung dari HRR atau %HRmax. */
   function lthrNow() {
     if (+state.lthrC > 0) return Math.round(+state.lthrC);
     const l = state.athlete && +state.athlete.lthr;
@@ -1916,7 +1920,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (x[10] > 0) return Math.round(x[10]);
       const hours = x[2] / 60;
       if (x[1] === "run") {
-        const histLthr = histRest > 0 && histMax > histRest ? Math.round(histRest + .88 * (histMax - histRest)) : 0;
+        const histLthr = lthrNow() || (histRest > 0 && histMax > histRest ? Math.round(histRest + .88 * (histMax - histRest)) : 0);
         let intensity = histLthr > 0 && x[4] > 0
           ? x[4] / histLthr
           : (metsOf(x[3] > 0 ? x[2] / x[3] : 8) / 11.5) * 0.95;
@@ -2924,7 +2928,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (L > 0) {
         // Zona HR berbasis LTHR, mengikuti pembagian 7 zona Interval.icu.
         // Batas BPM untuk LTHR 166: 141 / 149 / 157 / 166 / 170 / 175.
-        const edge = [Math.round(L * 0.85), Math.floor(L * 0.90), Math.floor(L * 0.95), Math.round(L), Math.ceil(L * 1.02), Math.ceil(L * 1.05)];
+        const edge = lthrZoneEdges();
         const z = [0, 0, 0, 0, 0, 0, 0]; let c = 0;
         hr.forEach((v) => {
           if (!(v > 40)) return;
@@ -3834,7 +3838,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   function decorate(r) {
     if (!r) return r;
     const a = state.athlete || {}, L = lthrNow(), fl = flagInfo();
-    const zoneEdges = L > 0 ? [Math.round(L * 0.85), Math.floor(L * 0.90), Math.floor(L * 0.95), Math.round(L), Math.ceil(L * 1.02), Math.ceil(L * 1.05)] : [];
+    const zoneEdges = L > 0 ? lthrZoneEdges() : [];
     if (L && typeof r.hr === "string") {
       if (/LTHR/.test(r.hr)) r.hr = "Jangan lewat " + L + " bpm di awal" + ((+state.raceDist || 0) >= 42 ? " · usaha ≈ Z3" : (+state.raceDist || 0) >= 21 ? " · usaha ≈ Z4" : (+state.raceDist || 0) >= 5 ? " · sampai Z5 di akhir" : "");
       else r.hr = r.hr.replace(/Zone (\d)(?:–(\d))?/, (m, x, y) => {
@@ -4314,33 +4318,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const st0 = stage();
     const M = st0.m;
 
-    /* LTHR & LTPace — dari kapasitas, bukan rata-rata easy */
-    let lthr = null, ltPace = null, ltPaceMin = null;
-    const mx = maxHr(), rst = restHr(), rng = mx - rst;
-
-    // 1) LTHR: ~88% HRR (lebih dekat threshold daripada average easy)
-    if (mx >= 140 && rng >= 40) {
-      lthr = Math.round(rst + 0.88 * rng);
-    } else if (mx >= 140) {
-      lthr = Math.round(mx * 0.88);
-    }
-
-    // 2) Koreksi LTHR dari lari yang benar-benar keras (HR tinggi + pace kencang)
-    const hardHR = runs
-      .filter((a) => a[4] > 0 && a[3] > 0 && a[2] >= 12)
-      .map((a) => {
-        const pace = a[2] / a[3];
-        const dens = a[4] / Math.max(pace, 4); // HR per min/km — lebih tinggi = lebih "threshold-like"
-        return { hr: a[4], pace, dens, min: a[2] };
-      })
-      .filter((x) => x.hr >= (lthr || 150) * 0.92)
-      .sort((a, b) => b.dens - a.dens);
-    if (hardHR.length >= 2) {
-      const top = hardHR.slice(0, Math.min(4, hardHR.length));
-      const med = [...top.map((x) => x.hr)].sort((a, b) => a - b)[Math.floor(top.length / 2)];
-      // Jangan tarik LTHR ke bawah dari easy; hanya pakai jika masuk akal
-      if (lthr == null || med >= lthr - 5) lthr = Math.round(med);
-    }
+    /* LTHR ditarik dari satu sumber yang sama dengan distribusi zona, detail aktivitas,
+       rekomendasi Coach, dan target workout Huawei. Tidak ada estimasi LTHR kedua di sini. */
+    let lthr = lthrNow() || null, ltPace = null, ltPaceMin = null;
     
 
     // 3) LTPace: pace di ~85% Max METs (threshold aerobik), fallback ke best recent hard effort
