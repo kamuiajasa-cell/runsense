@@ -2919,13 +2919,16 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         const e1 = ef(t0, tm), e2 = ef(tm, time[time.length - 1]);
         if (e1 && e2) out.dec = { pct: Math.round(((e1 - e2) / e1) * 100) };
       }
-      const mx = maxHr(), rs = restHr();
-      if (mx > rs && rs > 0) {
-        const z = [0, 0, 0, 0, 0]; let c = 0;
+      const L = lthrNow();
+      if (L > 0) {
+        // Zona HR berbasis LTHR, mengikuti pembagian 7 zona Interval.icu.
+        // Batas BPM untuk LTHR 166: 141 / 149 / 157 / 166 / 170 / 175.
+        const edge = [Math.ceil(L * 0.85), Math.floor(L * 0.90), Math.floor(L * 0.95), Math.round(L), Math.ceil(L * 1.02), Math.ceil(L * 1.05)];
+        const z = [0, 0, 0, 0, 0, 0, 0]; let c = 0;
         hr.forEach((v) => {
           if (!(v > 40)) return;
-          const r = (v - rs) / (mx - rs);
-          z[r < 0.6 ? 0 : r < 0.7 ? 1 : r < 0.8 ? 2 : r < 0.9 ? 3 : 4]++; c++;
+          const i = edge.findIndex((b) => v < b);
+          z[i < 0 ? 6 : i]++; c++;
         });
         if (c > 120) out.tiz = z.map((v) => Math.round((v / c) * 100));
       }
@@ -3829,14 +3832,14 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   }
   function decorate(r) {
     if (!r) return r;
-    const a = state.athlete || {}, L = +a.lthr || 0, fl = flagInfo();
-    const zb = { 1: [0, 0.81], 2: [0.81, 0.89], 3: [0.9, 0.93], 4: [0.94, 0.99], 5: [1, 1.06] };
+    const a = state.athlete || {}, L = lthrNow(), fl = flagInfo();
+    const zoneEdges = L > 0 ? [Math.ceil(L * 0.85), Math.floor(L * 0.90), Math.floor(L * 0.95), Math.round(L), Math.ceil(L * 1.02), Math.ceil(L * 1.05)] : [];
     if (L && typeof r.hr === "string") {
       if (/LTHR/.test(r.hr)) r.hr = "Jangan lewat " + L + " bpm di awal" + ((+state.raceDist || 0) >= 42 ? " · usaha ≈ Z3" : (+state.raceDist || 0) >= 21 ? " · usaha ≈ Z4" : (+state.raceDist || 0) >= 5 ? " · sampai Z5 di akhir" : "");
       else r.hr = r.hr.replace(/Zone (\d)(?:–(\d))?/, (m, x, y) => {
-        const mx0 = maxHr(), rs0 = restHr(), hrr = mx0 > rs0 && rs0 > 0, zr = { 1: [0, 0.6], 2: [0.6, 0.7], 3: [0.7, 0.8], 4: [0.8, 0.9], 5: [0.9, 1] };
-        const lo = hrr ? (x > 1 ? Math.round(rs0 + zr[x][0] * (mx0 - rs0)) : 0) : Math.round(L * zb[x][0]), hi = hrr ? Math.round(rs0 + zr[y || x][1] * (mx0 - rs0)) : Math.round(L * zb[y || x][1]);
-        return m + " · " + (lo ? lo + "–" + hi : "<" + hi) + " bpm";
+        const first = Math.max(1, Math.min(7, +x)), last = Math.max(first, Math.min(7, +(y || x)));
+        const lo = first === 1 ? 0 : zoneEdges[first - 2], hi = zoneEdges[last - 1] - 1;
+        return m + " · " + (lo ? lo + "–" + hi : "<" + hi) + " bpm (LTHR " + L + ")";
       });
     }
     if (a.ltPace && r.pace === "Mendekati LTPace") r.pace = a.ltPace + " /km (LTPace)";
@@ -5169,7 +5172,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   /* ---------- Analisis sesi: visual hanya dari data nyata, tiap visual punya narasi konteks ---------- */
   const SA = { sess: null };
   const saKm = (k) => (Math.round(k * 10) / 10).toString().replace(".", ",");
-  const ZN = [["Z1", "pemulihan", "#5b8def"], ["Z2", "aerobik", "var(--primary)"], ["Z3", "sedang", "var(--yellow)"], ["Z4", "threshold", "#ff8a3d"], ["Z5", "maksimal", "var(--red)"]];
+  const ZN = [["Z1", "recovery", "#5b8def"], ["Z2", "aerobic", "var(--primary)"], ["Z3", "tempo", "var(--yellow)"], ["Z4", "subthreshold", "#ff8a3d"], ["Z5", "superthreshold", "var(--red)"], ["Z6", "aerobic capacity", "#d65bd6"], ["Z7", "anaerobic", "#d94343"]];
   const saSec = (title, lead, inner) => `<section class="sa-sec"><div class="section-label">${title}</div>${lead ? `<p class="sa-lead">${lead}</p>` : ""}${inner}</section>`;
   const saNotes = (rev, title) => { const s = (rev.sections || []).find((x) => x.title === title); return s ? s.notes.map((n) => `<div class="review-note ${n.k}">${n.text}</div>`).join("") : ""; };
   const saMean = (x) => x.reduce((p, q) => p + q, 0) / x.length;
@@ -5544,7 +5547,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     state.afS = 3;
     state.icuLast = Date.now();
     state.vx = {};
-    state.sx = { x1: { fast: { p12: 5.75, med: 6.15, pct: 7 }, fade: { pct: 6 }, dec: { pct: 6 }, tiz: [8, 58, 24, 9, 1] } };
+    state.sx = { x1: { fast: { p12: 5.75, med: 6.15, pct: 7 }, fade: { pct: 6 }, dec: { pct: 6 }, tiz: [8, 48, 22, 12, 6, 3, 1] } };
     // Demo: race H-10 + rencana minggu contoh (hanya di memori, tidak menimpa data asli)
     const rd = new Date(Date.now() + 10 * 864e5);
     state.race = rd.getFullYear() + "-" + String(rd.getMonth() + 1).padStart(2, "0") + "-" + String(rd.getDate()).padStart(2, "0");
@@ -6007,7 +6010,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         state.workouts[day] = { day, title: String(watchR.title || "Sesi lari"), text: bw.text, segments: bw.segments || [], steps: [], eventId: null, savedAt: Date.now(), via: "huawei-direct" };
         persist();
       } catch (_) {}
-      setWatchStatus("Terkirim. Cek di aplikasi latihan lari di jam. Zona HR diperkirakan dari HR maks, bukan zona Intervals.");
+      setWatchStatus("Terkirim. Cek di aplikasi latihan lari di jam. Zona HR mengikuti 7 zona LTHR seperti Interval.icu.");
     } catch (e) {
       setWatchStatus("Gagal: " + String((e && e.message) || e) + ". Pakai Salin teks.", true);
     }
