@@ -32,8 +32,14 @@ let forecastEnd=-1,forecastDepth=0,forecastOpen=html.indexOf("{",forecastStart);
 for(let i=forecastOpen;i<html.length;i++){if(html[i]==="{")forecastDepth++;else if(html[i]==="}"&&--forecastDepth===0){forecastEnd=i+1;break;}}
 const forecastFn=new Function("return ("+html.slice(forecastStart,forecastEnd)+");")();
 assert.deepEqual(forecastFn(baseline,12),[6.6,5.1,6.5,6.1,6.7,6.7,7.2,7.3,7.7,7.9,8.3,8.6]);
-const sparse={...baseline,weeks:[0,4,8,0],total:12,average:3,activeWeeks:2,confidence:"low"};
-assert.deepEqual(forecastFn(sparse,5),[3,3,3,3,3],"sparse history must hold at its rolling average until more consistent data exists");
+const nextMonday=weekStart+7*DAY;
+class NextFixedDate extends Date { constructor(...args){super(...(args.length?args:[nextMonday+12*3600e3]));} }
+const afterMiss=new Function("state","Date","return ("+source+");")(state,NextFixedDate)();
+assert.deepEqual(afterMiss.weeks,[0,4,8,0],"a missed planned week is recorded as actual zero in the next calendar window");
+assert.equal(afterMiss.average,3);
+assert.equal(afterMiss.activeWeeks,2);
+assert.equal(afterMiss.confidence,"low");
+assert.deepEqual(forecastFn(afterMiss,5),[3,3,3,3,3],"sparse actual history must hold at its rolling average until more consistent data exists");
 assert.match(html,/Batas target progresi \+10%/);
 assert.match(html,/Minggu kosong dipertahankan sebagai 0/);
 assert.match(html,/rerata 4 minggu/);
