@@ -22,6 +22,11 @@ function extractFunction(source, name) {
 }
 
 const fnSource = extractFunction(html, "adaptiveContext");
+assert.match(html, /const hSame = hl \? hv\.filter/);
+assert.match(html, /const rSame = rl \? rh\.filter/);
+assert.match(html, /age >= 0 && age <= 2 \* 864e5/);
+assert.match(html, /age >= 0 && age <= 28 \* 864e5/);
+
 const fixedNow = Date.UTC(2026, 10, 19, 12);
 const DAY = 864e5;
 
