@@ -26,5 +26,7 @@ jobs:
         run: node tests/workout-pipeline.synthetic.test.js
       - name: Test session analysis with synthetic data
         run: node tests/session-analysis.synthetic.test.js
+      - name: Test LTHR zone consistency with synthetic data
+        run: node tests/lthr-zones.synthetic.test.js
       - name: Test native-like PWA interactions
         run: node tests/pwa-native-interactions.test.js
