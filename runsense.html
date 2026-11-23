@@ -3654,7 +3654,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const targets = [];
     for (let i = 0; i < count; i++) {
       const average = history.slice(-4).reduce((sum, km) => sum + km, 0) / 4;
-      const target = Math.round((canProgress ? average * 1.10 : average) * 10) / 10;
+      const target = Math.round((canProgress ? average * 1.10 : Number(baseline.average) || 0) * 10) / 10;
       targets.push(target);
       history.push(target);
     }
