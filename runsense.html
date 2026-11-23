@@ -1718,20 +1718,25 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   function autonomic() {
     const out = { lock: false, severe: false, warn: false, why: "", hrvPct: null, rhrD: null, hrv: null, rhr: null, sleepH: null, stress: null, stressD: null };
     const W = state.wellness || [];
-    const fresh = (w) => {
+    const dateStamp = (w) => {
       const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(w.id || "");
-      return !!m && today() - Date.UTC(+m[1], +m[2] - 1, +m[3]) <= 2 * 864e5;
+      return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : null;
     };
+    const ageMs = (w) => { const d = dateStamp(w); return d == null ? null : today() - d; };
+    const fresh = (w) => { const age = ageMs(w); return age != null && age >= 0 && age <= 2 * 864e5; };
+    const withinBaseline = (w) => { const age = ageMs(w); return age != null && age >= 0 && age <= 28 * 864e5; };
     const med = (a) => { const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
     const lastOf = (f) => { for (let i = W.length - 1; i >= 0; i--) if (f(W[i])) return W[i]; return null; };
     const parts = [];
 
     const hv = W.filter((w) => w.hrv > 0 && !w.hrvSpot);
     const hl = hv.length ? hv[hv.length - 1] : null;
-    const hr3 = hv.slice(-3), hm = hr3.length ? hr3.reduce((u, w) => u + w.hrv, 0) / hr3.length : 0; // rata-rata 3 malam
+    const hSource = hl ? (hl.hrvSrc || "") : "";
+    const hSame = hl ? hv.filter((w) => (w.hrvSrc || "") === hSource) : [];
+    const hr3 = hSame.slice(-3), hm = hr3.length ? hr3.reduce((u, w) => u + w.hrv, 0) / hr3.length : 0; // rata-rata 3 malam dari sumber yang sama
     if (hl && fresh(hl)) {
       out.hrv = Math.round(hl.hrv);
-      const base = hv.slice(0, -hr3.length).filter((w) => (w.hrvSrc || "") === (hl.hrvSrc || "")).slice(-28);
+      const base = hSame.slice(0, -hr3.length).filter(withinBaseline).slice(-28);
       if (base.length >= 7) {
         const m = med(base.map((w) => w.hrv));
         if (m > 0) {
@@ -1743,10 +1748,12 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
     const rh = W.filter((w) => w.restingHR > 30);
     const rl = rh.length ? rh[rh.length - 1] : null;
-    const rr3 = rh.slice(-3), rm = rr3.length ? rr3.reduce((u, w) => u + w.restingHR, 0) / rr3.length : 0; // rata-rata 3 hari
+    const rSource = rl ? (rl.rhrSrc || "") : "";
+    const rSame = rl ? rh.filter((w) => (w.rhrSrc || "") === rSource) : [];
+    const rr3 = rSame.slice(-3), rm = rr3.length ? rr3.reduce((u, w) => u + w.restingHR, 0) / rr3.length : 0; // rata-rata 3 hari dari sumber yang sama
     if (rl && fresh(rl)) {
       out.rhr = Math.round(rl.restingHR);
-      const base = rh.slice(0, -rr3.length).filter((w) => (w.rhrSrc || "") === (rl.rhrSrc || "")).slice(-28);
+      const base = rSame.slice(0, -rr3.length).filter(withinBaseline).slice(-28);
       if (base.length >= 7) {
         out.rhrD = Math.round(rm - med(base.map((w) => w.restingHR)));
         if (out.rhrD >= 3) parts.push("RHR +" + out.rhrD + " bpm");
