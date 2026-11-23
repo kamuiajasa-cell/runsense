@@ -3398,9 +3398,16 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const mileageBase = fourWeekMileageBaseline();
     const wkKm = mileageBase.average;
     if (mileageBase.total > 0 && tot > 0) {
-      const safeTarget = wkKm * 1.10;
+      const safeTarget = mileageBase.confidence === "high" ? wkKm * 1.10 : wkKm;
       const pctUp = Math.round((tot / wkKm - 1) * 100);
-      msgs.push("Baseline 4 minggu: " + wkKm.toFixed(1) + " km/minggu (" + mileageBase.weeks.map(v => v.toFixed(1)).join(" / ") + " km). Batas target progresi +10%: " + safeTarget.toFixed(1) + " km/minggu.");
+      const forecast = rollingMileageForecast(mileageBase, 5);
+      const forecastText = forecast.length
+        ? " Proyeksi rolling 5 minggu (asumsi target tercapai): " + forecast.map((v, i) => "M" + (i + 1) + " " + v.toFixed(1) + " km").join(" · ") + "."
+        : "";
+      const progressionText = mileageBase.confidence === "high"
+        ? "Batas target progresi +10%: " + safeTarget.toFixed(1) + " km/minggu."
+        : "Riwayat belum konsisten (" + mileageBase.activeWeeks + "/4 minggu aktif); progresi ditahan pada rata-rata " + safeTarget.toFixed(1) + " km/minggu sampai data lebih stabil.";
+      msgs.push("Baseline 4 minggu: " + wkKm.toFixed(1) + " km/minggu (" + mileageBase.weeks.map(v => v.toFixed(1)).join(" / ") + " km). " + progressionText + forecastText);
       if (tot > safeTarget + 0.05) msgs.push("Rencana " + tot.toFixed(1) + " km, " + pctUp + "% di atas rata-rata 4 minggu. Turunkan target ke maksimal " + safeTarget.toFixed(1) + " km atau tahan volume; +10% adalah plafon, bukan kewajiban.");
     } else if (mileageBase.hasHistory && tot > 0) {
       msgs.push("Tidak ada volume lari pada 4 minggu lengkap terakhir. Jangan menerapkan kenaikan +10% dari nol; mulai kembali dengan dosis ringan dan tahan progresi sampai ada riwayat baru.");
@@ -3629,7 +3636,29 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     });
     const total = weeks.reduce((a,b)=>a+b,0);
     const durationTotal = durationWeeks.reduce((a,b)=>a+b,0);
-    return { weeks, total, average: total / 4, durationAverage: durationTotal / 4, hasHistory };
+    const activeWeeks = weeks.filter((km) => km > 0).length;
+    return {
+      weeks, total, average: total / 4, durationAverage: durationTotal / 4, hasHistory,
+      activeWeeks, confidence: activeWeeks >= 3 ? "high" : "low"
+    };
+  }
+
+  /* Proyeksi target rolling: riwayat aktual tertua→terbaru, lalu target tiap minggu
+     masuk sebagai minggu terbaru. Saat minggu selesai, baseline berikutnya memakai aktualnya. */
+  function rollingMileageForecast(baseline, count) {
+    count = Math.max(0, Math.min(16, Number(count) || 5));
+    if (!baseline || !(baseline.total > 0)) return [];
+    let history = (baseline.weeks || []).slice().reverse().map((km) => Math.max(0, Number(km) || 0));
+    if (history.length !== 4) history = Array(4).fill(Math.max(0, Number(baseline.average) || 0));
+    const canProgress = baseline.confidence === "high";
+    const targets = [];
+    for (let i = 0; i < count; i++) {
+      const average = history.slice(-4).reduce((sum, km) => sum + km, 0) / 4;
+      const target = Math.round((canProgress ? average * 1.10 : average) * 10) / 10;
+      targets.push(target);
+      history.push(target);
+    }
+    return targets;
   }
 
   /* Beban 7 hari dibanding rerata 4 minggu kalender sebelumnya; guardrail, bukan diagnosis cedera. */
