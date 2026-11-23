@@ -29,7 +29,14 @@ const hasStructuredWorkout = new Function(extractFunction("hasStructuredWorkout"
 const mergeActsSource = extractFunction("mergeActs");
 const ZONE_PCT = { 1: [50, 70], 2: [70, 80], 3: [80, 87], 4: [87, 93], 5: [93, 100] };
 // toCourse calls buildWorkout, which in turn uses the production text parser.
-const toCourse = new Function("ZONE_PCT", extractFunction("parsePlannedWorkout") + ";" + extractFunction("buildWorkout") + ";" + extractFunction("toCourse") + "; return toCourse;")(ZONE_PCT);
+const courseState = { lthrC: 166, max: 185, rest: 63, athlete: {} };
+const toCourse = new Function("ZONE_PCT", "state",
+  extractFunction("maxHr") + ";" + extractFunction("restHr") + ";" +
+  extractFunction("lthrNow") + ";" + extractFunction("lthrZoneEdges") + ";" +
+  extractFunction("lthrZoneHrBounds") + ";" +
+  extractFunction("parsePlannedWorkout") + ";" + extractFunction("buildWorkout") + ";" +
+  extractFunction("toCourse") + "; return toCourse;"
+)(ZONE_PCT, courseState);
 
 const results = [];
 function test(name, fn) {
