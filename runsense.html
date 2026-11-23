@@ -2486,9 +2486,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   window.addEventListener("popstate", (event) => {
     const modal = document.querySelector(".modal-bg.show");
     if (modal) {
-      rsClosingModalFromPop = true;
+      window.rsClosingModalFromPop = true;
       modal.classList.remove("show");
-      queueMicrotask(() => { rsClosingModalFromPop = false; });
+      queueMicrotask(() => { window.rsClosingModalFromPop = false; });
       return;
     }
     const view = event.state && event.state.rsView;
@@ -6939,7 +6939,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (!history.state || !history.state.rsView) history.replaceState({ rsView: active ? active.id.replace(/^screen-/, "") : "setup" }, "", location.href);
   } catch (_) {}
 
-  var rsClosingModalFromPop = false;
+  window.rsClosingModalFromPop = false;
   var modalObserver = new MutationObserver(function (records) {
     records.forEach(function (record) {
       var el = record.target;
@@ -6950,7 +6950,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
           var view = history.state && history.state.rsView || "home";
           history.pushState({ rsView: view, rsModal: el.id }, "", location.href);
         } catch (_) {}
-      } else if (!isOpen && !rsClosingModalFromPop && history.state && history.state.rsModal === el.id) {
+      } else if (!isOpen && !window.rsClosingModalFromPop && history.state && history.state.rsModal === el.id) {
         try { history.back(); } catch (_) {}
       }
     });
