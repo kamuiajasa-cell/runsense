@@ -5994,7 +5994,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         cur.steps.push({
           kind: label === "warmup" ? "warmup" : label === "cooldown" ? "cooldown" : "run",
           target: "time", targetValue: +m[2] * (m[3].toLowerCase() === "m" ? 60 : 1),
-          intensity: "hrPercent", low: Math.max(0, Math.round(lowBpm / max * 100)), high: Math.min(100, Math.round(highBpm / max * 100))
+          intensity: "hrPercent", low: Math.max(50, Math.round(lowBpm / max * 100)), high: Math.min(100, Math.round(highBpm / max * 100))
         });
         continue;
       }
