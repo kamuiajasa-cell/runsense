@@ -1161,6 +1161,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       <header class="page-hero progress-hero" data-hero="progress"><span class="eyebrow">PERFORMANCE INTELLIGENCE</span><div class="page-title">See how far<br><em>you've grown.</em></div><p data-hero-sub>Ringkasan perkembangan lari berdasarkan data yang tersedia.</p></header>
       <div class="filter-dock"><span>TIMEFRAME</span><div class="fchips" id="prgChips"></div></div>
       <div id="progressBody"></div>
+      <div class="sg" id="prgCap" style="margin-top:12px"><div class="sg-t">Kapasitas &amp; beban</div><div class="sgroup"><div class="sblock rows" style="padding:4px 0"><div class="row"><span>RAI · kemampuan lari</span><b id="raiValue">—</b></div><div class="row"><span>Max METs</span><b id="afMets">—</b></div><div class="row"><span>CTL / ATL / TSB</span><b id="advLoad">—</b></div><div class="row"><span>LTHR · LTPace</span><b id="advLt">—</b></div></div></div></div>
+      <div class="sg" style="margin-top:12px"><div class="sg-t">Pace terbaik · 90 hari</div><div class="sgroup"><div class="sblock" id="bestSeg"></div></div></div>
     </div>
   </div>
 
@@ -1178,7 +1180,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
           <div class="srow has-hint"><span class="sic y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z"/></svg></span><span class="srow-t">Detak istirahat<span class="srow-s">Rata-rata 28 hari</span></span><input type="number" inputmode="numeric" id="inRest" placeholder="—" oninput="saveProfile()"><div class="srow-hint" id="inRestHint"></div></div>
           <div class="srow"><span class="sic r"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="srow-t">Detak maksimal</span><input type="number" inputmode="numeric" id="inMax" placeholder="—" oninput="saveProfile()"></div>
           <div class="srow has-hint"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span><span class="srow-t">LTHR custom<span class="srow-s">bpm</span></span><input type="number" inputmode="numeric" id="inLthr" placeholder="auto" oninput="saveProfile()"><div class="srow-hint" id="autoLthr"></div></div>
-          <div class="srow has-hint"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg></span><span class="srow-t">LTPace custom<span class="srow-s">menit per km</span></span><input type="text" inputmode="numeric" id="inLtp" placeholder="8:30" oninput="saveProfile()"><div class="srow-hint" id="autoLtp"></div></div>
+          <div class="srow has-hint"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg></span><span class="srow-t">LTPace custom<span class="srow-s">menit per km</span></span><input type="text" inputmode="numeric" id="inLtp" placeholder="auto (Intervals)" oninput="saveProfile()"><div class="srow-hint" id="autoLtp"></div></div>
+          <div class="sblock" id="zoneTbl"></div>
         </div>
         <div class="hint" style="padding:0 4px">Data otomatis diambil dari Intervals.icu jika tersedia. Isi nilai custom hanya bila ingin menimpa hasil otomatis.</div>
       </div>
@@ -1284,15 +1287,11 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
             <div class="sg-t">Mode lanjutan</div>
             <div class="sgroup">
               <div class="sblock rows" style="padding:4px 0">
-                <div class="row"><span>RAI · kemampuan lari</span><b id="raiValue">—</b></div>
                 <div class="row"><span>Keyakinan RAI</span><b id="raiConf">—</b></div>
-                <div class="row"><span>Max METs</span><b id="afMets">—</b></div>
                 <div class="row"><span>Profil tubuh · BMI</span><b id="bodyContext">—</b></div>
                 <div class="row"><span>Tren berat 28 hari</span><b id="bodyTrend">—</b></div>
                 <div class="row"><span>Kategori</span><b id="afBand">—</b></div>
                 <div class="row"><span>Tahap</span><b id="afStage">—</b></div>
-                <div class="row"><span>CTL / ATL / TSB</span><b id="advLoad">—</b></div>
-                <div class="row"><span>LTHR · LTPace</span><b id="advLt">—</b></div>
               </div>
               <div class="sblock">
                 <div class="insight" id="afTip">—</div>
@@ -1835,9 +1834,49 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
      Urutan: nilai manual, LTHR profil Intervals.icu, lalu estimasi 88% HRR.
      HRR hanya mengestimasi nilai LTHR saat data ambang belum tersedia; pembagian zona
      tetap selalu dihitung dari LTHR, tidak pernah langsung dari HRR atau %HRmax. */
+  function icuSet() { if (state._icu) return state._icu; try { return JSON.parse(localStorage.getItem("rs_icu") || "{}"); } catch (_) { return {}; } }
+  function ltPaceSec() { if (+state.ltpC > 0) return +state.ltpC; const t = +icuSet().tp; return t > 0 ? t : 0; }
+  function tizNow(sx) {
+    if (!sx || !Array.isArray(sx.chart) || sx.chart.length < 20) return null;
+    const e = lthrZoneEdges(); if (!e.length) return null;
+    const ch = sx.chart, ps = ch.map((q) => q[1]).sort((u, v) => u - v), m0 = ps[ps.length >> 1], z = [0, 0, 0, 0, 0, 0, 0]; let c = 0;
+    for (let i = 1; i < ch.length; i++) {
+      const h = ch[i][2], dt = ch[i][3] - ch[i - 1][3];
+      if (!(h > 40) || !(dt > 0) || ch[i][1] > m0 * 1.45) continue;
+      const k = e.findIndex((b) => h < b); z[k < 0 ? 6 : k] += dt; c += dt;
+    }
+    return c > 120 ? z.map((v) => Math.round(v / c * 100)) : null;
+  }
+  function renderBest() {
+    const el = $("#bestSeg"); if (!el) return;
+    const cut = Date.now() - 90 * 864e5, best = {};
+    (state.acts || []).forEach((a) => {
+      if (a[1] !== "run" || a[0] < cut || !a[9]) return;
+      const b = state.sx && state.sx[String(a[9])] && state.sx[String(a[9])].best; if (!b) return;
+      Object.keys(b).forEach((k) => { if (!best[k] || b[k] < best[k].s) best[k] = { s: b[k], ms: a[0] }; });
+    });
+    const ks = Object.keys(best).sort((u, v) => u - v);
+    el.innerHTML = ks.length ? '<div class="rows">' + ks.map((k) => '<div class="row"><span>' + k + " km terbaik</span><b>" + mp(best[k].s / 60 / k) + "/km · " + new Date(best[k].ms).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + "</b></div>").join("") + "</div>" : '<div class="hint" style="margin:0">Muncul setelah data stream tiap sesi terbaca (buka beberapa sesi di Riwayat).</div>';
+  }
+  function renderZoneTbl() {
+    const el = $("#zoneTbl"); if (!el) return;
+    if (!(lthrNow() > 0)) { el.innerHTML = ""; return; }
+    const pe = paceZoneEdges(), N = ["Recovery", "Aerobic", "Tempo", "SubThreshold", "SuperThreshold", "Aerobic Capacity", "Anaerobic"];
+    const t = (v) => Math.floor(v / 60) + ":" + String(v % 60).padStart(2, "0"), q = (m) => Math.round(m * 60);
+    const ps = (z) => !pe ? "" : z === 1 ? " · " + t(q(pe[0])) + "+" : z === 7 ? " · <" + t(q(pe[5])) : " · " + t(q(pe[z - 1])) + "–" + t(q(pe[z - 2]) - 1);
+    let h = '<div class="rows">';
+    for (let z = 1; z <= 7; z++) {
+      const b = lthrZoneHrBounds(z); if (!b) continue;
+      const hr = z === 1 ? "0–" + b[1] : b[0] + "–" + (b[1] == null ? (maxHr() || "") : b[1]);
+      h += '<div class="row"><span>Z' + z + " " + N[z - 1] + "</span><b>" + hr + " bpm" + ps(z) + (pe ? "/km" : "") + "</b></div>";
+    }
+    el.innerHTML = h + "</div>";
+  }
+  function paceZoneEdges() { const T = ltPaceSec(); return T ? [0.775, 0.877, 0.943, 1, 1.034, 1.115].map((f) => T / f / 60) : null; }
+  function rpace(x) { const g = segOf(x); if (g && g.runOnly && g.runOnly.pace > 0) return g.runOnly.pace; const p = x[2] / x[3]; return rwOn() ? runPaceOf(p) : p; }
   function lthrNow() {
     if (+state.lthrC > 0) return Math.round(+state.lthrC);
-    const l = state.athlete && +state.athlete.lthr;
+    const l = +icuSet().lthr;
     if (l > 0) return Math.round(l);
     const mx = maxHr(), rs = restHr();
     return rs > 0 && mx >= 140 && mx - rs >= 40 ? Math.round(rs + 0.88 * (mx - rs)) : 0;
@@ -1866,7 +1905,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const sg = segOf(a), hrA = sg ? (sg.work && sg.work.hr > 0 ? sg.work.hr : sg.runOnly.hr > 0 ? sg.runOnly.hr : a[4]) : a[4];
     if (Lh > 0 && hrA >= 80 && hrA <= 220 && min >= 8) {
       const hp = hrA / Lh, hpTxt = (sg && sg.work && sg.work.hr > 0 ? "HR segmen kerja " : sg ? "HR bagian lari " : "HR rata-rata ") + Math.round(hrA) + " bpm ≈ " + Math.round(hp * 100) + "% LTHR (" + Lh + ")";
-      if (hp >= 0.97 && min <= 40) return { type: min <= 20 ? "vo2" : "thr", conf: "sedang", why: hpTxt };
+      if (hp >= 0.97 && min <= 40) return { type: hp >= 1.02 && min <= 20 ? "vo2" : "thr", conf: "sedang", why: hpTxt };
       if (hp >= 0.9 && min >= 15) return { type: "thr", conf: "rendah", why: hpTxt + ", zona 3–4" };
       if (loadOf(a) > 85 && min >= 20) return { type: "thr", conf: "rendah", why: "training load tinggi (" + loadOf(a) + ")" };
       return { type: "easy", conf: "sedang", why: hpTxt + ", di bawah zona 3" };
@@ -1930,7 +1969,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (x[1] === "walk") return Math.round(x[2] * 0.35);
       return Math.round(x[2] * 0.8);
     };
-    const histCandidates = priorRuns.filter(x => x[2] >= 10 && x[3] >= 2).map(x => metsOf(x[2] / x[3]) / Math.max(.35, pctAt(x[2]))).filter(x => isFinite(x) && x >= 4 && x <= 25).sort((x,y)=>x-y);
+    const histCandidates = priorRuns.filter(x => x[2] >= 10 && x[3] >= 2).map(x => metsOf(rpace(x)) / Math.max(.35, pctAt(x[2]))).filter(x => isFinite(x) && x >= 4 && x <= 25).sort((x,y)=>x-y);
     const M = histCandidates.length >= 3 ? histCandidates[Math.floor(histCandidates.length * .75)] : null;
     const histStage = M == null ? 0 : M < 7.9 ? 1 : M < 9.2 ? 2 : M < 12 ? 3 : 4;
     const st = { m: M, s: histStage, e: { n: priorRuns.length, conf: priorRuns.length >= 6 ? "baik" : priorRuns.length >= 3 ? "sedang" : "rendah" } };
@@ -1948,11 +1987,12 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const lim = pctAt(dur);
     const rst = histRest;
     const mx = histMax;
-    const lthr = rst > 0 && mx > rst ? Math.round(rst + .88 * (mx - rst)) : null;
+    const lthr = lthrNow() || null;
     const priorPaces = priorRuns.filter(x => x[3] >= 2 && x[2] >= 12).map(x => x[2] / x[3]).sort((x,y)=>x-y);
-    const ltPace = priorPaces.length ? mp(priorPaces[0] * 1.04) : null;
+    const ltPace = ltPaceSec() > 0 ? mp(ltPaceSec() / 60) : (priorPaces.length ? mp(priorPaces[0] * 1.04) : null);
     const name = (a[7] || "").trim();
 
+    const ldArr = priorRuns.map(loadAt).filter((v) => v > 0).sort((u, v) => u - v), ldK = ldArr.length >= 4 ? clamp(ldArr[ldArr.length >> 1] / 70, 0.6, 1.5) : 1;
     const sec = (title) => ({ title, notes: [] });
     const S_int = sec("Intensitas");
     const S_ex = sec("Eksekusi");
@@ -2089,7 +2129,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         const t = detectType(x).type;
         return t === "easy";
       })
-      .map((x) => x[2] / x[3])
+      .map((x) => rpace(x))
       .filter((p) => p > 3 && p < 12);
     if (easyPaces.length >= 3) {
       const avg = easyPaces.reduce((s, p) => s + p, 0) / easyPaces.length;
@@ -2135,8 +2175,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (steady && sx.dec) push(S_ex, sx.dec.pct >= 5 ? "y" : "g", sx.dec.pct >= 5
         ? `Di paruh kedua detak jantung naik sekitar ${sx.dec.pct}% dibanding pace-nya. Dasar aerobikmu belum stabil untuk durasi ini.`
         : `Detak jantung stabil dari awal sampai akhir (selisih ${sx.dec.pct}%). Tanda dasar aerobik yang kuat.`);
-      if (sx.tiz) {
-        if ((det.type === "easy" || det.type === "long") && sx.tiz.slice(2).reduce((u, v) => u + v, 0) >= 50) {
+      const tzR = tizNow(sx) || sx.tiz;
+      if (tzR) {
+        if ((det.type === "easy" || det.type === "long") && tzR.slice(2).reduce((u, v) => u + v, 0) >= 50) {
           why.push("banyak waktu di intensitas sedang");
           push(S_ex, "y", "Lebih dari separuh waktunya di Z3 ke atas, jadi lebih keras dari easy murni. Pelankan sedikit supaya benar-benar aerobik.");
         }
@@ -2152,9 +2193,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     push(S_load, "g", "Beban sesi ini " + Math.round(load) + " poin (" + (icuLoad ? "dari Intervals" : "perkiraan app") +
       "). Total 7 hari terakhir ≈ " + f1(weekLoad) + " poin dan " + f1(weekKm) + " km.");
 
-    if (load >= 120) {
+    if (load >= 120 * ldK) {
       push(S_load, "r", "Beban sangat tinggi. Jangan lari keras atau long besok.");
-    } else if (load >= 80) {
+    } else if (load >= 80 * ldK) {
       push(S_load, "y", "Beban sesi ini tinggi. Beri tubuh waktu untuk pulih.");
     }
 
@@ -2170,9 +2211,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       const dayLoad = dayActs.reduce((sum, x) => sum + loadAt(x), 0);
       const dayHard = dayActs.some((x) => {
         const t = detectType(x).type;
-        return t === "thr" || t === "vo2" || t === "race" || loadAt(x) >= 70;
+        return t === "thr" || t === "vo2" || t === "race" || loadAt(x) >= 70 * ldK;
       });
-      if (dayHard || dayLoad >= 70) streak++;
+      if (dayHard || dayLoad >= 70 * ldK) streak++;
       else break;
     }
     if (streak >= 3) {
@@ -2195,7 +2236,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     }
 
     // —— 4. What next ——
-    const hard = (pct != null && pct > 0.78) || load >= 80 || det.type === "thr" || det.type === "vo2" || det.type === "race";
+    const hard = (pct != null && pct > 0.78) || load >= 80 * ldK || det.type === "thr" || det.type === "vo2" || det.type === "race";
     const longish = km >= 14 || det.type === "long";
     let tomorrow = "";
     let toneNext = "g";
@@ -2218,7 +2259,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       tomorrow = "Besok: cek kondisi pagi (detak istirahat, mood, kaki). Kalau ragu, lari santai saja.";
       toneNext = "g";
     }
-    push(S_next, toneNext, tomorrow);
+    push(S_next, toneNext, (hard || longish || streak >= 2) ? "Sesi ini cukup membebani badan. Sesi berikutnya disusun coach di Beranda sesuai kesiapan dan rencana minggu." : "Sesi ini terkendali. Sesi berikutnya disusun coach di Beranda sesuai rencana minggu.");
 
     // Coach one-liner on purpose
     if (det.type === "easy" && pct != null && pct <= 0.68) {
@@ -2234,8 +2275,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     let tone = "g";
     const nR = allNotes.filter((n) => n.k === "r").length;
     const nY = allNotes.filter((n) => n.k === "y").length;
+    const rp = feelAfter.rpe || 0;
     if (nR >= 1) tone = "r";
-    else if (nY >= 2) tone = "y";
+    else if (nY >= 2 && !(rp > 0 && rp <= 4 && nY <= 2)) tone = "y";
+    else if (nY >= 1 && rp >= 8) tone = "y";
 
     let headline;
     if (tone === "r") headline = "Sesi ini berat. Prioritaskan pemulihan.";
@@ -2847,7 +2890,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     // Durability: sepertiga akhir vs sepertiga tengah menurut jarak (bukan jumlah km), supaya lari 5 km tetap cukup stabil.
     {
       const d0 = Number(dist[0]), D = Number(dist[dist.length - 1]) - d0;
-      if (D >= 4000 && Number(time[time.length - 1]) - Number(time[0]) >= 1500) {
+      if (D >= 3000 && Number(time[time.length - 1]) - Number(time[0]) >= 1200) {
         const idxAt = (m) => { for (let i = 0; i < dist.length; i++) if (Number(dist[i]) - d0 >= m) return i; return dist.length - 1; };
         const seg = (fa, fb) => {
           const i0 = idxAt(D * fa), i1 = idxAt(D * fb);
@@ -2877,7 +2920,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       const n3 = Math.floor(sp.length / 3);
       const mid = mean(sp.slice(n3, 2 * n3)), last = mean(sp.slice(-n3));
       const pct = Math.round(((last - mid) / mid) * 100);
-      if (pct >= 5) out.fade = { pct };
+      if (pct >= 5 && pct < 30) out.fade = { pct };
     }
     // Pace bergerak dari stream: hanya segmen yang benar-benar bergerak (jeda/berhenti tidak ikut dihitung).
     {
@@ -2887,6 +2930,20 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         if (dt > 0 && dt <= 30 && dd >= 0 && dd / dt >= 0.8) { mt += dt; md += dd; }
       }
       if (md >= 500 && mt >= 120) out.mv = { pace: (mt / 60) / (md / 1000), km: md / 1000, min: mt / 60 };
+    }
+    {
+      const bt = {};
+      [1000, 3000, 5000, 10000].forEach((T) => {
+        let j = 0, bs = Infinity;
+        for (let i = 1; i < time.length; i++) {
+          const di = Number(dist[i]); if (!Number.isFinite(di)) continue;
+          while (j + 1 < i && di - Number(dist[j + 1]) >= T) j++;
+          const dd = di - Number(dist[j]);
+          if (dd >= T) { const sc = (Number(time[i]) - Number(time[j])) * T / dd; if (sc > 0 && sc < bs) bs = sc; }
+        }
+        if (bs < Infinity) bt[T / 1000] = Math.round(bs);
+      });
+      if (Object.keys(bt).length) out.best = bt;
     }
     // Sampel ringkas untuk grafik, sumbu = jarak: [km, pace, hr, detik]; pace dihaluskan (rata-rata 5 titik).
     const stride = Math.max(1, Math.floor((time.length - 1) / 180));
@@ -2911,7 +2968,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     // Segmentasi aktivitas memakai rencana workout kalender, bukan tebakan pace.
     const T = time[time.length - 1] - time[0];
     if (hr && hr.length === time.length) {
-      if (T >= 2400) {
+      if (T >= 1200) {
         const t0 = time[0] + T * 0.1, tm = time[0] + T * 0.55;
         const ef = (lo, hi) => {
           let i0 = -1, i1 = -1;
@@ -2921,7 +2978,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
           const dt = time[i1] - time[i0];
           return h.length && dt > 0 ? ((dist[i1] - dist[i0]) / dt) / mean(h) : null;
         };
-        const e1 = ef(t0, tm), e2 = ef(tm, time[time.length - 1]);
+        const e1 = ef(t0, tm), e2 = ef(tm, time[0] + T * 0.9);
         if (e1 && e2) out.dec = { pct: Math.round(((e1 - e2) / e1) * 100) };
       }
       const L = lthrNow();
@@ -3103,7 +3160,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
     const cached = state.sx[id];
     // Cache lama hanya menyimpan pace hasil distance/time; ambil ulang untuk memakai velocity stream.
-    if ((cached && cached.streamVersion>=15 && cached.chart && cached.splits) || (cached && cached.streamVersion>=15 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if ((cached && cached.streamVersion>=16 && cached.chart && cached.splits) || (cached && cached.streamVersion>=16 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
@@ -3127,7 +3184,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       } catch (_) {}
       state.sx[id] = Object.assign({}, summary || { none: 1 }, planned || cadenceOnly || {}, {
         intervals:actualIntervals, planDate:savedPlan?dayKey:null,
-        streamVersion:15, checkedAt:Date.now()
+        streamVersion:16, checkedAt:Date.now()
       });
     } catch (e) {
       // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
@@ -3152,7 +3209,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (durBusy || !state.apiKey || state.apiKey === "demo" || !Array.isArray(list)) return;
     const todo = list.filter((a) => a && a[9] && !/^hw/.test(String(a[9])) && a[1] === "run" && (a[3] >= 5 || a[2] >= 40)
       && !durTried[String(a[9])]
-      && !(state.sx[String(a[9])] && (state.sx[String(a[9])].streamVersion >= 9 || state.sx[String(a[9])].dur))).slice(-12);
+      && !(state.sx[String(a[9])] && state.sx[String(a[9])].streamVersion >= 16)).slice(-12);
     if (!todo.length) return;
     durBusy = true;
     try { for (const a of todo) { durTried[String(a[9])] = 1; await ensureStream(a); } } catch (_) {}
@@ -3253,6 +3310,17 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         }
       } catch (_) {}
 
+      try {
+        const ss = await icuGet("athlete/0/sport-settings");
+        const arr = Array.isArray(ss) ? ss : (ss && ss.sportSettings) || [];
+        const r = arr.find((q) => (q.types || []).some((t) => /^(Run|VirtualRun|TrailRun)$/.test(t))) || arr[0];
+        if (r) {
+          const o = { lthr: +r.lthr || 0, max: +r.max_hr || 0, tp: +r.threshold_pace || 0 };
+          if (o.tp > 0 && o.tp < 20) o.tp = 1000 / o.tp;
+          state._icu = o; localStorage.setItem("rs_icu", JSON.stringify(o));
+          if (!(+state.max > 0) && o.max > 0) state.max = o.max;
+        }
+      } catch (_) {}
       const now = Date.now();
       const old = fmtDate(new Date(now - (state.acts.length ? 100 : 760) * 864e5));
       const neu = fmtDate(new Date(now + 864e5));
@@ -3519,7 +3587,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   }
   function easyRange(score, au, heat) {
     const b = easyBase();
-    let lo = 6.8, hi = 7.6, src = "default";
+    let lo = 6.8, hi = 7.6, src = "default"; { const pz = paceZoneEdges(); if (pz) { lo = pz[1]; hi = pz[0]; src = "zona"; } }
     if (b) { lo = b; hi = b * 1.07; src = "baseline"; }
     let k = 1;
     if (heat) k += 0.06;
@@ -4382,9 +4450,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
     const st = stage();
 
-    const lthrAuto = lthr, ltPaceAuto = ltPace;
-    if (state.lthrC > 0) lthr = state.lthrC;
-    if (state.ltpC > 0) ltPace = mp(state.ltpC / 60);
+    const lthrAuto = +icuSet().lthr > 0 ? Math.round(+icuSet().lthr) : (() => { const mx = maxHr(), rs = restHr(); return rs > 0 && mx >= 140 && mx - rs >= 40 ? Math.round(rs + 0.88 * (mx - rs)) : 0; })();
+    const ltPaceAuto = ltPace; /* estimasi app: hanya pembanding */
+    if (ltPaceSec() > 0) ltPace = mp(ltPaceSec() / 60);
 
     state.athlete = {
       name: state.icuName || "Runner",
@@ -5090,6 +5158,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     $("#afStage").textContent = a.stageName || "—";
     $("#advLoad").textContent = [a.ctl, a.atl, a.tsb].map((v) => (v != null ? v.toFixed(1) : "—")).join(" / ");
     $("#advLt").textContent = (a.lthr ? a.lthr + " bpm" : "—") + " · " + (a.ltPace ? a.ltPace + " /km" : "—");
+    renderZoneTbl(); renderBest();
     const tips = {
       1: "Jalan cepat 20–35 mnt (akhir pekan lebih lama). Naik ke run-walk bila estimasi ≥ 7,9 METs.",
       2: "Run-walk White Plan fase I (~30 mnt). Naik ke tahap 3 bila estimasi ≥ 9,2 METs.",
@@ -5209,8 +5278,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     // narasi HR
     let hf = "";
     if (hv.length >= 8) {
-      const n = Math.max(2, Math.floor(hPts.length * 0.1)), a0 = Math.round(saMean(hPts.slice(1, n + 1).map((q) => q[2]))), a1 = Math.round(saMean(hPts.slice(-n).map((q) => q[2]))), mxv = Math.max(...hv), df = a1 - a0;
-      hf = `HR dari ~${a0} bpm di awal ke ~${a1} bpm di akhir (${df >= 0 ? "+" : "−"}${Math.abs(df)}), puncak ${mxv}. ` + (df >= 10 ? "Naik cukup jauh, cek tanjakan, panas, atau pace yang terlalu cepat." : df <= 3 ? "Relatif datar." : "Kenaikan wajar seiring durasi.");
+      const m = (lo, hi) => { const i0 = Math.floor(hPts.length * lo), q = hPts.slice(i0, Math.max(i0 + 1, Math.floor(hPts.length * hi))).map((p) => p[2]); return q.length ? Math.round(saMean(q)) : 0; };
+      const a0 = m(0, 0.12), c1 = m(0.3, 0.5), c2 = m(0.55, 0.8), a1 = m(0.9, 1), mxv = Math.max(...hv), dr = c2 - c1, fall = c2 - a1, df = c2 - a0;
+      hf = `Awal ~${a0} bpm, bagian inti ~${c2} bpm (${dr >= 0 ? "+" : "−"}${Math.abs(dr)} dari paruh pertama inti), puncak ${mxv}` + (fall >= 15 ? `, lalu turun ke ~${a1} di akhir (pendinginan/jalan). ` : `, akhir ~${a1}. `) + (df >= 20 ? "Naik dari awal ke inti itu wajar (pemanasan). " : "") + (dr >= 8 ? "HR naik di bagian inti: cek tanjakan, panas, atau pace." : dr <= 3 ? "HR inti stabil." : "Kenaikan inti wajar.");
     }
     const hrBlock = hrSvg ? `<div class="sa-chart-label">Detak jantung <span>bpm</span></div>${hf ? `<div class="sa-find">${hf}</div>` : ""}${hrSvg}` : "";
     const segs = sx && sx.planSource === "local-plan" && Array.isArray(sx.segments) ? sx.segments : [];
@@ -5243,11 +5313,12 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
   /* Distribusi zona HR: satu bar bertumpuk + angka stabilitas HR */
   function saZonesHTML(act, sx) {
-    if (!sx || !Array.isArray(sx.tiz)) return "";
-    const tz = sx.tiz, tot = tz.reduce((u, v) => u + v, 0) || 1, mins = act[2] || 0;
+    const tzC = tizNow(sx);
+    if (!tzC && (!sx || !Array.isArray(sx.tiz))) return "";
+    const tz = tzC || sx.tiz, tot = tz.reduce((u, v) => u + v, 0) || 1, mins = act[2] || 0;
     const seg = tz.map((v, i) => v > 0 ? `<button type="button" class="sa-seg" data-g="zn" data-r="${ZN[i][0]} ${ZN[i][1]}: ${v}% waktu, sekitar ${Math.max(1, Math.round((v / 100) * mins))} menit." style="width:${(v / tot) * 100}%;background:${ZN[i][2]}">${v >= 9 ? v + "%" : ""}</button>` : "").join("");
     const legend = tz.map((v, i) => v > 0 ? `<span><i style="background:${ZN[i][2]}"></i>${ZN[i][0]} ${v}%</span>` : "").join("");
-    const low = tz[0] + tz[1], high = tz[2] + tz[3] + tz[4];
+    const low = tz[0] + tz[1], high = tz[2] + tz[3] + tz[4] + tz[5] + tz[6];
     let stab = "";
     if (sx.dec && Number.isFinite(sx.dec.pct)) {
       const d = sx.dec.pct, lbl = d <= 3 ? "sangat stabil" : d < 5 ? "stabil" : d < 8 ? "mulai drift" : "drift jelas";
@@ -5349,8 +5420,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (rev.headline) h += `<div class="review-note ${rev.tone}" style="font-weight:700">${rev.headline}</div>`;
     if (rev.summary) h += `<p class="hint" style="font-family:var(--mono)">${rev.summary}</p>`;
     const isRun = act[1] === "run";
-    const i1 = saIntensityHTML(act, rev) + saNotes(rev, "Intensitas");
-    if (i1) h += saSec("Intensitas", "Seberapa berat sesi ini dibanding kapasitas dan batas ambangmu.", i1);
+    const coach = saCoachSummaryHTML(rev);
+    if (coach) h += saSec("Kesimpulan", "Temuan utama dan tindak lanjut dari data sesi ini.", coach);
     if (isRun) {
       const e1 = saExecHTML(act, sx) + saZonesHTML(act, sx) + saNotes(rev, "Eksekusi");
       h += saSec("Eksekusi", "Bagaimana lari ini dijalankan (pace) dan bagaimana tubuh merespons (detak jantung).", e1);
@@ -5359,10 +5430,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (c1) h += saSec("Beban & konteks", "Beban sesi, perubahan beban sebelum sesi, dan kondisi saat berlari.", c1);
     const ad = sessionAdaptationHTML(act) + saProgressTrendHTML(act);
     if (ad) h += saSec("Dibanding sesi sejenis", "Efisiensi dan tren beberapa sesi dengan jenis serta jarak yang sebanding.", ad);
-    const nx = saNotes(rev, "Lanjut");
-    if (nx) h += saSec("Lanjut", "", nx);
-    const coach = saCoachSummaryHTML(rev);
-    if (coach) h += saSec("Kesimpulan terpadu", "Ringkasan temuan utama dan tindak lanjut berdasarkan data yang tersedia.", coach);
+    const i1 = saIntensityHTML(act, rev) + saNotes(rev, "Intensitas");
+    if (i1) h += saSec("Pembanding kapasitas", "Seberapa berat sesi ini dibanding model kapasitas (skala METs), sebagai pembanding, bukan penilai utama.", i1);
     return `<div class="sa-flow">${h}</div>`;
   }
 
