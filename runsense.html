@@ -1688,9 +1688,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     // supaya sebanding dengan ambang di engine (70/75/85/90 dikalibrasi ke load ICU).
     const h = a[2] / 60;
     if (a[1] === "run") {
-      const mx = maxHr(), rs = restHr();
+      const L = lthrNow();
       let IF;
-      if (a[4] > 0 && mx > rs && rs > 0) IF = ((a[4] - rs) / (mx - rs)) / 0.88; // HRR rata-rata / LTHR (~88% HRR)
+      if (a[4] > 0 && L > 0) IF = a[4] / L; // Intensitas relatif langsung terhadap LTHR
       else IF = (metsOf(a[3] > 0 ? a[2] / a[3] : 8) / 11.5) * 0.95;
       IF = clamp(IF, 0.45, 1.15);
       return Math.round(h * 100 * IF * IF);
@@ -1916,8 +1916,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (x[10] > 0) return Math.round(x[10]);
       const hours = x[2] / 60;
       if (x[1] === "run") {
-        let intensity = histRest > 0 && histMax > histRest && x[4] > 0
-          ? ((x[4] - histRest) / (histMax - histRest)) / 0.88
+        const histLthr = histRest > 0 && histMax > histRest ? Math.round(histRest + .88 * (histMax - histRest)) : 0;
+        let intensity = histLthr > 0 && x[4] > 0
+          ? x[4] / histLthr
           : (metsOf(x[3] > 0 ? x[2] / x[3] : 8) / 11.5) * 0.95;
         intensity = clamp(intensity, 0.45, 1.15);
         return Math.round(hours * 100 * intensity * intensity);
@@ -2040,12 +2041,12 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         why.push("puncak detak lebih tinggi dari rata-rata");
         push(S_ex, "y", "Puncak detak mencapai " + Math.round(maxH) + " bpm, lebih tinggi dari rata-rata " + Math.round(hr) + " bpm. Periksa grafik HR untuk melihat apakah kenaikannya hanya sesaat atau bertahan.");
       }
-    } else if (hr > 0 && rst > 0 && mx > rst) {
-      const hrr = (hr - rst) / (mx - rst);
-      if (hrr >= 0.88) push(S_int, "r", "Detak ≈ " + Math.round(hrr * 100) + "% dari cadangan jantungmu, sangat keras.");
-      else if (hrr >= 0.78) push(S_int, "y", "Detak ≈ " + Math.round(hrr * 100) + "% dari cadangan jantungmu, zona sesi keras.");
-      else if (hrr <= 0.65) push(S_int, "g", "Detak ≈ " + Math.round(hrr * 100) + "% dari cadangan jantungmu, zona aerobik.");
-      else push(S_int, "g", "HR ≈ " + Math.round(hrr * 100) + "% reserve.");
+    } else if (hr > 0 && lthr) {
+      const ratio = hr / lthr;
+      if (ratio >= 1) push(S_int, "r", "Detak rata-rata sudah mencapai/melewati LTHR (" + Math.round(hr) + " / " + lthr + " bpm), sangat keras.");
+      else if (ratio >= 0.92) push(S_int, "y", "Detak dekat LTHR (" + Math.round(hr) + " dari " + lthr + " bpm), zona sesi keras.");
+      else if (ratio <= 0.82) push(S_int, "g", "Detak " + Math.round(hr) + " bpm (" + Math.round(ratio * 100) + "% LTHR), di bawah zona tempo.");
+      else push(S_int, "g", "HR ≈ " + Math.round(ratio * 100) + "% LTHR.");
     } else if (!hr) {
       push(S_int, "y", "Tanpa data HR. Analisis hanya dari pace/METs — pastikan jam terhubung ke Intervals.");
     }
@@ -5959,7 +5960,16 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   }
 
   /* ---------- Workout langsung ke jam (program lari Huawei, eksperimental) ---------- */
-  const ZONE_PCT = { 1: [50, 70], 2: [70, 80], 3: [80, 87], 4: [87, 93], 5: [93, 100] }; // % dari HR maks (perkiraan)
+  function lthrZoneEdges() {
+    const L = lthrNow();
+    return L > 0 ? [Math.round(L * .85), Math.floor(L * .90), Math.floor(L * .95), Math.round(L), Math.ceil(L * 1.02), Math.ceil(L * 1.05)] : [];
+  }
+  function lthrZoneHrBounds(z) {
+    const e = lthrZoneEdges();
+    if (!e.length) return null;
+    const n = Math.max(1, Math.min(7, +z));
+    return [n === 1 ? 0 : e[n - 2], n === 7 ? null : e[n - 1] - 1];
+  }
   function toCourse(r) {
     if (!r) return null;
     let w; try { w = buildWorkout(r); } catch (_) { return null; }
@@ -5975,13 +5985,16 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if ((m = /^(\d+)x$/i.exec(ln))) { flush(); cur.repeat = Math.min(99, +m[1]); continue; }
       if (/^(Warmup|Main Set|Cooldown)$/i.test(ln)) { flush(); label = ln.toLowerCase(); continue; }
       // contoh: "- Lari 1m Z2 HR", "- Mudah 5m Z1-Z2 HR", "- 20m Z2 HR", "- Jalan 1m"
-      if ((m = /^-\s*([A-Za-zÀ-ÿ ]*?)\s*(\d+)(m|s)\b(?:\s+Z([1-5])(?:-Z([1-5]))?\s+HR)?\s*$/i.exec(ln))) {
+      if ((m = /^-\s*([A-Za-zÀ-ÿ ]*?)\s*(\d+)(m|s)\b(?:\s+Z([1-7])(?:-Z([1-7]))?\s+HR)?\s*$/i.exec(ln))) {
         const word = (m[1] || "").toLowerCase(), walky = /jalan|pemulihan/.test(word);
         const zLo = m[4] ? +m[4] : walky ? 1 : 2, zHi = m[5] ? +m[5] : zLo;
+        const max = maxHr(), loHr = lthrZoneHrBounds(zLo), hiHr = lthrZoneHrBounds(zHi);
+        if (!max || !loHr || !hiHr) return null;
+        const lowBpm = loHr[0] || 0, highBpm = hiHr[1] == null ? max : hiHr[1];
         cur.steps.push({
           kind: label === "warmup" ? "warmup" : label === "cooldown" ? "cooldown" : "run",
           target: "time", targetValue: +m[2] * (m[3].toLowerCase() === "m" ? 60 : 1),
-          intensity: "hrPercent", low: ZONE_PCT[zLo][0], high: ZONE_PCT[zHi][1]
+          intensity: "hrPercent", low: Math.max(0, Math.round(lowBpm / max * 100)), high: Math.min(100, Math.round(highBpm / max * 100))
         });
         continue;
       }
