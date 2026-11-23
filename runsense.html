@@ -1128,6 +1128,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       <div class="insight" id="autoLine" style="display:none"></div>
       <div class="card" id="vxCard" style="display:none"><div id="vxBody"></div></div>
       <div class="card" id="strCard" style="display:none"></div>
+      <div class="card" id="lrnCard" style="display:none"></div>
       <div class="card" id="reviewCard" style="display:none">
         <div class="label">Ringkasan lari hari ini</div>
         <div id="reviewBody"></div>
@@ -1805,7 +1806,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       sc += clamp((b[Math.floor(b.length / 2)] - rh.slice(-3).reduce((u, v) => u + v, 0) / Math.min(3, rh.length)) * 1.3, -14, 12);
       inputs++;
     }
-    const acute = loadDays(7), chronic = (loadDays(28) - acute) / 3;
+    const _ew = LRN.acwr(), acute = _ew ? _ew.a : loadDays(7), chronic = _ew ? _ew.c : (loadDays(28) - loadDays(7)) / 3;
     if (chronic > 25) {
       inputs++;
       const r = acute / chronic;
@@ -3561,6 +3562,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   /* Pace easy: lari easy bersih terakhir, disetarakan ke HR target (85% LTHR), median berbobot kebaruan. */
   function easyBase() {
     easyMeta = null;
+    return null; /* DIMATIKAN: pace nyaman lama belum teruji; diganti algoritma baru. Fallback: zona pace dari ambang. */
     {
       const now = Date.now(), D = 864e5, L = lthrNow(), rs0 = restHr();
       const cl = (state.acts || []).filter((a) => a[1] === "run" && now - a[0] <= 42 * D && a[2] >= 12 && a[3] >= 2 && detectType(a).type === "easy")
@@ -3657,6 +3659,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   }
   /* Durasi spesifik = bobot-kebaruan dari lari bersih terpanjang + langkah progresi; naik maks ~10% dari lari bersih terpanjang. */
   function optimalDur(label) {
+    return { mins: 0, n: 0, conf: "rendah", src: "none", why: "" }; /* DIMATIKAN: durasi nyaman lama belum teruji. Fallback: histCap/trainingTolerance. */
     const now = Date.now(), D = 864e5;
     const cands = (state.acts || []).filter((x) => x[1] === "run" && x[2] >= 8 && x[3] >= 1.5 && x[0] <= now && now - x[0] <= 90 * D && detectType(x).type === label).sort((a, b) => b[0] - a[0]);
     const profs = cands.map(runProfile), clean = profs.filter((p) => cleanRun(p, label));
@@ -5079,7 +5082,24 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const dq = '<section class="prg-card prg-dq"><h4>Kualitas data</h4><div class="sub">' + runs.length + ' lari dipakai' + (excl > 0 ? ', ' + excl + ' dikecualikan (durasi &lt; 5 menit, jarak &lt; 1 km, atau pace tak wajar)' : '') + '. HR valid di ' + withHr + ' lari.' +
       ' Durability dihitung dari stream tiap lari panjang, bukan dari ringkasan aktivitas.</div></section>';
 
-    el.innerHTML = summary + perfHtml + durHtml + capHtml + susHtml + dq;
+    /* =============== PACE & DURASI NYAMAN (evaluasi) =============== */
+    let nymHtml = "";
+    try {
+      const nS = window.NYM.series(from, now), nv = window.NYM.now();
+      if (nS.length >= 2) {
+        const pI = nS.map(q => ({ ms: q.ms, v: q.pace * 60, t: dm(q.ms) + " · " + window.NYM.sx(q.pace) + " /km · " + q.n + " lari" }));
+        const dI = nS.filter(q => q.dur != null).map(q => ({ ms: q.ms, v: q.dur, t: dm(q.ms) + " · " + Math.round(q.dur) + " mnt" }));
+        const dP = Math.round((nS[nS.length - 1].pace - nS[0].pace) * 60), dD = dI.length > 1 ? Math.round(dI[dI.length - 1].v - dI[0].v) : null;
+        const gtx = window.NYM.gateTxt(window.NYM.gate());
+        nymHtml = card("Pace &amp; durasi nyaman", "Dari semua lari (bukan hanya easy), jendela 28 hari; satu titik = akhir tiap minggu. Pace dibaca di HR " + (nv.ok ? nv.hr : "acuan") + ".",
+          '<div class="sub" style="margin:4px 0 2px">Pace nyaman (makin ke atas = makin cepat)</div>' + lineChart("prgNymP", pI, v => fmtP(v), true, "Pace nyaman") +
+          (dI.length > 1 ? '<div class="sub" style="margin:12px 0 2px">Durasi nyaman</div>' + lineChart("prgNymD", dI, v => Math.round(v) + " mnt", false, "Durasi nyaman") : ""),
+          "Sepanjang grafik, pace nyaman berubah " + (dP > 0 ? "+" : "") + dP + " dtk/km" + (dD != null ? " dan durasi nyaman " + (dD > 0 ? "+" : "") + dD + " menit" : "") + ". " + gtx + " Selisih di bawah ±10–15 dtk/km masih dalam noise pengukuran.",
+          nv.ok && nv.n >= 25 ? "sedang" : "rendah");
+      } else nymHtml = card("Pace &amp; durasi nyaman", "Butuh minimal 8 lari ber-HR dan LTHR (atau HR istirahat/maksimal) di Pengaturan.", "", "", "");
+    } catch (_) { nymHtml = ""; }
+
+    el.innerHTML = summary + nymHtml + perfHtml + durHtml + capHtml + susHtml + dq;
     backfillDurability(runs);
     prefetchPace(perfNeed.map(x => ({ act: x }))).then(n => { if (n) renderProgress(); });
   }
@@ -6488,6 +6508,524 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     return `<button class="link" type="button" style="margin-top:10px" onclick="pqStart()">Cek kesiapan jantung (PAR-Q, sekali saja)</button>`;
   }
   Object.assign(window, { saveTest, pqStart, pqAns });
+
+
+  /* =====================================================================
+     LRN · Lapisan pembelajaran (v1)
+     Mencatat saran harian -> hasil nyata -> menyetel dosis/bobot dalam batas aman.
+     Aturan lama tetap jadi pagar. Setelan belajar baru AKTIF setelah >= 14 hasil
+     tercatat; sebelum itu hanya dihitung (mode bayangan) dan ditampilkan.
+     ===================================================================== */
+/* Pace & durasi nyaman v2 — SEMUA lari ikut dihitung (tanpa filter zona).
+   Lari = {ms, min, km, hr}. Murni fungsi: tidak menyentuh state aplikasi. */
+(function (root) {
+  const D = 864e5;
+  const pace = (r) => r.min / r.km;
+  const valid = (r) => r && r.min >= 8 && r.km > 0 && r.hr > 0 && pace(r) >= 3.5 && pace(r) <= 13;
+
+  /* HR = a + b*pace, kuadrat terkecil berbobot min(1, menit/20); lari singkat tetap ikut, bobotnya kecil */
+  function fit(runs) {
+    const s = runs.filter(valid); if (s.length < 8) return null;
+    let sw = 0, mx = 0, my = 0;
+    s.forEach((r) => { const w = Math.min(1, r.min / 20); sw += w; mx += w * pace(r); my += w * r.hr; });
+    mx /= sw; my /= sw;
+    let sxx = 0, sxy = 0;
+    s.forEach((r) => { const w = Math.min(1, r.min / 20); sxx += w * (pace(r) - mx) ** 2; sxy += w * (pace(r) - mx) * (r.hr - my); });
+    if (sxx <= 0) return null;
+    const b = sxy / sxx, a = my - b * mx;
+    return b < 0 ? { a, b, n: s.length } : null;   // pace lebih cepat harus = HR lebih tinggi
+  }
+  /* HR acuan = persen LTHR, sama dengan pembagian zona lain (Z2 Aerobic = 85–90% LTHR).
+     Target tengah Z2 = 87,5%; rentang cepat = 90% (batas Z2/Z3), lambat = 85% (batas Z1/Z2). */
+  const F_MID = 0.875, F_FAST = 0.90, F_SLOW = 0.85;
+  const hrTarget = (lthr, f) => lthr * (f || F_MID);
+  const paceAt = (m, hr) => (hr - m.a) / m.b;
+
+  /* Pace nyaman (mnt/km) pada 87,5% LTHR, plus rentang di batas Z2: 90% LTHR (cepat) sampai 85% LTHR (lambat) */
+  function paceNyaman(runs, lthr) {
+    const m = fit(runs); if (!m || !(lthr > 0)) return null;
+    return { n: m.n, pace: paceAt(m, hrTarget(lthr)), cepat: paceAt(m, hrTarget(lthr, F_FAST)), lambat: paceAt(m, hrTarget(lthr, F_SLOW)) };
+  }
+  /* Durasi nyaman = P75 durasi lari "tidak berat": HR aktual - HR prediksi dari pace <= 1,8% LTHR (≈3 bpm di LTHR 166) */
+  function durasiNyaman(runs, lthr) {
+    const m = fit(runs); if (!m || !(lthr > 0)) return null;
+    const tol = 0.018 * lthr;
+    const ok = runs.filter(valid).filter((r) => r.hr - (m.a + m.b * pace(r)) <= tol).map((r) => r.min).sort((x, y) => x - y);
+    if (ok.length < 6) return null;
+    return { n: ok.length, menit: ok[Math.floor((ok.length - 1) * 0.75)] };
+  }
+  /* Gerbang progresi: bandingkan pace@HR target jendela 42 hari terkini vs jendela 28 hari sebelumnya.
+     NAIK/TURUN hanya jika selisih > 2x galat baku bootstrap. Selain itu TAHAN. */
+  function gate(runs, now, lthr, seed) {
+    const hr = hrTarget(lthr); let s = seed || 7;
+    const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+    const win = (end) => runs.filter((r) => end - r.ms >= 0 && end - r.ms < 42 * D);
+    const est = (w) => { const m = fit(w); return m ? paceAt(m, hr) : null; };
+    const se = (w) => { const v = []; for (let i = 0; i < 200; i++) { const q = []; for (let j = 0; j < w.length; j++) q.push(w[Math.floor(rnd() * w.length)]); const e = est(q); if (e && e > 4 && e < 13) v.push(e); } if (v.length < 30) return null; const mu = v.reduce((x, y) => x + y) / v.length; return Math.sqrt(v.reduce((x, y) => x + (y - mu) ** 2, 0) / v.length); };
+    const wa = win(now), wb = win(now - 28 * D), pa = est(wa), pb = est(wb);
+    if (pa == null || pb == null) return { verdict: "DATA KURANG" };
+    const sa = se(wa), sb = se(wb); if (sa == null || sb == null) return { verdict: "DATA KURANG" };
+    const d = pa - pb, sd = Math.hypot(sa, sb);
+    return { verdict: d < -2 * sd ? "NAIK" : d > 2 * sd ? "TURUN" : "TAHAN", deltaDtk: Math.round(d * 60), ambangDtk: Math.round(2 * sd * 60), paceNow: pa };
+  }
+  /* Target pelan-pelan: pace -5 dtk/km hanya saat NAIK (+5 saat TURUN); durasi +5% bila 2 lari terakhir >= 95% target dan tidak berat.
+     Hasil durasi tetap harus lewat wkAdjust/histCap yang sudah ada (min), jangan menaikkan di luar pagar itu. */
+  function nextTargets(cur, g, last2OK) {
+    const o = { pace: cur.pace, menit: cur.menit };
+    if (g.verdict === "NAIK") o.pace = cur.pace - 5 / 60; else if (g.verdict === "TURUN") o.pace = cur.pace + 5 / 60;
+    if (last2OK) o.menit = Math.round(cur.menit * 1.05);
+    return o;
+  }
+  root.ComfortV2 = { fit, paceNyaman, durasiNyaman, gate, nextTargets };
+})(typeof window !== "undefined" ? window : globalThis);
+
+  /* ===== Nyaman v2: pace & durasi nyaman dari SEMUA lari (menggantikan kurva nyaman LRN yang belum teruji) ===== */
+  window.NYM = (function () {
+    const C = window.ComfortV2, D = 864e5, WIN = 28 * D;
+    let memo = { k: "", v: null }, gmemo = { k: "", v: null };
+    const sx = (p) => { const s = Math.round(p * 60); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+    const runsAll = () => (state.acts || []).filter((a) => a[1] === "run" && +a[2] >= 8 && +a[3] > 0 && +a[4] > 0)
+      .map((a) => ({ ms: a[0], min: +a[2], km: +a[3], hr: +a[4] })).sort((x, y) => x.ms - y.ms);
+    const hrOK = () => { const L = lthrNow(); return L >= 100 && L <= 220 ? L : 0; };   // satu sumber LTHR yang sama dengan analisis lain
+    function now() {
+      const runs = runsAll(), hp = hrOK(), t = Date.now();
+      const k = runs.length + ":" + (runs.length ? runs[runs.length - 1].ms : 0) + ":" + (hp || "-") + ":" + new Date(t).toDateString();
+      if (memo.k === k) return memo.v;
+      let v = { ok: false, n: runs.length, why: hp ? "data" : "hr" };
+      if (hp) {
+        const w = runs.filter((r) => t - r.ms < WIN), pn = C.paceNyaman(w, hp), dn = C.durasiNyaman(w, hp);
+        if (pn) v = { ok: true, n: pn.n, pace: pn.pace, cepat: pn.cepat, lambat: pn.lambat, hr: Math.round(hp * 0.875), lthr: hp, dur: dn ? dn.menit : null, durN: dn ? dn.n : 0 };
+      }
+      memo = { k, v }; return v;
+    }
+    function gate() {
+      const runs = runsAll(), hp = hrOK(); if (!hp) return { verdict: "DATA KURANG" };
+      const k = runs.length + ":" + (runs.length ? runs[runs.length - 1].ms : 0) + ":" + hp + ":" + new Date().toDateString();
+      if (gmemo.k === k) return gmemo.v;
+      let g; try { g = C.gate(runs, Date.now(), hp); } catch (_) { g = { verdict: "DATA KURANG" }; }
+      gmemo = { k, v: g }; return g;
+    }
+    const gateTxt = (g) => g.verdict === "NAIK" ? "Efisiensi membaik: pace di HR yang sama lebih cepat " + Math.abs(g.deltaDtk) + " dtk/km dibanding 4 minggu lalu."
+      : g.verdict === "TURUN" ? "Efisiensi menurun: pace di HR yang sama lebih lambat " + Math.abs(g.deltaDtk) + " dtk/km dibanding 4 minggu lalu."
+      : g.verdict === "TAHAN" ? "Belum ada perubahan berarti dalam 6 minggu terakhir (perubahan " + (g.deltaDtk > 0 ? "+" : "") + g.deltaDtk + " dtk/km, di bawah ambang ±" + g.ambangDtk + ")." : "";
+    function cardHTML() {
+      const v = now(), big = "font-size:30px;font-weight:700;line-height:1.1", unit = "font-size:13px;font-weight:500;color:var(--grey)", sm = "font-size:12px;color:var(--grey)";
+      if (!v.ok) return '<div class="label">Nyaman kamu</div><div class="sa-note" style="margin-top:8px">' + (v.why === "hr" ? "Isi LTHR (atau HR istirahat dan HR maksimal agar LTHR terestimasi) di Pengaturan supaya pace dan durasi nyaman bisa dihitung." : "Butuh minimal 8 lari dengan data HR (baru " + v.n + " lari).") + "</div>";
+      const g = gate(), conf = v.n >= 25 ? "sedang" : "rendah";
+      return '<div class="label">Nyaman kamu</div><div style="display:flex;gap:18px;margin-top:8px">' +
+        '<div style="flex:1"><div style="' + sm + '">Pace nyaman</div><div style="' + big + '">' + sx(v.pace) + '<span style="' + unit + '"> /km</span></div><div style="' + sm + '">di HR ' + v.hr + ' (87,5% LTHR ' + v.lthr + ') · rentang ' + sx(v.cepat) + "–" + sx(v.lambat) + "</div></div>" +
+        '<div style="flex:1"><div style="' + sm + '">Durasi nyaman</div><div style="' + big + '">' + (v.dur != null ? Math.round(v.dur) : "–") + '<span style="' + unit + '"> mnt</span></div><div style="' + sm + '">' + (v.dur != null ? "dari " + v.durN + " lari yang tidak berat" : "belum cukup lari") + "</div></div></div>" +
+        '<div class="sa-note" style="margin-top:10px">' + (gateTxt(g) ? gateTxt(g) + " " : "") + "Dihitung dari " + v.n + " lari (28 hari). Keyakinan pace " + conf + ", durasi rendah (perkiraan awal).</div>";
+    }
+    /* seri mingguan (akhir tiap minggu) dengan jendela 28 hari; titik terakhir = angka di kartu */
+    function series(from, to) {
+      const runs = runsAll(), hp = hrOK(), out = []; if (!hp) return out;
+      const ends = []; for (let e = to; e >= from; e -= 7 * D) ends.push(e); ends.reverse();
+      ends.forEach((e) => {
+        const w = runs.filter((r) => r.ms <= e && e - r.ms < WIN), pn = C.paceNyaman(w, hp); if (!pn) return;
+        const dn = C.durasiNyaman(w, hp); out.push({ ms: e, pace: pn.pace, dur: dn ? dn.menit : null, n: pn.n });
+      });
+      return out;
+    }
+    return { now, gate, gateTxt, cardHTML, series, sx };
+  })();
+
+  const LRN = (function () {
+    const KEY = "runsense_lrn_v1", D = 864e5, NEED = 14;
+    const S = ld(KEY, { log: {}, v: 1 });
+    if (!S.log) S.log = {};
+    let lastJson = JSON.stringify(S);
+    const save = () => { const j = JSON.stringify(S); if (j !== lastJson) { lastJson = j; sv(KEY, S); } };
+    const med = (a) => { if (!a.length) return null; const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+    const dstr = (ms) => { const d = new Date(ms); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+    const runs = () => (state.acts || []).filter((a) => a[1] === "run" && a[2] >= 8 && a[3] >= 1.5);
+    const easyTag = (t) => ["AEROBIK", "RECOVERY", "TAPER", "FONDASI"].indexOf(t) >= 0;
+
+    /* (4) Komponen kesiapan sebagai penalti (negatif = menurunkan skor) */
+    function comps() {
+      const au = autonomic(), c = {};
+      c.hrv = au.hrvPct != null ? Math.min(0, clamp(au.hrvPct * 0.5, -12, 5)) : 0;
+      c.sleep = au.sleepH != null ? (au.sleepH < 5.5 ? -8 : au.sleepH < 6.5 ? -3 : 0) : 0;
+      c.rhr = au.rhrD != null ? Math.min(0, -clamp(au.rhrD * 1.3, -14, 12)) : 0;
+      c.stress = au.stressD != null && au.stressD >= 15 ? -4 : 0;
+      const e = acwr();
+      c.load = 0;
+      if (e && e.c > 25) { const r = e.a / e.c; c.load = r > 1.5 ? -20 : r > 1.3 ? -12 : r > 1.15 ? -5 : r < 0.6 ? -6 : 0; }
+      const f = FEEL && FEEL.today ? FEEL.today[ymd()] : null;
+      c.feel = 0;
+      if (f && f.savedDate === ymd()) c.feel = -((f.energy === 1 ? 8 : f.energy === 2 ? 2 : 0) + (f.fatigue === 3 ? 8 : f.fatigue === 2 ? 3 : 0) + (f.legs === 3 ? 7 : f.legs === 2 ? 3 : 0) + (f.pain === 1 ? 10 : f.pain === 2 ? 25 : 0));
+      return c;
+    }
+
+    /* (4) Beban EWMA (7 hr vs 28 hr) dengan bobot ekstra untuk sesi keras. Perlu >= 35 hari riwayat. */
+    let ec = { k: "", v: null };
+    function acwr() {
+      const acts = state.acts || [], k = acts.length + ":" + today();
+      if (ec.k === k) return ec.v;
+      let v = null;
+      try {
+        const t0 = today(), first = acts.reduce((m, a) => Math.min(m, a[0]), Infinity);
+        if (isFinite(first) && t0 - first >= 35 * D) {
+          const days = new Array(90).fill(0);
+          acts.forEach((a) => {
+            const i = Math.round((t0 - d0(a[0])) / D);
+            if (i < 0 || i > 89) return;
+            let l = loadOf(a);
+            if (a[1] === "run" && ["thr", "vo2", "race"].indexOf(detectType(a).type) >= 0) l *= 1.1;
+            days[89 - i] += l;
+          });
+          let a7 = 0, c28 = 0;
+          days.forEach((l) => { a7 += (2 / 8) * (l - a7); c28 += (2 / 29) * (l - c28); });
+          v = { a: a7 * 7, c: c28 * 7 };
+        }
+      } catch (_) { v = null; }
+      ec = { k, v };
+      return v;
+    }
+
+    /* (4) HRV z-score pribadi (log) + utang tidur; hanya MENGETATKAN kunci, tidak pernah melonggarkan */
+    function augmentAu(o) {
+      try {
+        const W = state.wellness || [], t0 = today();
+        const hv = W.filter((w) => w.hrv > 0 && !w.hrvSpot);
+        const last = hv.length ? hv[hv.length - 1] : null;
+        if (last && o.hrv != null) {
+          const same = hv.filter((w) => (w.hrvSrc || "") === (last.hrvSrc || ""));
+          const l3 = same.slice(-3), base = same.slice(0, -l3.length).filter((w) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(w.id || ""); return m && t0 - Date.UTC(+m[1], +m[2] - 1, +m[3]) <= 28 * D; }).slice(-28);
+          if (base.length >= 14) {
+            const lg = base.map((w) => Math.log(w.hrv)), mu = lg.reduce((a, b) => a + b, 0) / lg.length;
+            const sd = Math.max(0.03, Math.sqrt(lg.reduce((a, b) => a + (b - mu) * (b - mu), 0) / lg.length));
+            const m3 = l3.reduce((a, w) => a + Math.log(w.hrv), 0) / l3.length;
+            o.hrvZ = Math.round((m3 - mu) / sd * 10) / 10;
+            const sup = (o.rhrD != null && o.rhrD >= 3) || (o.sleepH != null && o.sleepH < 5.5);
+            if (o.hrvZ <= -2 || (o.hrvZ <= -1.5 && sup)) { if (!o.lock) o.why += (o.why ? ", " : "") + "HRV z " + o.hrvZ; o.lock = true; o.warn = true; }
+          }
+        }
+        const sl = W.filter((w) => w.sleepSecs > 0 && t0 - (Date.UTC(+(w.id || "").slice(0, 4), +(w.id || "").slice(5, 7) - 1, +(w.id || "").slice(8, 10))) <= 28 * D);
+        if (sl.length >= 10) {
+          const need = clamp(Math.max(7, med(sl.map((w) => w.sleepSecs / 3600))), 7, 8.5);
+          o.sleepDebt = Math.round(sl.slice(-3).reduce((a, w) => a + Math.max(0, need - w.sleepSecs / 3600), 0) * 10) / 10;
+          if (o.sleepDebt >= 3) { o.warn = true; o.why += (o.why ? ", " : "") + "Utang tidur " + o.sleepDebt + "j"; }
+          if (o.sleepDebt >= 4.5 && ((o.hrvPct != null && o.hrvPct <= -8) || (o.rhrD != null && o.rhrD >= 3))) o.lock = true;
+        }
+      } catch (_) {}
+      return o;
+    }
+
+
+    /* Isi awal dari riwayat 90 hari: komponen kesiapan dihitung ulang pada tanggal itu, hasil dinilai dari RPE/kaki/nyeri/drift */
+    const lm = new Map();
+    const L1 = (a) => { let v = lm.get(a[0]); if (v == null) { v = loadOf(a); if (a[1] === "run" && ["thr", "vo2", "race"].indexOf(detectType(a).type) >= 0) v *= 1.1; lm.set(a[0], v); } return v; };
+    function acwrAt(t0) {
+      const acts = (state.acts || []).filter((a) => a[0] < t0); if (!acts.length) return null;
+      const first = acts.reduce((m, a) => Math.min(m, a[0]), Infinity); if (t0 - first < 35 * D) return null;
+      const days = new Array(90).fill(0);
+      acts.forEach((a) => { const i = Math.round((t0 - d0(a[0])) / D); if (i >= 1 && i <= 90) days[90 - i] += L1(a); });
+      let a7 = 0, c28 = 0; days.forEach((l) => { a7 += (2 / 8) * (l - a7); c28 += (2 / 29) * (l - c28); });
+      return { a: a7 * 7, c: c28 * 7 };
+    }
+    function compsAt(ms) {
+      const W = state.wellness || [], ds = dstr(ms), c = { hrv: 0, sleep: 0, rhr: 0, stress: 0, load: 0, feel: 0 };
+      const age = (w) => Math.round((Date.parse(ds + "T00:00:00Z") - Date.parse((w.id || "").slice(0, 10) + "T00:00:00Z")) / D);
+      const up = W.filter((w) => { const g = age(w); return g >= 0 && g <= 60; });
+      const avg = (a, f) => a.reduce((x, w) => x + f(w), 0) / a.length;
+      const hv = up.filter((w) => w.hrv > 0 && !w.hrvSpot);
+      if (hv.length >= 10 && age(hv[hv.length - 1]) <= 2) {
+        const b = hv.slice(0, -3).filter((w) => age(w) <= 28).slice(-28);
+        if (b.length >= 7) c.hrv = Math.min(0, clamp((avg(hv.slice(-3), (w) => w.hrv) / med(b.map((w) => w.hrv)) - 1) * 50, -12, 5));
+      }
+      const sl = up.filter((w) => w.sleepSecs > 0 && age(w) <= 2).pop();
+      if (sl) { const h = sl.sleepSecs / 3600; c.sleep = h < 5.5 ? -8 : h < 6.5 ? -3 : 0; }
+      const rh = up.filter((w) => w.restingHR > 30);
+      if (rh.length >= 10 && age(rh[rh.length - 1]) <= 2) {
+        const b = rh.slice(0, -3).filter((w) => age(w) <= 28).slice(-28);
+        if (b.length >= 7) c.rhr = Math.min(0, -clamp((avg(rh.slice(-3), (w) => w.restingHR) - med(b.map((w) => w.restingHR))) * 1.3, -14, 12));
+      }
+      const e = acwrAt(d0(ms));
+      if (e && e.c > 25) { const r = e.a / e.c; c.load = r > 1.5 ? -20 : r > 1.3 ? -12 : r > 1.15 ? -5 : r < 0.6 ? -6 : 0; }
+      const f = FEEL && FEEL.today ? FEEL.today[ds] : null;
+      if (f && f.savedDate === ds) c.feel = -((f.energy === 1 ? 8 : f.energy === 2 ? 2 : 0) + (f.fatigue === 3 ? 8 : f.fatigue === 2 ? 3 : 0) + (f.legs === 3 ? 7 : f.legs === 2 ? 3 : 0) + (f.pain === 1 ? 10 : f.pain === 2 ? 25 : 0));
+      return c;
+    }
+    let bk = "";
+    function backfill() {
+      const k = (state.acts || []).length + ":" + ymd(); if (bk === k || state.apiKey === "demo") return; bk = k; lm.clear();
+      const t0 = today(), seen = {};
+      runs().filter((a) => a[0] < t0 && t0 - a[0] <= 90 * D).sort((a, b) => b[2] - a[2]).forEach((a) => {
+        const d = dstr(a[0]); if (seen[d] || S.log[d]) return; seen[d] = 1;
+        const t = detectType(a).type;
+        S.log[d] = { r: 1, status: "train", tag: t === "long" ? "LONG" : (t === "thr" || t === "vo2" || t === "race") ? "QUALITY" : "AEROBIK", mins: Math.round(a[2]), score: null, c: compsAt(a[0]) };
+      });
+    }
+    const ninf = () => outs().filter((e) => e.out.good || e.out.bad).length;
+    /* Alasan belajar yang ditampilkan di coach: hanya muncul bila memang mengubah saran atau data tipis */
+    function note(r) {
+      if (!r || r.status === "done" || r.status === "rest") return "";
+      const p = [], cf = conf();
+      if (active()) {
+        const sh = shift(); if (Math.abs(sh) >= 2) p.push("Skor kesiapan disetel " + (sh > 0 ? "+" : "") + sh + " dari pola riwayatmu");
+        if (api.capNote !== 1) p.push("plafon durasi ×" + api.capNote + " mengikuti respons sesi sejenis terakhir");
+      }
+      { const bk = comfort().brk; if (bk && bk.n >= 3 && bk.lim && parseInt(r.duration) >= bk.lim * 0.95) p.push("kamu cenderung mentok lalu jalan di ±" + bk.lim + " menit lari nonstop" + (bk.hr ? " (HR ±" + bk.hr + " bpm)" : "") + "; jaga HR di bawah itu atau jadwalkan jalan 1–2 menit sebelum titik itu"); }
+      if (api.paceNote) p.push(api.paceNote);
+      if (api.durNote) p.push("durasi dibatasi ~" + api.durNote + " menit, batas nyamanmu dari riwayat");
+      if (cf.lv === "Rendah") p.push("data kesiapan terbatas (tanpa " + cf.miss.slice(0, 3).join(", ") + "), anggap saran ini perkiraan");
+      return p.length ? p.join("; ").replace(/^./, (x) => x.toUpperCase()) + "." : "";
+    }
+
+    /* Pace & durasi nyaman: metode yang sama dengan ambang suhu (bin berurutan >= 3 lari, bandingkan dengan lari tetangga +-28 hari
+       agar tren kebugaran terbuang, cari bin terbaik, lalu rentang yang masih dalam toleransi). Metrik: skor kenyamanan sesi
+       (drift, RPE, kaki, nyeri). Pace dinormalkan ke suhu memakai kurva suhu pribadi bila sudah ada. */
+    const climOK = () => { try { return !!climReady && typeof CL === "object"; } catch (_) { return false; } };
+    function relAt(v, P) {
+      let b = null, dm = 1e9;
+      (P.bins || []).forEach((x) => { const d = v >= x.lo && v <= x.hi ? 0 : Math.min(Math.abs(v - x.lo), Math.abs(v - x.hi)); if (d < dm) { dm = d; b = x; } });
+      return b && dm <= 2 ? b.med / 100 : 0;
+    }
+    function curve(rows, spans, t1, t2) {
+      if (rows.length < 10) return { ok: false, n: rows.length };
+      for (let si = 0; si < spans.length; si++) {
+        const so = rows.slice().sort((p, q) => p.v - q.v), gs = []; let cur = [];
+        so.forEach((x) => { cur.push(x); if (cur.length >= 3 && x.v - cur[0].v >= spans[si]) { gs.push(cur); cur = []; } });
+        if (cur.length) { if (cur.length >= 3 || !gs.length) gs.push(cur); else gs[gs.length - 1] = gs[gs.length - 1].concat(cur); }
+        const bins = gs.map((g) => ({ lo: g[0].v, hi: g[g.length - 1].v, m: med(g.map((x) => x.r)) }));
+        if (bins.length < 3) continue;
+        let bi = 0; bins.forEach((b, i) => { if (b.m > bins[bi].m) bi = i; });
+        const B = bins[bi]; let up = B.hi, dn = B.lo, drop = false;
+        for (let k = bi + 1; k < bins.length; k++) { const d = B.m - bins[k].m; if (d <= t1 && !drop) up = bins[k].hi; else { drop = true; if (d > t2) break; } }
+        for (let k = bi - 1; k >= 0; k--) { if (B.m - bins[k].m <= t1) dn = bins[k].lo; else break; }
+        return { ok: true, n: rows.length, lo: dn, hi: up, drop, conf: rows.length < 20 ? "awal" : rows.length < 40 ? "cukup" : "matang" };
+      }
+      return { ok: false, n: rows.length };
+    }
+    /* Lari terus lalu jalan di akhir (bukan run-walk terencana): lari nonstop >=10 mnt yang dominan lari, lalu bagian akhirnya banyak jalan.
+       Diperlakukan sebagai tanda batas nyaman terlewati; menit lari nonstop dan HR terakhir sebelum jalan dicatat. */
+    function breakOf(a) {
+      const sx = a[9] && state.sx ? state.sx[String(a[9])] : null;
+      if (!sx || !Array.isArray(sx.segments) || sx.planSource === "local-plan" || sx.segments.length < 3) return null;
+      const sg = sx.segments, cum = []; let t = 0;
+      sg.forEach((x) => { cum.push(t); t += (x.duration || 0) / 60; });
+      if (t < 15) return null;
+      for (let i = 1; i < sg.length; i++) {
+        const w = sg[i]; if (w.type !== "walk" || !(w.duration >= 45) || (w.pace && w.pace > 16)) continue;
+        const before = cum[i]; if (before < 10 || before < 0.5 * t) continue;
+        const pre = sg.slice(0, i), runB = pre.filter((x) => x.type === "run").reduce((q, x) => q + x.duration / 60, 0);
+        if (runB / before < 0.85) continue;
+        const rest = sg.slice(i), wk = rest.filter((x) => x.type === "walk").reduce((q, x) => q + x.duration / 60, 0), rt = t - before;
+        if (rt > 0 && wk / rt >= 0.35) { const last = pre.filter((x) => x.type === "run").pop(); return { min: Math.round(before), hr: last && last.hr > 0 ? Math.round(last.hr) : null }; }
+      }
+      return null;
+    }
+    let cmf = { k: "", v: null };
+    /* Otomatis, tanpa ulasan manual. Pace: efisiensi (m/menit per detak) relatif terhadap lari tetangga +-28 hari, dikelompokkan menurut
+       kecepatan (toleransi 1,5 / 4 poin, sama seperti suhu). Durasi: drift efisiensi paruh akhir dari stream, dikelompokkan menurut menit
+       (toleransi 3 / 6 poin). RPE, kaki, dan nyeri bila ada hanya menambah penalti. Efisiensi dikoreksi suhu bila kurva suhu sudah ada. */
+    function comfort() {
+      return { pace: { ok: false, n: 0 }, dur: { ok: false, n: 0 }, diag: null, brk: { n: 0, lim: 0, hr: 0 } }; /* DIMATIKAN: kurva pace/durasi nyaman lama belum teruji. */
+      const ok = climOK(), k = (state.acts || []).length + ":" + Object.values((FEEL && FEEL.sessions) || {}).reduce((q, x) => q + (x.updated || 1) + (x.rpe || 0) + (x.legs || 0), 0) + ":" + (ok ? Object.keys(CL.ctx).length : 0) + ":" + ymd();
+      if (cmf.k === k) return cmf.v;
+      let v = { pace: { ok: false, n: 0 }, dur: { ok: false, n: 0 }, diag: { cand: 0, q: 0, hr: 0, drift: 0, fb: 0, nsx: 0, shortRun: 0, walk: 0, brk: 0 }, brk: { n: 0 } }; const dg = v.diag;
+      try {
+        const now = Date.now(), P = ok ? clPers() : null, base = [], brks = [];
+        runs().filter((a) => now - a[0] <= 120 * D && a[2] >= 12 && a[3] >= 2).forEach((a) => {
+          const t = detectType(a).type; if (t !== "easy" && t !== "long") { dg.q++; return; }
+          dg.cand++;
+          const q = runProfile(a), b = breakOf(a); if (b) { brks.push(Object.assign({ ms: a[0] }, b)); dg.brk++; }
+          if (!(q.pace > 0) || !(q.min > 0)) return;
+          const man = 6 * Math.max(0, (q.rpe == null ? 3 : q.rpe) - 3) + 10 * Math.max(0, (q.legs || 0) - 1) + (q.pain ? 40 : 0);
+          if (man > 0 || q.rpe != null || q.legs != null) dg.fb++;
+          let spd = 60 / q.pace, e = q.hr > 0 ? (1000 / q.pace) / q.hr : null;
+          const c = ok ? CL.ctx[a[0]] : null;
+          if (c && !c.na && c.t != null && P && P.ok) { const rl = 1 + relAt(clV(c), P); spd = spd / rl; if (e) e = e / rl; }
+          if (e) dg.hr++;
+          if (q.drift != null) dg.drift++;
+          else if (!b) { const sx0 = a[9] && state.sx ? state.sx[String(a[9])] : null; if (!sx0) dg.nsx++; else if (q.walkShare >= 0.1) dg.walk++; else if (a[2] < 20) dg.shortRun++; }
+          base.push({ ms: a[0], e, spd, min: q.min, drift: q.drift, man });
+        });
+        const rp = [], rd = [];
+        base.forEach((r) => {
+          if (r.e) { let nb = base.filter((x) => x !== r && x.e && Math.abs(x.ms - r.ms) <= 28 * D); if (nb.length < 3) nb = base.filter((x) => x !== r && x.e && Math.abs(x.ms - r.ms) <= 56 * D); if (nb.length >= 3) rp.push({ v: r.spd, r: (r.e / med(nb.map((x) => x.e)) - 1) * 100 - r.man * 0.25 }); }
+          if (r.drift != null) rd.push({ v: r.min, r: -r.drift - r.man * 0.25 });
+        });
+        brks.forEach((b) => rd.push({ v: b.min, r: -8 }));
+        const rb = brks.filter((b) => now - b.ms <= 90 * D).sort((x, y) => y.ms - x.ms).slice(0, 6), rh = rb.filter((b) => b.hr);
+        const brkInfo = { n: rb.length, lim: rb.length ? Math.round(med(rb.map((b) => b.min))) : 0, hr: rh.length ? Math.round(med(rh.map((b) => b.hr))) : 0 };
+        v = { pace: curve(rp, [0.6, 0.3], 1.5, 4), dur: curve(rd, [8, 4], 3, 6), diag: dg, brk: brkInfo };
+      } catch (_) {}
+      cmf = { k, v }; return v;
+    }
+    /* Geser rentang pace easy ke batas nyaman hanya bila ada bukti bahwa lebih cepat dari itu menurunkan kenyamanan; tidak pernah mempercepat */
+    function tunePace(e) {
+      if (!e) return e;
+      const cv = comfort().pace; if (!cv.ok || !cv.drop) return e;
+      const pf = 60 / cv.hi; if (!(pf > e.lo)) return e;
+      const lo = Math.min(pf, e.lo * 1.12), hi = Math.max(e.hi, lo * 1.06);
+      api.paceNote = "pace easy digeser ke rentang nyamanmu (" + mp(lo) + "–" + mp(hi) + " /km)";
+      return Object.assign({}, e, { lo, hi });
+    }
+
+    /* (1) Catat saran harian */
+    function logPred(r) {
+      if (!r || r.status === "done" || !state.athlete || state.apiKey === "demo") return;
+      const k = ymd(), cur = S.log[k] || {};
+      if (cur.out && cur.out.ran) return;
+      S.log[k] = Object.assign(cur, { score: r.score, tag: r.tag || "", status: r.status, mins: parseInt(String(r.duration || "").match(/\d+/)) || 0, c: comps() });
+      const ks = Object.keys(S.log).sort(); ks.slice(0, Math.max(0, ks.length - 180)).forEach((x) => delete S.log[x]);
+      save();
+    }
+
+    /* (1)(2) Hasil nyata -> label baik / netral / buruk */
+    function update() {
+      backfill();
+      const t0 = ymd();
+      Object.keys(S.log).forEach((k) => {
+        const e = S.log[k], cutoff = k < t0 || (e.out && e.out.ran);
+        if (!cutoff && k !== t0) return;
+        const ra = runs().filter((a) => dstr(a[0]) === k).sort((a, b) => b[2] - a[2]);
+        if (!ra.length) { if (k < t0) e.out = { ran: false }; return; }
+        const a = ra[0], fs = (FEEL.sessions || {})[a[0]] || {}, ft = (FEEL.today || {})[k] || {};
+        const sx = a[9] && state.sx ? state.sx[String(a[9])] : null, drift = sx && sx.dec && sx.dec.pct != null ? +sx.dec.pct : null;
+        const pain = (ft.pain || 0) > 0 || e.fu === "nyeri", legs = fs.legs != null ? fs.legs : null, rpe = fs.rpe || null;
+        const hardRec = e.tag === "QUALITY" || e.tag === "LOMBA";
+        const bad = pain || (legs != null && legs >= 3) || (rpe != null && rpe >= 8) || (drift != null && drift > 8 && !hardRec);
+        const good = (rpe != null || legs != null || drift != null || e.fu === "segar") && !bad && e.fu !== "pegal" && (rpe == null || rpe <= (hardRec ? 7 : 5)) && (legs == null || legs <= 1) && (drift == null || drift <= 6);
+        e.out = { ran: true, mins: Math.round(a[2]), ratio: e.mins ? Math.round(a[2] / e.mins * 100) / 100 : null, rpe, legs, pain, drift, bad, good };
+      });
+      save();
+    }
+    const outs = () => Object.keys(S.log).sort().map((k) => Object.assign({ d: k }, S.log[k])).filter((e) => e.out && e.out.ran && e.status === "train");
+    const active = () => ninf() >= NEED;
+
+    /* (2) Pengali plafon durasi per kelompok sesi, dengan shrinkage ke 1 (prior 4 sesi) */
+    function capMul(label) {
+      const grp = label === "long" ? (e) => e.tag === "LONG" : (e) => easyTag(e.tag);
+      const xs = outs().filter(grp).slice(-6);
+      if (!xs.length) return { m: 1, n: 0 };
+      const g = xs.filter((e) => e.out.good).length, b = xs.filter((e) => e.out.bad).length;
+      const m = 1 + clamp(((g - 2 * b) / (xs.length + 4)) * 0.12, -0.12, 0.05);
+      return { m: Math.round(m * 100) / 100, n: xs.length, g, b };
+    }
+
+    /* (3) Bobot kesiapan pribadi: sinyal yang terbukti memprediksi sesi buruk diperkuat, yang tidak diperlemah */
+    function weights() {
+      const xs = outs().filter((e) => e.c), w = {}, keys = ["hrv", "sleep", "rhr", "stress", "load", "feel"];
+      keys.forEach((k) => {
+        const fl = xs.filter((e) => e.c[k] <= -3), un = xs.filter((e) => e.c[k] > -3);
+        if (fl.length < 6 || un.length < 6) { w[k] = { m: 1, n: fl.length }; return; }
+        const bf = fl.filter((e) => e.out.bad).length / fl.length, bu = un.filter((e) => e.out.bad).length / un.length;
+        w[k] = { m: Math.round((1 + clamp((bf - bu) * (fl.length / (fl.length + 8)) * 2, -0.3, 0.3)) * 100) / 100, n: fl.length };
+      });
+      return w;
+    }
+    function shift() {
+      if (!active()) return 0;
+      const c = comps(), w = weights(); let s = 0;
+      Object.keys(c).forEach((k) => { if (w[k]) s += (w[k].m - 1) * c[k]; });
+      return clamp(Math.round(s), -10, 6);
+    }
+
+    /* (5) Pace ambang cadangan dari regresi HR-pace (hanya bila bukti kuat) */
+    function estLtPace() {
+      try {
+        const L = lthrNow(); if (!(L > 0)) return 0;
+        const now = Date.now(), P = runs().filter((a) => now - a[0] <= 56 * D && a[2] >= 15 && a[4] >= 100 && a[4] <= 200 && a[2] / a[3] >= 3.5 && a[2] / a[3] <= 11).map((a) => ({ x: a[4], y: a[2] / a[3], w: Math.pow(0.5, (now - a[0]) / (28 * D)) }));
+        if (P.length < 8) return 0;
+        const sw = P.reduce((s, p) => s + p.w, 0), mx = P.reduce((s, p) => s + p.w * p.x, 0) / sw, my = P.reduce((s, p) => s + p.w * p.y, 0) / sw;
+        const sxx = P.reduce((s, p) => s + p.w * (p.x - mx) * (p.x - mx), 0), sxy = P.reduce((s, p) => s + p.w * (p.x - mx) * (p.y - my), 0), syy = P.reduce((s, p) => s + p.w * (p.y - my) * (p.y - my), 0);
+        if (sxx <= 0 || syy <= 0 || Math.sqrt(sxx / sw) < 5) return 0;
+        const b = sxy / sxx, r2 = sxy * sxy / (sxx * syy);
+        if (b >= 0 || r2 < 0.4) return 0;
+        const pace = my + b * (L - mx), lo = Math.min(...P.map((p) => p.y)), hi = Math.max(...P.map((p) => p.y));
+        return clamp(pace, lo * 0.92, hi) * 60;
+      } catch (_) { return 0; }
+    }
+
+    /* (7) Tren efisiensi aerobik (m/menit per detak) dan hari yang sering terlewat */
+    function effTrend() {
+      const now = Date.now(), E = runs().filter((a) => a[4] >= 90 && a[2] >= 15 && now - a[0] <= 56 * D && detectType(a).type === "easy").map((a) => ({ ms: a[0], v: (a[3] * 1000 / a[2]) / a[4] }));
+      const n = E.filter((e) => now - e.ms <= 14 * D).map((e) => e.v), o = E.filter((e) => now - e.ms > 14 * D).map((e) => e.v);
+      if (n.length < 3 || o.length < 3) return null;
+      return Math.round((med(n) / med(o) - 1) * 1000) / 10;
+    }
+    function missedDays() {
+      const now = Date.now(), R = runs().filter((a) => now - a[0] <= 56 * D);
+      if (R.length < 10) return [];
+      const cnt = [0, 0, 0, 0, 0, 0, 0]; R.forEach((a) => cnt[new Date(a[0]).getDay()]++);
+      const nm = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"], out = [];
+      for (let i = 0; i < 7; i++) { const p = planOf(i); if (p && p.t !== "rest" && cnt[i] <= 1) out.push(nm[i]); }
+      return out;
+    }
+    function setFu(d, v) { if (S.log[d]) { S.log[d].fu = S.log[d].fu === v ? null : v; update(); save(); if (state.athlete) processData(); else render(); } }
+
+    /* (6) Evaluasi berjalan */
+    function evalStats() {
+      const all = Object.keys(S.log).map((k) => S.log[k]).filter((e) => e.out && !e.r);
+      const tr = all.filter((e) => e.status === "train" && e.out.ran), hard = tr.filter((e) => e.out.bad);
+      const rs = all.filter((e) => e.status === "rest" || e.tag === "RECOVERY"), caut = rs.filter((e) => e.out.ran && e.out.mins >= 25 && e.out.good);
+      return { n: tr.length, hard: hard.length, rs: rs.length, caut: caut.length };
+    }
+
+    /* (8) Tingkat kepercayaan saran */
+    function conf() {
+      const au = autonomic(), miss = [], f = FEEL && FEEL.today ? FEEL.today[ymd()] : null;
+      if (au.hrv == null) miss.push("HRV"); if (au.sleepH == null) miss.push("tidur"); if (!rhr28()) miss.push("baseline RHR");
+      if (!(f && f.savedDate === ymd())) miss.push("check-in"); if (!acwr()) miss.push("riwayat beban 5 minggu");
+      return { lv: miss.length <= 1 ? "Tinggi" : miss.length <= 3 ? "Sedang" : "Rendah", miss };
+    }
+
+    function render() {
+      const el = document.getElementById("lrnCard"); if (!el) return;
+      if (!state.athlete || !(state.acts || []).length) { el.style.display = "none"; return; }
+      const n = ninf(), ev = evalStats(), cf = conf(), cm = capMul("easy"), w = weights(), et = effTrend(), md = missedDays();
+      const y = dstr(Date.now() - D), ye = S.log[y], rows = [];
+      const wTxt = Object.keys(w).filter((k) => w[k].m !== 1).map((k) => ({ hrv: "HRV", sleep: "tidur", rhr: "RHR", stress: "stres", load: "beban", feel: "check-in" }[k] + " ×" + w[k].m)).join(", ");
+      rows.push(["Kepercayaan saran", "<b>" + cf.lv + "</b>" + (cf.miss.length ? " · tanpa " + cf.miss.join(", ") : "")]);
+      rows.push(["Belajar dari riwayat", (n >= NEED ? "<b>Aktif</b>" : "Bayangan " + n + "/" + NEED) + " · " + n + " sesi berumpan balik"]);
+      if (n >= 4) rows.push(["Saran terlalu berat", ev.hard + "/" + ev.n + " sesi" + (ev.rs ? " · terlalu hati-hati " + ev.caut + "/" + ev.rs : "")]);
+      const cf2 = comfort(), cp = cf2.pace, cd2 = cf2.dur;
+      rows.push(["Pace nyaman", cp.ok ? mp(60 / cp.hi) + "–" + mp(60 / cp.lo) + " /km · " + cp.n + " lari (" + cp.conf + ")" + (cp.drop ? "" : " · belum ada batas cepat") : "dinonaktifkan (menunggu algoritma baru)"]);
+      rows.push(["Durasi nyaman", cd2.ok ? Math.round(cd2.lo) + "–" + Math.round(cd2.hi) + " mnt · " + cd2.n + " lari (" + cd2.conf + ")" + (cd2.drop ? "" : " · belum ada batas atas") : "dinonaktifkan (menunggu algoritma baru)"]);
+      const dgx = cf2.diag; if (dgx) rows.push(["Lari terhitung", "dari " + dgx.cand + " easy/long: " + dgx.hr + " punya HR (pace), " + dgx.drift + " punya drift (durasi)" + (dgx.fb ? ", " + dgx.fb + " dengan ulasan" : "") + (dgx.q ? " · " + dgx.q + " quality dilewati" : "") + (dgx.cand - dgx.drift > 0 ? " · drift kosong: " + dgx.nsx + " belum ada stream, " + dgx.shortRun + " <20 mnt, " + dgx.walk + " run-walk" : "")]);
+      if (cf2.brk && cf2.brk.n >= 2) { const L0 = lthrNow(); rows.push(["Mentok lalu jalan", cf2.brk.n + " lari terakhir · ±" + cf2.brk.lim + " mnt nonstop" + (cf2.brk.hr ? " · HR ±" + cf2.brk.hr + " bpm" + (L0 > 0 ? " (" + Math.round(cf2.brk.hr / L0 * 100) + "% LTHR)" : "") : "")]); }
+      if (cm.n) rows.push(["Plafon durasi easy", "×" + cm.m + (n >= NEED ? "" : " (belum dipakai)")]);
+      if (wTxt) rows.push(["Bobot kesiapan", wTxt + (n >= NEED ? "" : " (belum dipakai)")]);
+      if (et != null) rows.push(["Efisiensi aerobik 2 minggu", (et > 0 ? "+" : "") + et + "%"]);
+      const au = autonomic();
+      if (au.hrvZ != null) rows.push(["HRV vs normalmu", "z " + au.hrvZ]);
+      if (au.sleepDebt != null && au.sleepDebt > 0) rows.push(["Utang tidur 3 malam", au.sleepDebt + " jam"]);
+      if (md.length) rows.push(["Hari rencana sering terlewat", md.join(", ")]);
+      let fu = "";
+      if (ye && ye.out && ye.out.ran) fu = '<div class="sa-note" style="margin-top:10px">Kaki 24 jam setelah lari kemarin?</div><div class="ty-chips">' + [["segar", "Segar"], ["pegal", "Pegal"], ["nyeri", "Nyeri"]].map((x) => '<button type="button" class="ty-chip' + (ye.fu === x[0] ? " on" : "") + '" onclick="lrnFu(\'' + y + "','" + x[0] + '\')">' + x[1] + "</button>").join("") + "</div>";
+      try { el.innerHTML = window.NYM.cardHTML() + fu; } catch (_) { el.innerHTML = '<div class="label">Nyaman kamu</div><div class="sa-note">Belum bisa dihitung.</div>' + fu; }
+      el.style.display = "";
+      const rc = document.getElementById("reviewCard"), rb = document.getElementById("reviewBody"), te = S.log[ymd()];
+      if (rb && rc && rc.style.display !== "none" && !rb.querySelector(".lrn-rv") && te && te.out && te.out.ran) {
+        const o = te.out, m = o.bad ? "Dicatat sebagai sesi terlalu berat; dosis berikutnya akan lebih hati-hati." : o.good ? "Dicatat sebagai sesi yang sesuai; ikut menyetel dosis berikutnya." : "Dicatat netral. Isi RPE dan rasa kaki agar sesi ini ikut mengajari app.";
+        rb.insertAdjacentHTML("beforeend", '<div class="sa-note lrn-rv" style="margin-top:10px">' + m + "</div>");
+      }
+    }
+    const api = { capNote: 1, paceNote: "", durNote: 0, comfort, tunePace, note, ninf, comps, acwr, augmentAu, logPred, update, capMul, shift, estLtPace, render, setFu, active };
+    return api;
+  })();
+  window.lrnFu = (d, v) => LRN.setFu(d, v);
+
+  /* Pasang ke fungsi yang sudah ada (pembungkus; logika lama tetap berjalan sebagai dasar) */
+  (function () {
+    const _au = autonomic; autonomic = function () { return LRN.augmentAu(_au.apply(this, arguments)); };
+    const _rd = readiness; readiness = function () { const s = _rd.apply(this, arguments); return s == null ? s : clamp(Math.round(s + LRN.shift()), 22, 98); };
+    const _ac = applyCap; applyCap = function (mins, label, boot) {
+      const r = _ac(mins, label, boot);
+      const m = LRN.active() ? LRN.capMul(label).m : 1;
+      if (m !== 1) { LRN.capNote = m; const c = Math.max(15, Math.floor(r.cap * m)); r.cap = c; r.mins = Math.min(mins, c); r.capped = mins > c; r.lrn = m; }
+      if (label === "easy" || label === "long") { const cd = LRN.comfort().dur; if (cd.ok && cd.drop) { const c = Math.max(15, Math.floor(cd.hi * 1.05)); if (c < r.cap) { r.cap = c; r.mins = Math.min(mins, c); r.capped = mins > c; LRN.durNote = c; } } }
+      return r;
+    };
+    const _er = easyRange; easyRange = function () { const e = _er.apply(this, arguments); try { return LRN.tunePace(e); } catch (_) { return e; } };
+    const _lt = ltPaceSec; ltPaceSec = function () { const t = _lt(); return t > 0 ? t : Math.round(LRN.estLtPace()); };
+    const _dt = designToday; designToday = function () { LRN.capNote = 1; LRN.paceNote = ""; LRN.durNote = 0; const r = _dt.apply(this, arguments); try { const n = LRN.note(r); if (n && r) { r.reason = (r.reason || "") + " " + n; r.lrnNote = n; } LRN.logPred(r); } catch (_) {} return r; };
+    const _cl = coachLine; coachLine = function (r, a) { const t = _cl(r, a); return r && r.lrnNote ? t + " " + r.lrnNote : t; };
+    const _ra = renderAll; renderAll = function () { try { LRN.update(); } catch (_) {} _ra.apply(this, arguments); try { LRN.render(); } catch (_) {} };
+  })();
 
   (async function init() {
     applyTheme();
