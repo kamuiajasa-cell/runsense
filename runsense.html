@@ -3649,18 +3649,18 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   function trimQualityWork(q, targetMins) {
     if (!q || !Array.isArray(q.wl) || !(targetMins > 0) || !(q.dur > targetMins)) return q;
     const workLine = q.wl[4] || "";
-    const match = /(\\d+)(m|s)\\b/.exec(workLine);
+    const match = /([0-9]+)(m|s)( |$)/.exec(workLine);
     if (!match) return q;
     const oldValue = Number(match[1]), unit = match[2];
-    const repsMatch = String(q.wl[3] || "1x").match(/(\\d+)/);
+    const repsMatch = String(q.wl[3] || "1x").match(/([0-9]+)/);
     const reps = repsMatch ? Math.max(1, Number(repsMatch[1])) : 1;
     const minimum = unit === "m" ? 1 : 30;
     const factor = Math.max(.5, Math.min(1, targetMins / q.dur));
     const nextValue = Math.max(minimum, Math.min(oldValue - 1, Math.floor(oldValue * factor)));
     if (!(nextValue < oldValue)) return q;
-    q.wl[4] = workLine.replace(match[0], nextValue + unit);
-    const corePattern = new RegExp("\\\\b" + oldValue + "\\\\s*(mnt|menit|dtk|detik)");
-    q.core = String(q.core || "").replace(corePattern, nextValue + " $1");
+    q.wl[4] = workLine.replace(match[0], nextValue + unit + match[3]);
+    const corePattern = new RegExp("(^|[^0-9])" + oldValue + " (mnt|menit|dtk|detik)");
+    q.core = String(q.core || "").replace(corePattern, "$1" + nextValue + " $2");
     const minutesPerRep = (oldValue - nextValue) * (unit === "m" ? 1 : 1 / 60);
     q.dur = Math.max(15, Math.round(q.dur - minutesPerRep * reps));
     return q;
