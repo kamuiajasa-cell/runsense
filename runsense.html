@@ -2923,7 +2923,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (L > 0) {
         // Zona HR berbasis LTHR, mengikuti pembagian 7 zona Interval.icu.
         // Batas BPM untuk LTHR 166: 141 / 149 / 157 / 166 / 170 / 175.
-        const edge = [Math.ceil(L * 0.85), Math.floor(L * 0.90), Math.floor(L * 0.95), Math.round(L), Math.ceil(L * 1.02), Math.ceil(L * 1.05)];
+        const edge = [Math.round(L * 0.85), Math.floor(L * 0.90), Math.floor(L * 0.95), Math.round(L), Math.ceil(L * 1.02), Math.ceil(L * 1.05)];
         const z = [0, 0, 0, 0, 0, 0, 0]; let c = 0;
         hr.forEach((v) => {
           if (!(v > 40)) return;
@@ -3833,7 +3833,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   function decorate(r) {
     if (!r) return r;
     const a = state.athlete || {}, L = lthrNow(), fl = flagInfo();
-    const zoneEdges = L > 0 ? [Math.ceil(L * 0.85), Math.floor(L * 0.90), Math.floor(L * 0.95), Math.round(L), Math.ceil(L * 1.02), Math.ceil(L * 1.05)] : [];
+    const zoneEdges = L > 0 ? [Math.round(L * 0.85), Math.floor(L * 0.90), Math.floor(L * 0.95), Math.round(L), Math.ceil(L * 1.02), Math.ceil(L * 1.05)] : [];
     if (L && typeof r.hr === "string") {
       if (/LTHR/.test(r.hr)) r.hr = "Jangan lewat " + L + " bpm di awal" + ((+state.raceDist || 0) >= 42 ? " · usaha ≈ Z3" : (+state.raceDist || 0) >= 21 ? " · usaha ≈ Z4" : (+state.raceDist || 0) >= 5 ? " · sampai Z5 di akhir" : "");
       else r.hr = r.hr.replace(/Zone (\d)(?:–(\d))?/, (m, x, y) => {
