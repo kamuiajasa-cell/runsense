@@ -3397,7 +3397,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const runDays = PLAN_DAYS.filter((d) => ["easy", "quality", "long"].includes((state.plan[d[0]] || {}).t)).length;
     const mileageBase = fourWeekMileageBaseline();
     const wkKm = mileageBase.average;
-    if (mileageBase.total > 0 && tot > 0) {
+    if (mileageBase.total > 0) {
       const safeTarget = mileageBase.confidence === "high" ? wkKm * 1.10 : wkKm;
       const pctUp = Math.round((tot / wkKm - 1) * 100);
       const forecast = rollingMileageForecast(mileageBase, 5);
@@ -3408,7 +3408,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         ? "Batas target progresi +10%: " + safeTarget.toFixed(1) + " km/minggu."
         : "Riwayat belum konsisten (" + mileageBase.activeWeeks + "/4 minggu aktif); progresi ditahan pada rata-rata " + safeTarget.toFixed(1) + " km/minggu sampai data lebih stabil.";
       msgs.push("Baseline 4 minggu: " + wkKm.toFixed(1) + " km/minggu (" + mileageBase.weeks.map(v => v.toFixed(1)).join(" / ") + " km). " + progressionText + forecastText);
-      if (tot > safeTarget + 0.05) msgs.push("Rencana " + tot.toFixed(1) + " km, " + pctUp + "% di atas rata-rata 4 minggu. Turunkan target ke maksimal " + safeTarget.toFixed(1) + " km atau tahan volume; +10% adalah plafon, bukan kewajiban.");
+      if (tot > 0 && tot > safeTarget + 0.05) msgs.push("Rencana " + tot.toFixed(1) + " km, " + pctUp + "% di atas rata-rata 4 minggu. Turunkan target ke maksimal " + safeTarget.toFixed(1) + " km atau tahan volume; +10% adalah plafon, bukan kewajiban.");
     } else if (mileageBase.hasHistory && tot > 0) {
       msgs.push("Tidak ada volume lari pada 4 minggu lengkap terakhir. Jangan menerapkan kenaikan +10% dari nol; mulai kembali dengan dosis ringan dan tahan progresi sampai ada riwayat baru.");
     }
