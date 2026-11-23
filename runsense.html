@@ -3645,6 +3645,27 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     return {mins,note:""};
   }
 
+  /* Kurangi menit kerja quality secara nyata agar durasi, langkah, dan workout jam tetap sinkron. */
+  function trimQualityWork(q, targetMins) {
+    if (!q || !Array.isArray(q.wl) || !(targetMins > 0) || !(q.dur > targetMins)) return q;
+    const workLine = q.wl[4] || "";
+    const match = /(\\d+)(m|s)\\b/.exec(workLine);
+    if (!match) return q;
+    const oldValue = Number(match[1]), unit = match[2];
+    const repsMatch = String(q.wl[3] || "1x").match(/(\\d+)/);
+    const reps = repsMatch ? Math.max(1, Number(repsMatch[1])) : 1;
+    const minimum = unit === "m" ? 1 : 30;
+    const factor = Math.max(.5, Math.min(1, targetMins / q.dur));
+    const nextValue = Math.max(minimum, Math.min(oldValue - 1, Math.floor(oldValue * factor)));
+    if (!(nextValue < oldValue)) return q;
+    q.wl[4] = workLine.replace(match[0], nextValue + unit);
+    const corePattern = new RegExp("\\\\b" + oldValue + "\\\\s*(mnt|menit|dtk|detik)");
+    q.core = String(q.core || "").replace(corePattern, nextValue + " $1");
+    const minutesPerRep = (oldValue - nextValue) * (unit === "m" ? 1 : 1 / 60);
+    q.dur = Math.max(15, Math.round(q.dur - minutesPerRep * reps));
+    return q;
+  }
+
 
   // Feel-first coaching: subjective inputs are independent of imported activity metrics.
   function feelSave(){ sv("runsense_feel_v1",FEEL); }
@@ -4166,6 +4187,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         ? " Volume quality dijaga sesuai riwayatmu" + (qh.n ? " (sesi sejenis terpanjang " + Math.round(qh.max) + " mnt)." : " (belum ada quality 30 hari terakhir).")
         : "";
       const qw = wkAdjust(q.dur);
+      if (qw.mins < q.dur) trimQualityWork(q, qw.mins);
       if (qw.note) q.why += qw.note;
       return {
         k: "wn",
