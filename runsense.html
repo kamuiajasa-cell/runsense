@@ -5,6 +5,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>RunSense</title>
 <meta name="theme-color" content="#090B09">
+<script>
+/* Anti-kedip saat buka: tema dan layar awal ditentukan sebelum halaman pertama digambar.
+   Bila sudah pernah terhubung (API key atau mode jam), layar setup disembunyikan dulu;
+   init() melepas penyembunyian ini sesudah layar tujuan aktif, dan ada pengaman 4 detik. */
+(function () {
+  try {
+    var d = document.documentElement, l = localStorage;
+    d.dataset.theme = l.getItem("runsense_theme") || "dark";
+    if (l.getItem("runsense_key") || l.getItem("runsense_src") === "watch") {
+      d.classList.add("rs-boot");
+      setTimeout(function () { d.classList.remove("rs-boot"); }, 4000);
+    }
+  } catch (e) {}
+})();
+</script>
+<style>html.rs-boot #screen-setup{display:none!important}</style>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -5091,7 +5107,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         const dI = nS.filter(q => q.dur != null).map(q => ({ ms: q.ms, v: q.dur, t: dm(q.ms) + " · " + Math.round(q.dur) + " mnt" }));
         const dP = Math.round((nS[nS.length - 1].pace - nS[0].pace) * 60), dD = dI.length > 1 ? Math.round(dI[dI.length - 1].v - dI[0].v) : null;
         const gtx = window.NYM.gateTxt(window.NYM.gate());
-        nymHtml = card("Pace &amp; durasi nyaman", "Dari semua lari (bukan hanya easy), jendela 28 hari; satu titik = akhir tiap minggu. Pace dibaca di HR " + (nv.ok ? nv.hr : "acuan") + ".",
+        nymHtml = card("Pace &amp; durasi nyaman", "Dari semua lari (bukan hanya easy), jendela 42 hari; satu titik = akhir tiap minggu. Pace dibaca di HR " + (nv.ok ? nv.hr : "acuan") + ".",
           '<div class="sub" style="margin:4px 0 2px">Pace nyaman (makin ke atas = makin cepat)</div>' + lineChart("prgNymP", pI, v => fmtP(v), true, "Pace nyaman") +
           (dI.length > 1 ? '<div class="sub" style="margin:12px 0 2px">Durasi nyaman</div>' + lineChart("prgNymD", dI, v => Math.round(v) + " mnt", false, "Durasi nyaman") : ""),
           "Sepanjang grafik, pace nyaman berubah " + (dP > 0 ? "+" : "") + dP + " dtk/km" + (dD != null ? " dan durasi nyaman " + (dD > 0 ? "+" : "") + dD + " menit" : "") + ". " + gtx + " Selisih di bawah ±10–15 dtk/km masih dalam noise pengukuran.",
@@ -6536,12 +6552,12 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     return b < 0 ? { a, b, n: s.length } : null;   // pace lebih cepat harus = HR lebih tinggi
   }
   /* HR acuan = persen LTHR, sama dengan pembagian zona lain (Z2 Aerobic = 85–90% LTHR).
-     Target tengah Z2 = 87,5%; rentang cepat = 90% (batas Z2/Z3), lambat = 85% (batas Z1/Z2). */
-  const F_MID = 0.875, F_FAST = 0.90, F_SLOW = 0.85;
+     Target = 85% LTHR (batas bawah Z2, 141 bpm di LTHR 166); rentang cepat = 89% (puncak Z2), lambat = 80% (Z1 atas). */
+  const F_MID = 0.85, F_FAST = 0.89, F_SLOW = 0.80;
   const hrTarget = (lthr, f) => lthr * (f || F_MID);
   const paceAt = (m, hr) => (hr - m.a) / m.b;
 
-  /* Pace nyaman (mnt/km) pada 87,5% LTHR, plus rentang di batas Z2: 90% LTHR (cepat) sampai 85% LTHR (lambat) */
+  /* Pace nyaman (mnt/km) pada 85% LTHR, plus rentang: 89% LTHR (cepat, puncak Z2) sampai 80% LTHR (lambat) */
   function paceNyaman(runs, lthr) {
     const m = fit(runs); if (!m || !(lthr > 0)) return null;
     return { n: m.n, pace: paceAt(m, hrTarget(lthr)), cepat: paceAt(m, hrTarget(lthr, F_FAST)), lambat: paceAt(m, hrTarget(lthr, F_SLOW)) };
@@ -6576,12 +6592,12 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (last2OK) o.menit = Math.round(cur.menit * 1.05);
     return o;
   }
-  root.ComfortV2 = { fit, paceNyaman, durasiNyaman, gate, nextTargets };
+  root.ComfortV2 = { fit, paceNyaman, durasiNyaman, gate, nextTargets, hrTarget };
 })(typeof window !== "undefined" ? window : globalThis);
 
   /* ===== Nyaman v2: pace & durasi nyaman dari SEMUA lari (menggantikan kurva nyaman LRN yang belum teruji) ===== */
   window.NYM = (function () {
-    const C = window.ComfortV2, D = 864e5, WIN = 28 * D;
+    const C = window.ComfortV2, D = 864e5, WIN = 42 * D;
     let memo = { k: "", v: null }, gmemo = { k: "", v: null };
     const sx = (p) => { const s = Math.round(p * 60); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
     const runsAll = () => (state.acts || []).filter((a) => a[1] === "run" && +a[2] >= 8 && +a[3] > 0 && +a[4] > 0)
@@ -6594,7 +6610,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       let v = { ok: false, n: runs.length, why: hp ? "data" : "hr" };
       if (hp) {
         const w = runs.filter((r) => t - r.ms < WIN), pn = C.paceNyaman(w, hp), dn = C.durasiNyaman(w, hp);
-        if (pn) v = { ok: true, n: pn.n, pace: pn.pace, cepat: pn.cepat, lambat: pn.lambat, hr: Math.round(hp * 0.875), lthr: hp, dur: dn ? dn.menit : null, durN: dn ? dn.n : 0 };
+        if (pn) v = { ok: true, n: pn.n, pace: pn.pace, cepat: pn.cepat, lambat: pn.lambat, hr: Math.round(C.hrTarget(hp)), lthr: hp, dur: dn ? dn.menit : null, durN: dn ? dn.n : 0 };
       }
       memo = { k, v }; return v;
     }
@@ -6613,11 +6629,11 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (!v.ok) return '<div class="label">Nyaman kamu</div><div class="sa-note" style="margin-top:8px">' + (v.why === "hr" ? "Isi LTHR (atau HR istirahat dan HR maksimal agar LTHR terestimasi) di Pengaturan supaya pace dan durasi nyaman bisa dihitung." : "Butuh minimal 8 lari dengan data HR (baru " + v.n + " lari).") + "</div>";
       const g = gate(), conf = v.n >= 25 ? "sedang" : "rendah";
       return '<div class="label">Nyaman kamu</div><div style="display:flex;gap:18px;margin-top:8px">' +
-        '<div style="flex:1"><div style="' + sm + '">Pace nyaman</div><div style="' + big + '">' + sx(v.pace) + '<span style="' + unit + '"> /km</span></div><div style="' + sm + '">di HR ' + v.hr + ' (87,5% LTHR ' + v.lthr + ') · rentang ' + sx(v.cepat) + "–" + sx(v.lambat) + "</div></div>" +
+        '<div style="flex:1"><div style="' + sm + '">Pace nyaman</div><div style="' + big + '">' + sx(v.pace) + '<span style="' + unit + '"> /km</span></div><div style="' + sm + '">di HR ' + v.hr + ' (85% LTHR ' + v.lthr + ') · rentang ' + sx(v.cepat) + "–" + sx(v.lambat) + "</div></div>" +
         '<div style="flex:1"><div style="' + sm + '">Durasi nyaman</div><div style="' + big + '">' + (v.dur != null ? Math.round(v.dur) : "–") + '<span style="' + unit + '"> mnt</span></div><div style="' + sm + '">' + (v.dur != null ? "dari " + v.durN + " lari yang tidak berat" : "belum cukup lari") + "</div></div></div>" +
-        '<div class="sa-note" style="margin-top:10px">' + (gateTxt(g) ? gateTxt(g) + " " : "") + "Dihitung dari " + v.n + " lari (28 hari). Keyakinan pace " + conf + ", durasi rendah (perkiraan awal).</div>";
+        '<div class="sa-note" style="margin-top:10px">' + (gateTxt(g) ? gateTxt(g) + " " : "") + "Dihitung dari " + v.n + " lari (42 hari). Keyakinan pace " + conf + ", durasi rendah (perkiraan awal).</div>";
     }
-    /* seri mingguan (akhir tiap minggu) dengan jendela 28 hari; titik terakhir = angka di kartu */
+    /* seri mingguan (akhir tiap minggu) dengan jendela 42 hari; titik terakhir = angka di kartu */
     function series(from, to) {
       const runs = runsAll(), hp = hrOK(), out = []; if (!hp) return out;
       const ends = []; for (let e = to; e >= from; e -= 7 * D) ends.push(e); ends.reverse();
@@ -7078,6 +7094,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       }
     }
 
+    document.documentElement.classList.remove("rs-boot");   /* layar tujuan sudah aktif; lepas penyembunyian setup */
     if (native()) {
       setTimeout(pullWatch, 500);
       document.addEventListener("visibilitychange", () => {
@@ -7146,10 +7163,13 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   }
   /* HeatStressEngine: estimasi (bukan WBGT). Nyaman dan aman dipisah: petir/hujan lebat menang atas skor. */
   const clV = (c) => (c.t != null ? c.t : c.at) + c.sr / 150;   /* suhu udara asli + beban matahari; kelembapan dipisah di clCls */
-  /* Ambang: default 25/27/29, diganti ambang pribadi bila riwayat cukup (clPers). Batas keselamatan (33/38) tidak pernah dipersonalisasi. */
+  /* Ambang: default 25,8/27,1/27,1 (sejuk/wn/panas), diganti ambang pribadi bila riwayat cukup (clPers). Batas keselamatan (33/38) tidak pernah dipersonalisasi. */
   function clTh() {
-    const P = clPers(), cool = P.ok && P.cool != null ? P.cool : 25, hot = P.ok && P.hot != null ? P.hot : 29;
-    return { cool, hot, wn: P.ok && P.cool != null ? (P.hot != null ? (cool + hot) / 2 : cool + 2) : 27 };
+    /* Default dari skala kenyamanan termal Indonesia (suhu efektif, LPMB PU): nyaman optimal sampai 25,8°C,
+       hangat-nyaman 25,8-27,1°C, di atas 27,1°C tidak nyaman. Dipakai hanya sampai riwayat easy run cukup;
+       sesudah itu ambang pribadi yang berlaku. */
+    const P = clPers(), cool = P.ok && P.cool != null ? P.cool : 25.8, hot = P.ok && P.hot != null ? P.hot : Math.max(27.1, cool + 1);
+    return { cool, hot, wn: P.ok && P.cool != null ? (P.hot != null ? (cool + hot) / 2 : cool + 2) : 27.1 };
   }
   function clCls(c) { const v = clV(c), th = clTh(); return v < th.cool ? "sejuk" : v < th.hot ? "hangat" : c.rh >= 70 ? "panas & lembap" : "panas"; }
   const clK = (c) => (c.t != null && c.rh != null ? clCls(c) : c.cls);   /* kelas selalu dihitung ulang dengan ambang terbaru */
@@ -7208,8 +7228,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   const clSc = (c) => { const v = clV(c), P = clPers(); return P.ok ? (v < P.opt ? (P.opt - v) * 0.5 : v - P.opt) : v; };
   function clPersTxt() {
     const P = clPers();
-    if (!P.ok) return `Ambang masih default (25° / 29°): ${P.reason}.`;
-    return `Ambang pribadi dari ${P.n} easy run (${P.conf}): paling efisien ±${Math.round(P.opt)}°C · nyaman < ${P.cool != null ? P.cool + "°C" : "25°C (default)"} · berat ≥ ${P.hot != null ? P.hot + "°C" : "29°C (default)"}. Suhu efektif = suhu udara + efek matahari.`;
+    if (!P.ok) return `Ambang masih default (25,8° / 27,1°, skala Indonesia): ${P.reason}.`;
+    return `Ambang pribadi dari ${P.n} easy run (${P.conf}): paling efisien ±${Math.round(P.opt)}°C · nyaman < ${P.cool != null ? P.cool + "°C" : "25,8°C (default)"} · berat ≥ ${P.hot != null ? P.hot + "°C" : "27,1°C (default)"}. Suhu efektif = suhu udara + efek matahari.`;
   }
   function clStat(c) {
     const v = clV(c);
@@ -7310,13 +7330,19 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const T = o.h.time.map((s) => +new Date(s)), now = Date.now(), out = [];
     T.forEach((m) => {
       const hr = new Date(m).getHours();
-      if (m <= now || m > now + 40 * 3600e3 || hr < 5 || hr > 18) return;
+      /* 24 jam penuh ke depan, termasuk malam dan dini hari (Ramadan: sesudah buka/tarawih atau sebelum imsak).
+         Jam 00-02 diberi penalti kecil karena jam tidur; selebihnya murni skor cuaca. */
+      if (m <= now || m > now + 24 * 3600e3) return;
       const c = clAvg(o, m, m + dur * 60e3); if (!c) return;
-      out.push({ m, c, s: clSc(c) + (c.p >= 0.3 ? 6 : 0) + (c.p >= 2 ? 10 : 0) + (c.code >= 95 ? 50 : 0) });
+      out.push({ m, c, s: clSc(c) + (c.p >= 0.3 ? 6 : 0) + (c.p >= 2 ? 10 : 0) + (c.code >= 95 ? 50 : 0) + (hr < 3 ? 2.5 : 0) });
     });
     out.sort((p, q) => p.s - q.s);
-    const pick = out.length ? [out[0]] : [];
-    const s2 = out.find((x) => pick[0] && Math.abs(x.m - pick[0].m) >= 2 * 3600e3); if (s2) pick.push(s2);
+    /* skor selisih <= 1 poin dianggap sama: pilih yang paling dekat waktunya (hari ini menang atas besok) */
+    const early = (arr) => { if (!arr.length) return null; const b = arr[0].s; return arr.filter((x) => x.s <= b + 1).sort((p, q) => p.m - q.m)[0]; };
+    const first = early(out);
+    const pick = first ? [first] : [];
+    const s2 = first ? early(out.filter((x) => Math.abs(x.m - first.m) >= 3 * 3600e3)) : null; if (s2) pick.push(s2);
+    pick.sort((p, q) => p.m - q.m);
     const base = clSc(nowC) + (nowC.p >= 0.3 ? 6 : 0);
     return pick.map((x) => {
       const why = ["suhu " + Math.round(x.c.t != null ? x.c.t : x.c.at) + "°C" + (x.c.at != null && x.c.t != null ? " (terasa " + Math.round(x.c.at) + "°C)" : "")];
@@ -7324,7 +7350,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (nowC.sr - x.c.sr >= 150) why.push("matahari lebih lemah");
       if (x.c.p < 0.3) why.push("kering"); else why.push("ada hujan");
       const dd = Math.round((new Date(cD(x.m)) - new Date(cD(now))) / 864e5);
-      return { better: x.s <= base - 1.5, txt: (dd === 0 ? "Hari ini " : dd === 1 ? "Besok " : "") + cH(x.m) + " · " + why.join(", ") };
+      return { better: x.s <= base - 1.5, txt: (dd === 0 ? "Hari ini " : dd === 1 ? "Besok " : "") + cH(x.m) + (new Date(x.m).getHours() < 5 ? " (dini hari)" : new Date(x.m).getHours() >= 19 ? " (malam)" : "") + " · " + why.join(", ") };
     });
   }
   function climPaint(el, o) {
