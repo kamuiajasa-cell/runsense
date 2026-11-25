@@ -4615,9 +4615,18 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const elevWeek = sum(acts, 5);
     const calRows = acts.filter(a => Number(a[13]) > 0);
     const kcalWeek = calRows.reduce((n, a) => n + Number(a[13]), 0);
+    const todayActs = acts.filter(a => dateKey(+a[0]) === todayKey);
+    const todayCalRows = todayActs.filter(a => Number(a[13]) > 0);
+    const kcalToday = todayCalRows.reduce((n, a) => n + Number(a[13]), 0);
+    const cardioToday = todayActs.filter(a => /run|walk|hike|cycl|bike|ride|swim|row|elliptical|cardio|rope|skipping/.test(String(a[12] || a[1] || "").toLowerCase()));
     const stepsToday = Number((wellByDay.get(todayKey) || {}).steps) || 0;
     const todayWell = wellByDay.get(todayKey) || {};
     const sleepSecs = Number(todayWell.sleepSecs || todayWell.sleep_seconds || 0);
+    const rhrToday = Number(todayWell.restingHR || 0);
+    const hrvToday = Number(todayWell.hrv || 0);
+    const weightToday = Number(todayWell.weight || 0);
+    const vo2Today = Number(todayWell.vo2max || todayWell.vo2Max || 0);
+    const bodyFatToday = Number(todayWell.bodyFat || 0);
     const hrRows = acts.filter(a => Number(a[4]) >= 50 && Number(a[4]) <= 230);
     const avgHr = hrRows.length ? Math.round(hrRows.reduce((n, a) => n + Number(a[4]) * Math.max(1, Number(a[2]) || 1), 0) / hrRows.reduce((n, a) => n + Math.max(1, Number(a[2]) || 1), 0)) : null;
     const fmt = n => (Math.round(n * 10) / 10).toLocaleString("id-ID");
@@ -4639,10 +4648,17 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     host.innerHTML =
       '<div class="sgroup" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
       metric("Jarak hari ini", val(kmToday, "km"), "Jarak sesi, bukan total langkah harian") +
+      metric("Kardio hari ini", val(sum(cardioToday, 2), "menit"), cardioToday.length + " sesi kardio") +
       metric("Kardio minggu ini", val(minsWeek, "menit"), cardioActs.length + " sesi kardio") +
       metric("Jarak minggu ini", val(kmWeek, "km"), "Semua jenis aktivitas") +
-      metric("Kalori latihan", kcalText, calRows.length ? "Dari field kalori aktivitas Intervals" : "Intervals tidak mengirim kalori untuk sesi ini") +
+      metric("Kalori hari ini", todayCalRows.length ? fmt(kcalToday) + " kcal" : "—", "Kalori latihan jika dikirim sumber") +
+      metric("Kalori minggu ini", kcalText, calRows.length ? "Kalori aktivitas Intervals" : "Tidak tersedia dari sumber") +
       metric("Langkah hari ini", val(stepsToday, "langkah"), "Wellness Intervals.icu") +
+      metric("Resting HR", val(rhrToday, "bpm"), "Data wellness harian") +
+      metric("HRV RMSSD", val(hrvToday, "ms"), "Data wellness harian") +
+      metric("Berat badan", val(weightToday, "kg"), "Jika tersedia di wellness") +
+      metric("VO₂max", val(vo2Today, "ml/kg/min"), "Jika tersedia di wellness") +
+      metric("Body fat", val(bodyFatToday, "%"), "Jika tersedia di wellness") +
       metric("Rata-rata HR sesi", hrText, hrRows.length + " aktivitas dengan HR") +
       metric("Elevasi minggu ini", val(elevWeek, "m"), "Akumulasi aktivitas") +
       metric("Tidur hari ini", sleepText, "Jika tersedia di wellness") +
