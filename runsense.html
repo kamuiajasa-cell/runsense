@@ -1339,6 +1339,21 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     </div>
   </div>
 
+  <!-- HEALTH CONNECT: hanya ditampilkan oleh shim native di APK RunSense -->
+  <div id="screen-healthconnect" class="screen">
+    <div class="content profile-layout">
+      <header class="page-hero"><span class="eyebrow">ANDROID HEALTH DATA</span><div class="page-title">Health<br><em>Connect.</em></div><p>Kelola izin dan kirim data latihan serta wellness RunSense ke Health Connect.</p></header>
+      <div class="sg">
+        <div class="sg-t">Sinkronisasi kesehatan</div>
+        <div class="sgroup" id="rsHcGroup">
+          <div class="srow" id="rsHcMount"><span class="sic n"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18"/></svg></span><span class="srow-t">Health Connect<span class="srow-s">Memeriksa dukungan perangkat…</span></span><b class="srow-v">—</b></div>
+          <div class="sactions" id="rsHcActions"></div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:14px">RunSense mengirim data dari Intervals.icu ke Health Connect. Aplikasi lain dapat membaca data tersebut sesuai izin yang kamu berikan. RunSense tidak membaca data Health Connect.</div>
+    </div>
+  </div>
+
   <nav class="bottom-nav" id="bottomNav" style="display:none">
     <button class="nav-item active" data-screen="home" onclick="showScreen('home')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
@@ -1355,6 +1370,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     <button class="nav-item" data-screen="me" onclick="showScreen('me')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.33 0-8 1.67-8 5v1h16v-1c0-3.33-4.67-5-8-5z"/></svg>
       Saya
+    </button>
+    <button class="nav-item" id="hcNav" data-screen="healthconnect" onclick="showScreen('healthconnect')" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z"/></svg>
+      Health
     </button>
   </nav>
 </div>
