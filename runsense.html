@@ -1149,6 +1149,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         <div class="label">Ringkasan lari hari ini</div>
         <div id="reviewBody"></div>
       </div>
+      <section class="card" id="activityMetricsCard" aria-label="Ringkasan aktivitas dan kesehatan">
+        <div class="label">Aktivitas &amp; kesehatan · 7 hari</div>
+        <div id="activityMetricsBody"><div class="hint">Menunggu data Intervals.icu…</div></div>
+      </section>
       <div class="card quiet">
         <div class="rows">
           <div class="row"><span>Kesiapan</span><b id="rdy">—</b></div>
@@ -3265,7 +3269,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       id,
       Number(a.icu_training_load || a.training_load || a.hrss || 0),
       Number(a.average_cadence || 0),
-      String(a.type || a.sport_type || a.name || "other").slice(0, 60)
+      String(a.type || a.sport_type || a.name || "other").slice(0, 60),
+      Number(a.calories || a.kcal || a.active_calories || 0)
     ];
     // indices: 0 start,1 kind,2 min,3 km,4 avgHr,5 elev,6 lid,7 name,8 maxHr,9 icuId,10 load
   }
@@ -4587,7 +4592,65 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     return p.toLowerCase();
   }
 
+  function renderActivityMetrics() {
+    const host = $("#activityMetricsBody");
+    if (!host) return;
+    const DAY = 864e5, now = Date.now();
+    const dateKey = ms => {
+      const d = new Date(ms);
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    };
+    const todayKey = dateKey(now);
+    const weekStart = new Date(); weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+    const weekMs = +weekStart;
+    const acts = (state.acts || []).filter(a => a && Number.isFinite(+a[0]) && +a[0] >= weekMs && +a[0] <= now);
+    const wellness = state.wellness || [];
+    const wellByDay = new Map(wellness.map(w => [String(w.id || "").slice(0, 10), w]));
+    const sum = (arr, ix) => arr.reduce((n, a) => n + (Number(a[ix]) > 0 ? Number(a[ix]) : 0), 0);
+    const kmToday = sum(acts.filter(a => dateKey(+a[0]) === todayKey), 3);
+    const minsWeek = sum(acts, 2);
+    const kmWeek = sum(acts, 3);
+    const elevWeek = sum(acts, 5);
+    const calRows = acts.filter(a => Number(a[13]) > 0);
+    const kcalWeek = calRows.reduce((n, a) => n + Number(a[13]), 0);
+    const stepsToday = Number((wellByDay.get(todayKey) || {}).steps) || 0;
+    const todayWell = wellByDay.get(todayKey) || {};
+    const sleepSecs = Number(todayWell.sleepSecs || todayWell.sleep_seconds || 0);
+    const hrRows = acts.filter(a => Number(a[4]) >= 50 && Number(a[4]) <= 230);
+    const avgHr = hrRows.length ? Math.round(hrRows.reduce((n, a) => n + Number(a[4]) * Math.max(1, Number(a[2]) || 1), 0) / hrRows.reduce((n, a) => n + Math.max(1, Number(a[2]) || 1), 0)) : null;
+    const fmt = n => (Math.round(n * 10) / 10).toLocaleString("id-ID");
+    const val = (n, unit) => n > 0 ? fmt(n) + " " + unit : "—";
+    const metric = (label, value, sub) => '<div class="sblock"><div class="label">' + label + '</div><b style="font-size:20px;display:block;letter-spacing:-.03em">' + value + '</b>' + (sub ? '<small style="color:var(--grey);font-size:11px">' + sub + '</small>' : '') + '</div>';
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+      const key = dateKey(+d), dayActs = acts.filter(a => dateKey(+a[0]) === key);
+      const km = sum(dayActs, 3), mins = sum(dayActs, 2);
+      const calories = dayActs.filter(a => Number(a[13]) > 0).reduce((n, a) => n + Number(a[13]), 0);
+      days.push({ key, label: ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"][d.getDay()], km, mins, calories });
+    }
+    const maxKm = Math.max(1, ...days.map(d => d.km));
+    const daily = days.map(d => '<div style="display:grid;grid-template-columns:32px 1fr 58px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--card-border)"><span style="font-size:11px;color:var(--grey)">' + d.label + '</span><div style="height:7px;background:var(--el);border-radius:8px;overflow:hidden"><div style="height:100%;width:' + Math.min(100, d.km / maxKm * 100).toFixed(1) + '%;background:var(--primary);border-radius:8px"></div></div><b style="font-size:12px;text-align:right">' + fmt(d.km) + ' km</b></div>').join("");
+    const kcalText = calRows.length ? fmt(kcalWeek) + " kcal" : "Tidak tersedia";
+    const hrText = avgHr ? avgHr + " bpm" : "—";
+    const sleepText = sleepSecs > 0 ? (sleepSecs / 3600).toFixed(1).replace(".", ",") + " jam" : "—";
+    host.innerHTML =
+      '<div class="sgroup" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      metric("Jarak hari ini", val(kmToday, "km"), "Jarak sesi, bukan total langkah harian") +
+      metric("Kardio minggu ini", val(minsWeek, "menit"), acts.length + " sesi tercatat") +
+      metric("Jarak minggu ini", val(kmWeek, "km"), "Semua jenis aktivitas") +
+      metric("Kalori latihan", kcalText, calRows.length ? "Dari field kalori aktivitas Intervals" : "Intervals tidak mengirim kalori untuk sesi ini") +
+      metric("Langkah hari ini", val(stepsToday, "langkah"), "Wellness Intervals.icu") +
+      metric("Rata-rata HR sesi", hrText, hrRows.length + " aktivitas dengan HR") +
+      metric("Elevasi minggu ini", val(elevWeek, "m"), "Akumulasi aktivitas") +
+      metric("Tidur hari ini", sleepText, "Jika tersedia di wellness") +
+      '</div><div class="label" style="margin-top:16px">Jarak aktivitas · 7 hari terakhir</div>' + daily +
+      '<p class="hint" style="margin:10px 0 0">Jarak dihitung dari aktivitas yang tercatat di Intervals.icu. Ini bukan total jarak gerak harian Huawei. Durasi kardio adalah total durasi aktivitas yang tersinkron; bukan menit zona intensitas karena data HR per detik belum dihitung di ringkasan ini. Kalori hanya ditampilkan jika sumber aktivitas menyediakannya.</p>';
+  }
+
   function renderAll() {
+    renderActivityMetrics();
     setGreeting();
     const a = state.athlete, g = state.goalEst;
     let r = state.recommendation;
