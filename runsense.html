@@ -1466,6 +1466,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     src: "",        // "watch" = tanpa Intervals.icu
     hwLast: 0,      // terakhir data jam masuk
     sx: {},         // icuId -> ringkasan stream + interval aktual
+    hx: {},         // icuId -> stream mentah terolah untuk Health Connect
     workouts: {}    // yyyy-mm-dd -> rencana segmen yang dibuat RunSense sebelum latihan
   };
 
@@ -3175,6 +3176,129 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const name=String(act[7]||"").toLowerCase();
     return candidates.find(e=>name.includes(String(e.name||"").replace(/^RunSense\s*[·-]\s*/i,"").toLowerCase()))||candidates[0];
   }
+  /* ---------- Mesin data turunan Health Connect dari stream mentah Intervals ---------- */
+  const hxBusy = {};
+  function hxCardio(a) {
+    return /run|walk|hike|cycl|bike|ride|swim|row|elliptical|cardio|rope|skipping/i.test(String(a && (a[12] || a[1]) || ""));
+  }
+  function hxStreamArray(raw, name) {
+    const src = raw && !Array.isArray(raw) && Array.isArray(raw.streams) ? raw.streams : raw;
+    if (Array.isArray(src)) {
+      const o = src.find(x => x && (x.type === name || x.name === name));
+      return o && Array.isArray(o.data) ? o.data : null;
+    }
+    const o = src && (src[name] || src[name + ".json"]);
+    return Array.isArray(o) ? o : o && Array.isArray(o.data) ? o.data : null;
+  }
+  function hxDate(ms) {
+    const d = new Date(ms);
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  function hxAnalyze(raw, a) {
+    const time=hxStreamArray(raw,"time"), hr=hxStreamArray(raw,"heartrate");
+    const cadence=hxStreamArray(raw,"cadence"), distance=hxStreamArray(raw,"distance");
+    if (!time || time.length < 3) return null;
+    const L=lthrNow(), edges=L>0?lthrZoneEdges():[];
+    const zoneSec=[0,0,0,0,0,0,0], samples=[];
+    let activitySteps=0, cadenceSec=0, stride=null, hrSec=0;
+    const isWalk=/walk|hike/i.test(String(a[12]||a[1]||""));
+    for(let i=1;i<time.length;i++){
+      const t0=Number(time[i-1]),t1=Number(time[i]),dt=t1-t0;
+      if(!Number.isFinite(t0)||!Number.isFinite(t1)||dt<=0||dt>30) continue;
+      if(hr&&hr.length===time.length){
+        const h0=Number(hr[i-1]),h1=Number(hr[i]);
+        const h=(h0>40&&h0<240&&h1>40&&h1<240)?(h0+h1)/2:(h0>40&&h0<240?h0:h1);
+        if(h>40&&h<240){
+          hrSec+=dt;
+          if(edges.length){const z=edges.findIndex(b=>h<b);zoneSec[z<0?6:z]+=dt;}
+          if(i%5===0)samples.push({t:Math.round(Number(a[0])+t1*1000),hr:Math.round(h)});
+        }
+      }
+      if(cadence&&cadence.length===time.length){
+        const c=(Number(cadence[i-1])+Number(cadence[i]))/2;
+        if(c>35&&c<230&&(isWalk||a[1]==="run")){
+          activitySteps+=c*dt/60; cadenceSec+=dt;
+        }
+      }
+    }
+    if(isWalk&&cadenceSec>=Math.min(180,(Number(a[2])||0)*60*.35)&&activitySteps>0&&Number(a[3])>0){
+      const candidate=Number(a[3])*1000/activitySteps;
+      if(candidate>=.35&&candidate<=1.15)stride=candidate;
+    }
+    return {
+      checkedAt:Date.now(),version:1,hrCoverageSec:Math.round(hrSec),
+      zoneSeconds:edges.length?zoneSec.map(Math.round):null,
+      hrSamples:samples.slice(0,5000),activitySteps:cadenceSec>0?Math.round(activitySteps):null,
+      cadenceCoverageSec:Math.round(cadenceSec),walkStrideM:stride
+    };
+  }
+  async function ensureHealthStreams() {
+    if(!state.apiKey||state.apiKey==="demo")return 0;
+    const cutoff=Date.now()-365*864e5;
+    const todo=(state.acts||[]).filter(a=>a&&a[9]&&!/^hw/.test(String(a[9]))&&a[0]>=cutoff&&hxCardio(a))
+      .sort((a,b)=>b[0]-a[0]).filter(a=>{
+        const h=state.hx[String(a[9])];
+        return !h||h.version!==1||Date.now()-(h.checkedAt||0)>7*864e5;
+      }).slice(0,8);
+    let done=0;
+    for(const a of todo){
+      const id=String(a[9]);if(hxBusy[id])continue;hxBusy[id]=1;
+      try{
+        const raw=await icuGet("activity/"+encodeURIComponent(id)+"/streams.json?types=time,heartrate,cadence,distance");
+        const h=hxAnalyze(raw,a);
+        if(h)state.hx[id]=h;
+        else state.hx[id]={version:1,checkedAt:Date.now(),noUsableStream:true};
+        done++;
+      }catch(_){/* kegagalan API tidak diubah menjadi data nol */}
+      delete hxBusy[id];
+    }
+    const keys=Object.keys(state.hx);
+    if(keys.length>500)keys.sort((a,b)=>(state.hx[a].checkedAt||0)-(state.hx[b].checkedAt||0)).slice(0,keys.length-500).forEach(k=>delete state.hx[k]);
+    if(done)persist();
+    return done;
+  }
+  function deriveHealthDaily() {
+    const wellness=state.wellness||[], acts=state.acts||[], hx=state.hx||{};
+    const strideRows=Object.values(hx).map(x=>Number(x.walkStrideM)).filter(x=>x>=.35&&x<=1.15).sort((a,b)=>a-b);
+    const stride=strideRows.length?strideRows[Math.floor(strideRows.length/2)]:0;
+    const byDay=new Map();
+    wellness.forEach(w=>{if(w&&w.id)byDay.set(String(w.id).slice(0,10),{date:String(w.id).slice(0,10),steps:Number(w.steps)||0});});
+    const dayActs=new Map();
+    acts.forEach(a=>{
+      if(!a||!a[9])return;
+      const day=hxDate(a[0]),list=dayActs.get(day)||[];list.push(a);dayActs.set(day,list);
+    });
+    const out=[];
+    byDay.forEach((d,key)=>{
+      const list=dayActs.get(key)||[];
+      const locomotion=list.filter(a=>/run|walk|hike/i.test(String(a[12]||a[1]||"")));
+      const measured=locomotion.length>0&&locomotion.every(a=>{
+        const h=hx[String(a[9])];return h&&Number(h.activitySteps)>0&&Number(h.cadenceCoverageSec)>=Math.min(180,Number(a[2])*60*.35);
+      });
+      const activitySteps=measured?locomotion.reduce((n,a)=>n+Number(hx[String(a[9])].activitySteps),0):0;
+      const activityDistance=list.reduce((n,a)=>n+(Number(a[3])>0?Number(a[3])*1000:0),0);
+      if(stride>0&&d.steps>0&&measured){
+        const residual=Math.max(0,d.steps-activitySteps);
+        d.distanceMeters=Math.round(activityDistance+residual*stride);
+        d.distanceMethod="activity_distance_plus_residual_steps_x_personal_walk_stride";
+        d.walkStrideMeters=Math.round(stride*1000)/1000;
+        d.activitySteps=activitySteps;
+      }
+      out.push(d);
+    });
+    return out;
+  }
+  function deriveHealthWeek() {
+    const from=Date.now()-7*864e5, sums=[0,0,0,0,0,0,0];let coverage=0,activities=0;
+    (state.acts||[]).forEach(a=>{
+      if(!a||a[0]<from||!a[9]||!hxCardio(a))return;
+      const h=state.hx[String(a[9])];if(!h||!Array.isArray(h.zoneSeconds))return;
+      h.zoneSeconds.forEach((v,i)=>sums[i]+=Number(v)||0);
+      coverage+=Number(h.hrCoverageSec)||0;activities++;
+    });
+    return {zoneMinutes:sums.map(v=>Math.round(v/60*10)/10),coverageMinutes:Math.round(coverage/60),activities,lthr:lthrNow()};
+  }
+
   async function ensureStream(a) {
     if (!a || !a[9] || !state.apiKey || state.apiKey === "demo") return;
     const id = String(a[9]);
@@ -3413,6 +3537,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         state.icuStepsDays = stepDays;
       }
 
+      await ensureHealthStreams();
       state.icuLast = Date.now();
       persist();
       setSync(
@@ -4620,6 +4745,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const kcalToday = todayCalRows.reduce((n, a) => n + Number(a[13]), 0);
     const cardioToday = todayActs.filter(a => /run|walk|hike|cycl|bike|ride|swim|row|elliptical|cardio|rope|skipping/.test(String(a[12] || a[1] || "").toLowerCase()));
     const stepsToday = Number((wellByDay.get(todayKey) || {}).steps) || 0;
+    const derivedDays = deriveHealthDaily();
+    const derivedToday = derivedDays.find(d => d.date === todayKey) || {};
+    const cardioZones = deriveHealthWeek();
     const todayWell = wellByDay.get(todayKey) || {};
     const sleepSecs = Number(todayWell.sleepSecs || todayWell.sleep_seconds || 0);
     const rhrToday = Number(todayWell.restingHR || 0);
@@ -4654,6 +4782,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       metric("Kalori hari ini", todayCalRows.length ? fmt(kcalToday) + " kcal" : "—", "Kalori latihan jika dikirim sumber") +
       metric("Kalori minggu ini", kcalText, calRows.length ? "Kalori aktivitas Intervals" : "Tidak tersedia dari sumber") +
       metric("Langkah hari ini", val(stepsToday, "langkah"), "Wellness Intervals.icu") +
+      metric("Jarak harian turunan", derivedToday.distanceMeters ? val(derivedToday.distanceMeters/1000,"km") : "Belum cukup data", derivedToday.distanceMeters ? "Aktivitas + sisa langkah × panjang langkah personal" : "Perlu stream cadence jalan dan langkah harian") +
+      metric("Kardio zona LTHR · 7 hari", cardioZones.activities ? cardioZones.zoneMinutes.map((v,i)=>"Z"+(i+1)+" "+fmt(v)+"m").join(" · ") : "Belum ada stream HR", cardioZones.activities+" aktivitas · cakupan HR "+fmt(cardioZones.coverageMinutes)+" menit") +
       metric("Resting HR", val(rhrToday, "bpm"), "Data wellness harian") +
       metric("HRV RMSSD", val(hrvToday, "ms"), "Data wellness harian") +
       metric("Berat badan", val(weightToday, "kg"), "Jika tersedia di wellness") +
@@ -4663,7 +4793,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       metric("Elevasi minggu ini", val(elevWeek, "m"), "Akumulasi aktivitas") +
       metric("Tidur hari ini", sleepText, "Jika tersedia di wellness") +
       '</div><div class="label" style="margin-top:16px">Jarak aktivitas · 7 hari terakhir</div>' + daily +
-      '<p class="hint" style="margin:10px 0 0">Jarak dihitung dari aktivitas yang tercatat di Intervals.icu. Ini bukan total jarak gerak harian Huawei. Durasi kardio adalah total durasi aktivitas yang tersinkron; bukan menit zona intensitas karena data HR per detik belum dihitung di ringkasan ini. Kalori hanya ditampilkan jika sumber aktivitas menyediakannya.</p>';
+      '<p class="hint" style="margin:10px 0 0">Jarak turunan hanya dihitung jika langkah harian, jarak aktivitas, dan cadence aktivitas lokomosi cukup lengkap; panjang langkah dikalibrasi dari sesi jalan aktual. Menit zona dihitung dari stream HR bertimestamp memakai batas LTHR. Tidur hanya dapat dikirim sebagai sesi jika sumber menyediakan timestamp mulai dan selesai; sleepSecs saja tidak cukup.</p>';
   }
 
   function renderAll() {
@@ -5821,6 +5951,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
           weightHistory: state.weightHistory,
           hwLast: state.hwLast,
           sx: state.sx,
+          hx: state.hx,
           workouts: state.workouts
         })
       );
@@ -5853,6 +5984,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         state.weightHistory = Array.isArray(d.weightHistory) ? d.weightHistory : [];
         if (!state.weightHistory.length && state.weight >= 25) state.weightHistory = [{ date: ymd(), weight: state.weight }];
         state.sx = d.sx && typeof d.sx === "object" ? d.sx : {};
+        state.hx = d.hx && typeof d.hx === "object" ? d.hx : {};
         state.workouts = d.workouts && typeof d.workouts === "object" ? d.workouts : {};
         state.hwLast = d.hwLast || 0;
       }
