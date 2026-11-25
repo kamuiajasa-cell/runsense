@@ -3370,9 +3370,14 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
           const hrvSDNN = wellnessNumber(w.hrvSDNN);
           const steps = wellnessNumber(w.steps, w.Steps, w.totalSteps, w.stepCount);
           const spO2 = wellnessNumber(w.spO2, w.spo2);
+          const weight = wellnessNumber(w.weight, w.weightKg);
+          const bodyFat = wellnessNumber(w.bodyFat, w.body_fat);
+          const systolic = wellnessNumber(w.systolic, w.systolicBP, w.systolic_bp);
+          const diastolic = wellnessNumber(w.diastolic, w.diastolicBP, w.diastolic_bp);
+          const vo2max = wellnessNumber(w.vo2max, w.vo2Max, w.vo2_max);
           if (steps != null && steps > 0) stepDays++;
-          // Simpan seluruh field wellness yang dikembalikan Intervals.icu agar tidak
-          // hilang dari cache RunSense; field yang didukung APK diteruskan ke Health Connect.
+          // Simpan seluruh field asli Intervals dan normalisasi metrik yang punya record Health Connect.
+          // Jarak harian tidak dibuat dari jumlah aktivitas: Intervals wellness Huawei tidak menyediakannya.
           const next = Object.assign({}, prev, w, {
             id,
             ctl: w.ctl != null ? Number(w.ctl) : (prev.ctl ?? null),
@@ -3381,7 +3386,12 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
             steps: steps != null ? Math.round(steps) : (prev.steps ?? null),
             spO2: spO2 != null ? spO2 : (prev.spO2 ?? null),
             hrv: hrv != null ? hrv : (prev.hrv ?? null),
-            hrvSDNN: hrvSDNN != null ? hrvSDNN : (prev.hrvSDNN ?? null)
+            hrvSDNN: hrvSDNN != null ? hrvSDNN : (prev.hrvSDNN ?? null),
+            weight: weight != null ? weight : (prev.weight ?? null),
+            bodyFat: bodyFat != null ? bodyFat : (prev.bodyFat ?? null),
+            systolic: systolic != null ? systolic : (prev.systolic ?? null),
+            diastolic: diastolic != null ? diastolic : (prev.diastolic ?? null),
+            vo2max: vo2max != null ? vo2max : (prev.vo2max ?? null)
           });
           // Data dari jam tetap menjadi kebenaran operasional untuk RHR/HRV.
           if (prev.rhrSrc === "jam") next.restingHR = prev.restingHR ?? null;
