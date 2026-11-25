@@ -4609,7 +4609,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const wellByDay = new Map(wellness.map(w => [String(w.id || "").slice(0, 10), w]));
     const sum = (arr, ix) => arr.reduce((n, a) => n + (Number(a[ix]) > 0 ? Number(a[ix]) : 0), 0);
     const kmToday = sum(acts.filter(a => dateKey(+a[0]) === todayKey), 3);
-    const minsWeek = sum(acts, 2);
+    const cardioActs = acts.filter(a => /run|walk|hike|cycl|bike|ride|swim|row|elliptical|cardio|rope|skipping/.test(String(a[12] || a[1] || '').toLowerCase()));
+    const minsWeek = sum(cardioActs, 2);
     const kmWeek = sum(acts, 3);
     const elevWeek = sum(acts, 5);
     const calRows = acts.filter(a => Number(a[13]) > 0);
@@ -4638,7 +4639,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     host.innerHTML =
       '<div class="sgroup" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
       metric("Jarak hari ini", val(kmToday, "km"), "Jarak sesi, bukan total langkah harian") +
-      metric("Kardio minggu ini", val(minsWeek, "menit"), acts.length + " sesi tercatat") +
+      metric("Kardio minggu ini", val(minsWeek, "menit"), cardioActs.length + " sesi kardio") +
       metric("Jarak minggu ini", val(kmWeek, "km"), "Semua jenis aktivitas") +
       metric("Kalori latihan", kcalText, calRows.length ? "Dari field kalori aktivitas Intervals" : "Intervals tidak mengirim kalori untuk sesi ini") +
       metric("Langkah hari ini", val(stepsToday, "langkah"), "Wellness Intervals.icu") +
