@@ -3264,7 +3264,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       Number(a.max_heartrate || a.max_hr || 0),
       id,
       Number(a.icu_training_load || a.training_load || a.hrss || 0),
-      Number(a.average_cadence || 0)
+      Number(a.average_cadence || 0),
+      String(a.type || a.sport_type || a.name || "other").slice(0, 60)
     ];
     // indices: 0 start,1 kind,2 min,3 km,4 avgHr,5 elev,6 lid,7 name,8 maxHr,9 icuId,10 load
   }
