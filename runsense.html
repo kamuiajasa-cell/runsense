@@ -4750,6 +4750,25 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const cardioZones = deriveHealthWeek();
     const todayWell = wellByDay.get(todayKey) || {};
     const sleepSecs = Number(todayWell.sleepSecs || todayWell.sleep_seconds || 0);
+    const sleepStamp = (value, isStart) => {
+      if (value == null || value === "") return 0;
+      const n = Number(value);
+      if (Number.isFinite(n) && n > 0) return n > 1e12 ? n : n > 1e9 ? n * 1000 : 0;
+      const raw = String(value).trim();
+      const parsed = Date.parse(raw);
+      if (Number.isFinite(parsed)) return parsed;
+      const tm = raw.match(/^(\\d{1,2}):(\\d{2})(?::(\\d{2}))?$/);
+      if (!tm) return 0;
+      const base = new Date(todayKey + "T00:00:00");
+      base.setHours(Number(tm[1]), Number(tm[2]), Number(tm[3] || 0), 0);
+      if (isStart && Number(tm[1]) >= 12) base.setDate(base.getDate() - 1);
+      return +base;
+    };
+    let sleepStartMs = sleepStamp(todayWell.sleepStartMs || todayWell.sleep_start_ms || todayWell.sleepStart || todayWell.sleep_start || todayWell.sleepStartTime || todayWell.sleep_start_time, true);
+    let sleepEndMs = sleepStamp(todayWell.sleepEndMs || todayWell.sleep_end_ms || todayWell.sleepEnd || todayWell.sleep_end || todayWell.sleepEndTime || todayWell.sleep_end_time, false);
+    if (sleepSecs > 0 && sleepStartMs && !sleepEndMs) sleepEndMs = sleepStartMs + sleepSecs * 1000;
+    if (sleepSecs > 0 && sleepEndMs && !sleepStartMs) sleepStartMs = sleepEndMs - sleepSecs * 1000;
+    const sleepClock = ms => ms > 0 ? new Date(ms).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}) : "Belum ada timestamp";
     const rhrToday = Number(todayWell.restingHR || 0);
     const hrvToday = Number(todayWell.hrv || 0);
     const weightToday = Number(todayWell.weight || 0);
@@ -4792,6 +4811,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       metric("Rata-rata HR sesi", hrText, hrRows.length + " aktivitas dengan HR") +
       metric("Elevasi minggu ini", val(elevWeek, "m"), "Akumulasi aktivitas") +
       metric("Tidur hari ini", sleepText, "Jika tersedia di wellness") +
+      metric("Mulai tidur", sleepClock(sleepStartMs), sleepStartMs ? "Timestamp sumber atau hasil durasi + waktu batas" : "SleepSecs saja tidak cukup") +
+      metric("Jam bangun", sleepClock(sleepEndMs), sleepEndMs ? "Timestamp sumber atau hasil durasi + waktu batas" : "Belum ada waktu selesai dari sumber") +
       '</div><div class="label" style="margin-top:16px">Jarak aktivitas · 7 hari terakhir</div>' + daily +
       '<p class="hint" style="margin:10px 0 0">Jarak turunan hanya dihitung jika langkah harian, jarak aktivitas, dan cadence aktivitas lokomosi cukup lengkap; panjang langkah dikalibrasi dari sesi jalan aktual. Menit zona dihitung dari stream HR bertimestamp memakai batas LTHR. Tidur hanya dapat dikirim sebagai sesi jika sumber menyediakan timestamp mulai dan selesai; sleepSecs saja tidak cukup.</p>';
   }
