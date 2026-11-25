@@ -3339,7 +3339,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         }
       } catch (_) {}
       const now = Date.now();
-      const old = fmtDate(new Date(now - (state.acts.length ? 100 : 760) * 864e5));
+      const old = fmtDate(new Date(now - (state.acts.length ? 120 : 760) * 864e5));
       const neu = fmtDate(new Date(now + 864e5));
 
       const [acts, well] = await Promise.all([
@@ -3352,21 +3352,41 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
       if (Array.isArray(well)) {
         const map = new Map((state.wellness || []).map((w) => [w.id, w]));
+        const wellnessNumber = (...values) => {
+          for (const value of values) {
+            if (value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value))) return Number(value);
+          }
+          return null;
+        };
+        let stepDays = 0;
         well.forEach((w) => {
           const id = String(w.id || w.date || "").slice(0, 10);
           if (!/^\d{4}-\d{2}-\d{2}$/.test(id)) return;
           const prev = map.get(id) || {};
-          const rhr = Number(w.restingHR || w.resting_hr || 0) || null;
-          const hvv = Number(w.hrv || w.hrvSDNN || 0) || null;
-          const next = Object.assign({}, prev, {
+          const rhr = wellnessNumber(w.restingHR, w.resting_hr);
+          // Intervals.icu hrv adalah rMSSD. Jangan menggantinya dengan hrvSDNN:
+          // keduanya metrik berbeda dan Health Connect meminta nilai RMSSD.
+          const hrv = wellnessNumber(w.hrv);
+          const hrvSDNN = wellnessNumber(w.hrvSDNN);
+          const steps = wellnessNumber(w.steps, w.Steps, w.totalSteps, w.stepCount);
+          const spO2 = wellnessNumber(w.spO2, w.spo2);
+          if (steps != null && steps > 0) stepDays++;
+          // Simpan seluruh field wellness yang dikembalikan Intervals.icu agar tidak
+          // hilang dari cache RunSense; field yang didukung APK diteruskan ke Health Connect.
+          const next = Object.assign({}, prev, w, {
             id,
-            ctl: w.ctl != null ? Number(w.ctl) : null,
-            atl: w.atl != null ? Number(w.atl) : null,
-            tsb: w.tsb != null ? Number(w.tsb) : null
+            ctl: w.ctl != null ? Number(w.ctl) : (prev.ctl ?? null),
+            atl: w.atl != null ? Number(w.atl) : (prev.atl ?? null),
+            tsb: w.tsb != null ? Number(w.tsb) : (prev.tsb ?? null),
+            steps: steps != null ? Math.round(steps) : (prev.steps ?? null),
+            spO2: spO2 != null ? spO2 : (prev.spO2 ?? null),
+            hrv: hrv != null ? hrv : (prev.hrv ?? null),
+            hrvSDNN: hrvSDNN != null ? hrvSDNN : (prev.hrvSDNN ?? null)
           });
-          // Data dari jam adalah kebenaran operasional: Intervals hanya mengisi yang kosong.
-          if (prev.rhrSrc !== "jam") next.restingHR = rhr || prev.restingHR || null;
-          if (prev.hrvSrc !== "jam") next.hrv = hvv || prev.hrv || null;
+          // Data dari jam tetap menjadi kebenaran operasional untuk RHR/HRV.
+          if (prev.rhrSrc === "jam") next.restingHR = prev.restingHR ?? null;
+          else next.restingHR = rhr != null ? rhr : (prev.restingHR ?? null);
+          if (prev.hrvSrc === "jam") next.hrv = prev.hrv ?? null;
           map.set(id, next);
         });
         state.wellness = [...map.values()].sort((a, b) => a.id.localeCompare(b.id)).slice(-400);
@@ -3374,12 +3394,13 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
           const r = [...state.wellness].reverse().find((w) => w.restingHR > 30);
           if (r) state.rest = r.restingHR;
         }
+        state.icuStepsDays = stepDays;
       }
 
       state.icuLast = Date.now();
       persist();
       setSync(
-        `Sinkron · ${added} baru/diubah · ${state.icuName || "OK"} · ${new Date(state.icuLast).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}` +
+        `Sinkron · ${added} baru/diubah · ${state.icuStepsDays || 0} hari langkah · ${state.icuName || "OK"} · ${new Date(state.icuLast).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}` +
           (state.hwLast ? ` · Jam ${new Date(state.hwLast).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}` : ""),
         ""
       );
