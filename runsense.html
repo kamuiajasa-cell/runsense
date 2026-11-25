@@ -7908,5 +7908,33 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   };
 })();
 </script>
+<script>
+/* Health Connect menu: aktif hanya saat WebView APK menyediakan native bridge.
+   Relokasi ini juga kompatibel dengan APK lama yang masih memasang kontrol di Pengaturan. */
+(function () {
+  function mountHealthConnectMenu() {
+    if (!window.RunSenseNative) return;
+    var nav = document.getElementById("hcNav");
+    var group = document.getElementById("rsHcGroup");
+    var actions = document.getElementById("rsHcActions");
+    if (!nav || !group || !actions) return;
+    nav.hidden = false;
+
+    var status = document.getElementById("rsHcState");
+    if (status) {
+      var row = status.closest(".srow");
+      if (row && !group.contains(row)) group.insertBefore(row, actions);
+    }
+    document.querySelectorAll("#screen-me .sactions button").forEach(function (button) {
+      var label = (button.textContent || "").trim();
+      if (/^(Tulis ke Health Connect|Otomatis:|Buka Health Connect)/.test(label) && !actions.contains(button)) {
+        actions.appendChild(button);
+      }
+    });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountHealthConnectMenu);
+  else mountHealthConnectMenu();
+})();
+</script>
 </body>
 </html>
