@@ -3555,6 +3555,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       await ensureHealthStreams();
       state.icuLast = Date.now();
       persist();
+      try { window.RSBridge && window.RSBridge.push(); } catch (_) {}
       setSync(
         `Sinkron · ${added} baru/diubah · ${state.icuStepsDays || 0} hari langkah · ${state.icuName || "OK"} · ${new Date(state.icuLast).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}` +
           (state.hwLast ? ` · Jam ${new Date(state.hwLast).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}` : ""),
@@ -3700,6 +3701,26 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     renderPlanUI();
     applyLater();
   }
+  // API sempit untuk runsense-bridge.js (opsional): hanya baca + terapkan rencana, tidak menyentuh API key.
+  window.RSApi = {
+    snapshot() {
+      let rec = null, ready = null, ctx = null;
+      try { rec = designToday(); } catch (_) {}
+      try { ready = readiness(); } catch (_) {}
+      try { ctx = adaptiveContext(); } catch (_) {}
+      const clean = (o) => { try { return JSON.parse(JSON.stringify(o, (k, v) => (typeof v === "function" || v instanceof Element ? undefined : v))); } catch (_) { return null; } };
+      return {
+        ts: Date.now(), goal: state.goal, race: state.race, heat: state.heat, flag: state.flag,
+        plan: state.plan, lthr: state.lthrC || null, max: state.max, age: state.age, weight: state.weight,
+        coach: clean({ readiness: ready, today: rec && { status: rec.status, title: rec.title, duration: rec.duration, hr: rec.hr, pace: rec.pace, tag: rec.tag, reason: rec.reason }, adaptive: ctx && { acute: ctx.acute, prevWeekly: ctx.prevWeekly, ratio: ctx.ratio, hard7: ctx.hard7, hardRpe: ctx.hardRpe, heavyLegs: ctx.heavyLegs, avgRpe: ctx.avgRpe, volumeFactor: ctx.volumeFactor, notes: ctx.notes, qualityCaution: ctx.qualityCaution, strengthCaution: ctx.strengthCaution } }),
+        // acts: [ms, tipe, menit, km, hrRata, ...] — 60 hari terakhir, tanpa stream mentah
+        acts: (state.acts || []).filter((a) => a[0] >= Date.now() - 60 * 864e5).map((a) => a.slice(0, 6)),
+        wellness: clean(state.wellness)
+      };
+    },
+    setPlan(d, f, v) { setPlan(d, f, v); },
+    setRules(r) { window.__RS_RULES = r || null; applyLater(); }
+  };
   function setRace(v) {
     state.race = v || "";
     try { localStorage.setItem("runsense_race", state.race); } catch (_) {}
@@ -4046,16 +4067,17 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       else break;
     }
     const qualityProgressionLevel=Math.min(3,Math.floor(successfulQuality/2));
+    const R=(typeof window!=="undefined"&&window.__RS_RULES)||{};const rv=(k,d)=>Number.isFinite(+R[k])&&R[k]!==null?+R[k]:d;
     let volumeFactor=1,notes=[];
     // Kenaikan menit mingguan hanya dipotong oleh wkAdjust(); jangan dihitung dua kali.
-    if(ratio!=null&&ratio>1.5)notes.push("menit lari 7 hari >150% rerata 4 minggu");
-    else if(ratio!=null&&ratio>1.3)notes.push("volume mingguan meningkat cepat");
-    else if(ratio!=null&&ratio>=1.10)notes.push("plafon progresi +10% dari rata-rata 4 minggu tercapai");
-    if(hard.length>=2){volumeFactor=Math.min(volumeFactor,.85);notes.push("2+ sesi intens dalam 7 hari");}
-    if(hardRpe>=2){volumeFactor=Math.min(volumeFactor,.85);notes.push("2+ sesi terakhir terasa berat (RPE ≥7)");}
-    if(heavyLegs>=2||todayLegsHeavy){volumeFactor=Math.min(volumeFactor,.85);notes.push("otot/kaki melaporkan beban berat");}
-    if(qualityCaution){volumeFactor=Math.min(volumeFactor,.85);notes.push("respons sesi quality terakhir berat; dosis berikutnya diturunkan");}
-    if(strengthCaution){volumeFactor=Math.min(volumeFactor,.9);notes.push("dosis strength kaki menengah–tinggi dalam 48 jam");}
+    if(ratio!=null&&ratio>rv("ratioHigh",1.5))notes.push("menit lari 7 hari >150% rerata 4 minggu");
+    else if(ratio!=null&&ratio>rv("ratioFast",1.3))notes.push("volume mingguan meningkat cepat");
+    else if(ratio!=null&&ratio>=rv("ratioCap",1.10))notes.push("plafon progresi +10% dari rata-rata 4 minggu tercapai");
+    if(hard.length>=rv("hardMax7d",2)){volumeFactor=Math.min(volumeFactor,rv("hardFactor",.85));notes.push("2+ sesi intens dalam 7 hari");}
+    if(hardRpe>=rv("hardRpeCount",2)){volumeFactor=Math.min(volumeFactor,rv("rpeFactor",.85));notes.push("2+ sesi terakhir terasa berat (RPE ≥7)");}
+    if(heavyLegs>=rv("heavyLegsCount",2)||todayLegsHeavy){volumeFactor=Math.min(volumeFactor,rv("legsFactor",.85));notes.push("otot/kaki melaporkan beban berat");}
+    if(qualityCaution){volumeFactor=Math.min(volumeFactor,rv("qualityFactor",.85));notes.push("respons sesi quality terakhir berat; dosis berikutnya diturunkan");}
+    if(strengthCaution){volumeFactor=Math.min(volumeFactor,rv("strengthFactor",.9));notes.push("dosis strength kaki menengah–tinggi dalam 48 jam");}
     return {acute,prevWeekly,ratio,hard7:hard.length,hardRpe,heavyLegs,avgRpe,qualityCaution,qualityProgressionLevel,successfulQuality,volumeFactor,strengthLoad48h:strength.legLoad,strengthCaution,qualityLock:hard.length>=2||hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||strengthCaution||(ratio!=null&&ratio>1.5),recoveryBias:hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||(avgRpe!=null&&avgRpe>=7&&recentFeel.length>=2),notes};
   }
   function applyFeelDecision(r){
@@ -7936,5 +7958,6 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   else mountHealthConnectMenu();
 })();
 </script>
+<script src="./runsense-bridge.js" defer></script>
 </body>
 </html>
