@@ -3709,13 +3709,43 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       try { ready = readiness(); } catch (_) {}
       try { ctx = adaptiveContext(); } catch (_) {}
       const clean = (o) => { try { return JSON.parse(JSON.stringify(o, (k, v) => (typeof v === "function" || v instanceof Element ? undefined : v))); } catch (_) { return null; } };
+      const strip = (t) => String(t == null ? "" : t).replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 320);
+      const r1 = (v) => (typeof v === "number" && isFinite(v) ? Math.round(v * 100) / 100 : v);
+      // Analisa 3 lari terakhir: review app + split per km + drift, bukan sekadar rata-rata.
+      const runs = (state.acts || []).filter((x) => x[1] === "run" && x[3] > 0).sort((x, y) => y[0] - x[0]).slice(0, 3).map((x) => {
+        let rev = null, ty = null;
+        try { rev = reviewRun(x); } catch (_) {}
+        try { ty = detectType(x).type; } catch (_) {}
+        const sx = x[9] && state.sx ? state.sx[String(x[9])] : null;
+        const has = !!(sx && !sx.none);
+        return clean({
+          startLocal: new Date(x[0]).toLocaleString("sv-SE"), type: ty, minutes: r1(x[2]), km: r1(x[3]), avgHr: x[4] ? Math.round(x[4]) : null,
+          review: rev && (rev.headline || rev.summary || (rev.sections || []).length) ? {
+            tone: rev.tone, headline: strip(rev.headline), summary: strip(rev.summary),
+            sections: (rev.sections || []).map((sec) => ({ title: strip(sec.title), notes: (sec.notes || []).map((n) => strip(n.text)).filter(Boolean).slice(0, 8) }))
+          } : null,
+          streamAvailable: has,
+          splits: has && sx.splits ? sx.splits.map((q) => ({ km: q.km, paceMinPerKm: r1(q.pace), hr: q.hr ? Math.round(q.hr) : null })) : null,
+          drift: has ? { dec: sx.dec || null, fade: sx.fade || null, fast: sx.fast || null } : null,
+          runOnly: has ? sx.runOnly || null : null, walkShare: has ? r1(sx.walkShare) : null,
+          movingPart: has ? sx.mv || null : null, best: has ? sx.best || null : null,
+          segments: has && Array.isArray(sx.segments) ? sx.segments.slice(0, 24).map((g) => ({ type: g.type, sec: Math.round(g.duration), m: Math.round(g.distance), hr: g.hr ? Math.round(g.hr) : null, cad: g.cadence || null })) : null
+        });
+      });
+      let stg = null; try { stg = stage().s; } catch (_) {}
+      const well = (state.wellness || []).slice(-14).map((w) => {
+        const o = {};
+        Object.keys(w).forEach((k) => { const v = w[k]; if (v !== null && v !== undefined && v !== false && k !== "sportInfo" && k !== "updated" && k !== "locked") o[k] = v; });
+        return o;
+      });
       return {
-        ts: Date.now(), goal: state.goal, race: state.race, heat: state.heat, flag: state.flag,
+        ts: Date.now(), goal: state.goal, race: state.race, heat: state.heat, flag: state.flag, stage: stg,
         plan: state.plan, lthr: state.lthrC || null, max: state.max, age: state.age, weight: state.weight,
-        coach: clean({ readiness: ready, today: rec && { status: rec.status, title: rec.title, duration: rec.duration, hr: rec.hr, pace: rec.pace, tag: rec.tag, reason: rec.reason }, adaptive: ctx && { acute: ctx.acute, prevWeekly: ctx.prevWeekly, ratio: ctx.ratio, hard7: ctx.hard7, hardRpe: ctx.hardRpe, heavyLegs: ctx.heavyLegs, avgRpe: ctx.avgRpe, volumeFactor: ctx.volumeFactor, notes: ctx.notes, qualityCaution: ctx.qualityCaution, strengthCaution: ctx.strengthCaution } }),
+        coach: clean({ readiness: ready, today: rec && { status: rec.status, title: rec.title, duration: rec.duration, hr: rec.hr, pace: rec.pace, tag: rec.tag, reason: rec.reason, steps: rec.steps }, adaptive: ctx && { acute: ctx.acute, prevWeekly: ctx.prevWeekly, ratio: ctx.ratio, hard7: ctx.hard7, hardRpe: ctx.hardRpe, heavyLegs: ctx.heavyLegs, avgRpe: ctx.avgRpe, volumeFactor: ctx.volumeFactor, notes: ctx.notes, qualityCaution: ctx.qualityCaution, strengthCaution: ctx.strengthCaution } }),
+        runs: runs,
         // acts: [ms, tipe, menit, km, hrRata, ...] — 60 hari terakhir, tanpa stream mentah
-        acts: (state.acts || []).filter((a) => a[0] >= Date.now() - 60 * 864e5).map((a) => a.slice(0, 6)),
-        wellness: clean(state.wellness)
+        acts: (state.acts || []).filter((x) => x[0] >= Date.now() - 60 * 864e5).map((x) => x.slice(0, 6)),
+        wellness: clean(well)
       };
     },
     setPlan(d, f, v) { setPlan(d, f, v); },
