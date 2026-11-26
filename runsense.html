@@ -5630,7 +5630,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
     /* aeroHtml sempat dihitung tapi tidak di-render — diperbaiki di sini */
     el.innerHTML = summary + actHtml + nymHtml + perfHtml + aeroHtml + capHtml + durHtml + susHtml + dq;
-    backfilldaya tahan(runs);
+    backfillDurability(runs);
     prefetchPace(perfNeed.map(x => ({ act: x }))).then(n => { if (n) renderProgress(); });
   }
   window.renderProgress = renderProgress;
