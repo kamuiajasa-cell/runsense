@@ -2290,39 +2290,84 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       }
     }
 
-    // —— 4. What next ——
+    // —— 4. Verdict eksekusi + aksi tunggal (preskriptif) ——
     const hard = (pct != null && pct > 0.78) || load >= 80 * ldK || det.type === "thr" || det.type === "vo2" || det.type === "race";
     const longish = km >= 14 || det.type === "long";
-    let tomorrow = "";
-    let toneNext = "g";
-    if (hard && longish) {
-      tomorrow = "Besok: istirahat penuh atau jalan santai 20–30 menit. Jangan lari keras.";
-      toneNext = "r";
-    } else if (hard) {
-      tomorrow = "Besok: lari santai (masih bisa ngobrol) atau istirahat. Jangan lari keras dua hari beruntun.";
-      toneNext = "y";
-    } else if (longish) {
-      tomorrow = "Besok: lari santai 30–40 menit atau jalan santai. Kaki butuh pulih, bukan dipaksa.";
-      toneNext = "y";
-    } else if (streak >= 2) {
-      tomorrow = "Besok: utamakan pemulihan. Skor kesiapan bagus belum tentu badan siap kalau beberapa hari terakhir berat.";
-      toneNext = "y";
-    } else if (pct != null && pct <= 0.68) {
-      tomorrow = "Besok: boleh lanjut sesuai rencana bila bangun tidur terasa oke.";
-      toneNext = "g";
-    } else {
-      tomorrow = "Besok: cek kondisi pagi (detak istirahat, mood, kaki). Kalau ragu, lari santai saja.";
-      toneNext = "g";
-    }
-    push(S_next, toneNext, (hard || longish || streak >= 2) ? "Sesi ini cukup membebani badan. Sesi berikutnya disusun coach di Beranda sesuai kesiapan dan rencana minggu." : "Sesi ini terkendali. Sesi berikutnya disusun coach di Beranda sesuai rencana minggu.");
+    const sxV = state.sx && a[9] ? state.sx[String(a[9])] : null;
+    const driftPct = sxV && sxV.dec && Number.isFinite(+sxV.dec.pct) ? +sxV.dec.pct : null;
+    const fadePct = sxV && sxV.fade && Number.isFinite(+sxV.fade.pct) ? +sxV.fade.pct : null;
+    const fastStart = sxV && sxV.fast && Number.isFinite(+sxV.fast.pct) ? +sxV.fast.pct : null;
+    const tzV = sxV ? (tizNow(sxV) || sxV.tiz) : null;
+    const zHardShare = tzV && tzV.length >= 5 ? tzV.slice(2).reduce((u, v) => u + v, 0) : null;
+    const rp = feelAfter.rpe || 0;
+    const legsHeavy = feelAfter.legs != null && feelAfter.legs >= 2;
 
-    // Coach one-liner on purpose
-    if (det.type === "easy" && pct != null && pct <= 0.68) {
-      push(S_next, "g", "Tujuan sesi santai tercapai. Inilah yang membangun dasar aerobik. Jangan dijadikan tempo hanya karena lagi enak.");
-    } else if (det.type === "thr" || det.type === "vo2") {
-      push(S_next, "g", "Sesi kerasnya sudah masuk. Nilainya ada di pemulihan dan lari santai berikutnya, bukan di seberapa kencang kamu bisa.");
+    /* Verdict: on | hard | easy | mixed — satu status, satu aksi. */
+    let verdict = { k: "on", label: "Sesuai target", action: "Lanjut sesuai rencana bila bangun tidur terasa oke." };
+    const L = lthr || lthrNow() || 0;
+    const hrRatio = L > 0 && hr > 0 ? hr / L : null;
+
+    if (det.type === "easy" || det.type === "recovery") {
+      const tooHard = (pct != null && pct > 0.75) || (hrRatio != null && hrRatio >= 0.88) || (zHardShare != null && zHardShare >= 40) || (rp >= 6) || (driftPct != null && driftPct >= 8) || (fastStart != null && fastStart >= 8);
+      const tooEasy = !tooHard && pct != null && pct < 0.5 && km >= 5 && (hrRatio == null || hrRatio < 0.72) && rp > 0 && rp <= 2;
+      if (tooHard) {
+        verdict = { k: "hard", label: "Terlalu keras untuk easy", action: "Lain kali turunkan 15–25 dtk/km atau jaga HR ≤ 85% LTHR" + (L ? " (~" + Math.round(L * 0.85) + " bpm)" : "") + ". Dua km pertama lebih pelan." };
+      } else if (tooEasy && st.s >= 3) {
+        verdict = { k: "easy", label: "Sangat santai", action: "Boleh naikkan sedikit volume easy minggu depan (+5–10%), bukan pace." };
+      } else {
+        verdict = { k: "on", label: "Easy on target", action: "Pertahankan ritme ini. Jangan ubah jadi tempo hanya karena kaki terasa ringan." };
+      }
     } else if (det.type === "long") {
-      push(S_next, "g", "Long itu melatih ketahanan dan mental. Yang dihitung selesai dengan terkendali, bukan ngebut di 5 km terakhir.");
+      const longHard = (driftPct != null && driftPct >= 7) || (fadePct != null && fadePct >= 10) || (rp >= 8) || legsHeavy || (pct != null && pct > 0.78);
+      if (longHard) {
+        verdict = { k: "hard", label: "Long terlalu berat", action: "Potong 10–15% jarak long berikutnya, atau sisip walk 1–2 menit sebelum titik lelah. Mulai 2 km lebih pelan." };
+      } else if (fadePct != null && fadePct >= 6) {
+        verdict = { k: "mixed", label: "Long oke, akhir melemah", action: "Mulai 20–30 dtk/km lebih pelan; simpan tenaga untuk 30% jarak terakhir." };
+      } else {
+        verdict = { k: "on", label: "Long terkendali", action: "Recovery 24–48 jam (easy pendek atau libur). Jangan quality dalam 48 jam." };
+      }
+    } else if (det.type === "thr") {
+      /* Threshold: target ~92–100% LTHR pada blok kerja; di bawah 88% = terlalu mudah, di atas 102% rata-rata = terlalu keras. */
+      const sgT = segOf(a);
+      const hrWork = sgT && sgT.work && sgT.work.hr > 0 ? sgT.work.hr : (sgT && sgT.runOnly && sgT.runOnly.hr > 0 ? sgT.runOnly.hr : hr);
+      const wr = L > 0 && hrWork > 0 ? hrWork / L : null;
+      if (wr != null && wr < 0.88) {
+        verdict = { k: "easy", label: "Threshold terlalu mudah", action: "Naikkan effort sedikit: target HR kerja ~92–98% LTHR" + (L ? " (" + Math.round(L * 0.92) + "–" + Math.round(L * 0.98) + " bpm)" : "") + ", atau perketat pace 5–10 dtk/km." };
+      } else if (wr != null && wr > 1.02) {
+        verdict = { k: "hard", label: "Threshold terlalu keras", action: "Turunkan pace 5–10 dtk/km. Threshold harus terkendali sampai akhir blok, bukan all-out." };
+      } else if (rp >= 9 || legsHeavy) {
+        verdict = { k: "hard", label: "Threshold membebani berlebih", action: "Easy 1–2 hari. Kualitas berikutnya lebih pendek atau lebih pelan 5 dtk/km." };
+      } else {
+        verdict = { k: "on", label: "Threshold on target", action: "Recovery easy esok. Nilai sesi ada di pemulihan, bukan di menambah keras." };
+      }
+    } else if (det.type === "vo2") {
+      const sgV = segOf(a);
+      const hrWork = sgV && sgV.work && sgV.work.hr > 0 ? sgV.work.hr : hr;
+      const wr = L > 0 && hrWork > 0 ? hrWork / L : null;
+      if (wr != null && wr < 0.92) {
+        verdict = { k: "easy", label: "Interval kurang stimulus", action: "Percepat 5–8 dtk/km di repetisi, atau perpanjang kerja 15–30 dtk. Recovery antar repetisi tetap jalan santai." };
+      } else if (rp >= 9 && (fadePct != null && fadePct >= 12)) {
+        verdict = { k: "hard", label: "Interval overreach", action: "Kurangi 1–2 repetisi next time. Jaga agar repetisi terakhir masih mirip yang pertama." };
+      } else {
+        verdict = { k: "on", label: "Interval terlaksana", action: "Easy penuh besok. Jangan double quality dalam 72 jam." };
+      }
+    } else if (det.type === "race") {
+      verdict = { k: "on", label: "Race / time trial", action: "Pulihkan 2–5 hari sesuai jarak. Volume turun dulu, baru bangun lagi." };
+    }
+
+    if (streak >= 3 && verdict.k === "on") {
+      verdict = { k: "hard", label: "Beban menumpuk", action: "Sisipkan 1 hari istirahat penuh sebelum quality atau long berikutnya." };
+    }
+
+    push(S_next, verdict.k === "hard" ? "r" : verdict.k === "mixed" || verdict.k === "easy" ? "y" : "g",
+      "Verdict: " + verdict.label + ". Aksi: " + verdict.action);
+    push(S_next, hard || longish || streak >= 2 ? "y" : "g",
+      hard || longish || streak >= 2
+        ? "Sesi berikutnya disusun di Beranda sesuai kesiapan — prioritaskan recovery dulu."
+        : "Sesi berikutnya disusun di Beranda sesuai rencana minggu.");
+
+    if (det.type === "easy" && verdict.k === "on") {
+      push(S_next, "g", "Easy yang terkendali membangun dasar aerobik. Jangan dijadikan tempo hanya karena lagi enak.");
     }
 
     // —— Tone & headline ——
@@ -2330,17 +2375,19 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     let tone = "g";
     const nR = allNotes.filter((n) => n.k === "r").length;
     const nY = allNotes.filter((n) => n.k === "y").length;
-    const rp = feelAfter.rpe || 0;
-    if (nR >= 1) tone = "r";
-    else if (nY >= 2 && !(rp > 0 && rp <= 4 && nY <= 2)) tone = "y";
+    if (verdict.k === "hard" || nR >= 1) tone = "r";
+    else if (verdict.k === "mixed" || verdict.k === "easy" || (nY >= 2 && !(rp > 0 && rp <= 4 && nY <= 2))) tone = "y";
     else if (nY >= 1 && rp >= 8) tone = "y";
 
     let headline;
-    if (tone === "r") headline = "Sesi ini berat. Prioritaskan pemulihan.";
+    if (verdict.k === "hard") headline = verdict.label + ". " + verdict.action;
+    else if (verdict.k === "easy") headline = verdict.label + ". " + verdict.action;
+    else if (verdict.k === "mixed") headline = verdict.label + ". " + verdict.action;
+    else if (tone === "r") headline = "Sesi ini berat. Prioritaskan pemulihan.";
     else if (tone === "y") headline = why.length ? "Hati-hati: " + why.slice(0, 2).join(" dan ") + ". Besok santai dulu." : "Ada sinyal untuk waspada. Besok santai dulu.";
-    else if (det.type === "easy" && pct != null && pct <= 0.68) headline = "Lari santai yang terkendali. Dasar aerobikmu bertambah.";
-    else if (det.type === "long") headline = "Long selesai. Bebannya perlu dipulihkan dengan baik.";
-    else if (det.type === "thr" || det.type === "vo2") headline = "Sesi keras terlaksana. Sekarang waktunya pulih.";
+    else if (det.type === "easy") headline = "Easy on target. Dasar aerobikmu bertambah.";
+    else if (det.type === "long") headline = "Long terkendali. Pulihkan dengan baik.";
+    else if (det.type === "thr" || det.type === "vo2") headline = "Sesi keras on target. Sekarang pulih.";
     else headline = "Sesi terkendali. Lanjut sesuai tubuh, bukan ego.";
 
     const sections = [S_int, S_ex, S_load, S_next].filter((sec) => sec.notes.length);
@@ -2350,9 +2397,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       headline,
       summary,
       sections,
-      meta: { pct, lim, M, ltPace, paceSrc: sx && sx.mv && sx.mv.pace > 0 ? "stream" : "avg" },
+      verdict,
+      meta: { pct, lim, M, ltPace, paceSrc: sxV && sxV.mv && sxV.mv.pace > 0 ? "stream" : "avg" },
       flat: allNotes,
-      // backward-compatible array shape if something still maps notes
       map: null
     };
   }
@@ -5488,14 +5535,76 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
     /* =============== RINGKASAN =============== */
     const sumRow = (name, v, label, note, c) => '<div class="prg-sumrow"><div class="top"><b>' + name + '</b>' + pill(v, label) + '</div><div class="nt">' + note + ' <span class="prg-conf">keyakinan ' + c + '</span></div></div>';
-    const L = { up: "Membaik", flat: "Stabil", dn: "Perlu perhatian", na: "Belum cukup data" };
-    const summary = '<section class="prg-card"><h4>Ringkasan progres</h4><div class="sub">Lima sisi dinilai terpisah, tanpa skor gabungan. Periode: ' + (prgR >= 26 ? dmy(from) + ' – ' + dmy(now) : dm(from) + ' – ' + dm(now)) + '.</div>' +
-      sumRow("Performa", perfV, perfV === "dn" ? "Lebih lambat" : L[perfV], perfNote, perfConf) +
-      sumRow("Aerobik", aeroV, aeroV === "dn" ? "Menurun" : L[aeroV], aeroV === "na" ? "Butuh minimal 4 easy run dengan HR valid." : aeroNote.split(". ")[0] + ".", aeroConf) +
-      sumRow("Durability", durV, durLbl, durNote.split(". ")[0] + ".", durConf) +
-      sumRow("Kapasitas latihan", capV, capV === "dn" ? "Menurun" : L[capV], capNote.split(". ")[0] + ".", capConf) +
-      sumRow("Keberlanjutan", susV, L[susV], susNote.split(". ")[0] + ".", susConf) +
+    const Lbl = { up: "Membaik", flat: "Stabil", dn: "Perlu perhatian", na: "Belum cukup data" };
+    const summary = '<section class="prg-card"><h4>5 Pilar Progres</h4><div class="sub">Lima dimensi perkembangan dinilai terpisah, tanpa skor gabungan. Baca keterkaitannya, bukan satu angka saja. Periode: ' + (prgR >= 26 ? dmy(from) + ' – ' + dmy(now) : dm(from) + ' – ' + dm(now)) + '.</div>' +
+      sumRow("1 · Performa", perfV, perfV === "dn" ? "Lebih lambat" : Lbl[perfV], perfNote, perfConf) +
+      sumRow("2 · Efisiensi aerobik", aeroV, aeroV === "dn" ? "Menurun" : Lbl[aeroV], aeroV === "na" ? "Butuh minimal 4 easy run dengan HR valid." : aeroNote.split(". ")[0] + ".", aeroConf) +
+      sumRow("3 · Kapasitas", capV, capV === "dn" ? "Menurun" : Lbl[capV], capNote.split(". ")[0] + ".", capConf) +
+      sumRow("4 · Durability", durV, durLbl, durNote.split(". ")[0] + ".", durConf) +
+      sumRow("5 · Keberlanjutan", susV, Lbl[susV], susNote.split(". ")[0] + ".", susConf) +
       '</section>';
+
+    /* =============== RENCANA AKSI (preskriptif) =============== */
+    const goal = state.goal || "Umum";
+    const hardMin = dist.mid + dist.hard;
+    const hardPct = dTot > 0 ? Math.round(hardMin / dTot * 100) : 0;
+    const easyPct = dTot > 0 ? pc(dist.easy) : 0;
+    const avgWkKm = evalWeeks.length ? avg(evalWeeks.map((w) => w.km)) : totKm / Math.max(1, prgR);
+    const avgWkN = evalWeeks.length ? avg(evalWeeks.map((w) => w.n)) : runs.length / Math.max(1, prgR);
+    const qualityN = runs.filter((x) => { const t = typeOf(x); return t === "thr" || t === "vo2" || t === "race"; }).length;
+    const longN = runs.filter((x) => typeOf(x) === "long").length;
+    const plateau = (perfV === "flat" || perfV === "na") && (aeroV === "flat" || aeroV === "na") && (capV === "flat" || capV === "na") && runs.length >= 10;
+    const actions = [];
+    /* Fitness vs fatigue dari wellness terbaru */
+    let tsbNote = "";
+    try {
+      const wLast = (state.wellness || []).filter((w) => w && (w.ctl != null || w.tsb != null)).slice(-1)[0];
+      if (wLast) {
+        const ctl = wLast.ctl != null ? +wLast.ctl : null, atl = wLast.atl != null ? +wLast.atl : null;
+        const tsb = wLast.tsb != null ? +wLast.tsb : (ctl != null && atl != null ? ctl - atl : null);
+        if (tsb != null) {
+          tsbNote = "TSB " + (tsb > 0 ? "+" : "") + Math.round(tsb) + (ctl != null ? " · CTL " + Math.round(ctl) : "");
+          if (tsb <= -20) actions.push({ k: "r", t: "Form rendah (TSB " + Math.round(tsb) + "). Turunkan volume 20–30% 5–7 hari, tahan quality." });
+          else if (tsb >= 15 && aeroV === "up") actions.push({ k: "g", t: "Form segar (TSB +" + Math.round(tsb) + "). Boleh sesi quality atau long yang direncanakan." });
+        }
+      }
+    } catch (_) {}
+    if (plateau) {
+      actions.push({ k: "y", t: "Plateau: performa, aerobik, dan volume relatif datar. Coba 1 quality/minggu (bila fondasi ≥3 easy/minggu) atau naikkan long 10%, jangan keduanya sekaligus." });
+    }
+    if (aeroV === "dn") {
+      actions.push({ k: "y", t: "Efisiensi aerobik menurun. 2–3 minggu fokus easy terkendali (HR ≤85% LTHR); cek panas, tidur, dan elevasi sebelum menyimpulkan overtraining." });
+    } else if (aeroV === "up" && capV !== "dn") {
+      actions.push({ k: "g", t: "Aerobik membaik. Pertahankan volume; progress lewat long +5–10% atau quality terkontrol, bukan pace easy lebih kencang." });
+    }
+    if (durV === "dn") {
+      actions.push({ k: "y", t: "Durability melemah di akhir long. Mulai lebih pelan, atau potong long 10% sampai drift akhir stabil." });
+    }
+    if (hardPct > 25) {
+      actions.push({ k: "y", t: "Quality/lomba " + hardPct + "% dari menit total — terlalu tinggi. Target ~10–20%. Geser surplus ke easy." });
+    } else if (hardPct < 5 && avgWkN >= 3 && (goal === "5K" || goal === "10K") && qualityN < Math.max(1, Math.floor(prgR / 3))) {
+      actions.push({ k: "g", t: "Target " + goal + ": quality masih jarang. Tambah 1 sesi threshold/interval tiap 7–10 hari bila kesiapan mengizinkan." });
+    }
+    if ((goal === "Half" || goal === "Marathon") && longN < Math.max(1, Math.floor(prgR / 4)) && avgWkKm >= 15) {
+      actions.push({ k: "g", t: "Target " + goal + ": long masih jarang di periode ini. Jadwalkan 1 long/minggu (naik bertahap, max +10%/minggu)." });
+    }
+    if (easyPct < 50 && dTot > 0) {
+      actions.push({ k: "y", t: "Easy hanya " + easyPct + "% menit. Naikkan porsi easy agar recovery dan adaptasi aerobik cukup." });
+    }
+    if (susV === "dn") {
+      actions.push({ k: "r", t: "Keberlanjutan menurun (konsistensi/recovery). Prioritas: 1 hari libur ekstra/minggu dan tidur, bukan menambah volume." });
+    }
+    if (capV === "up" && (aeroV === "dn" || durV === "dn")) {
+      actions.push({ k: "y", t: "Volume naik tapi kebugaran/durability tidak ikut. Tahan volume 2 minggu; perbaiki kualitas easy dan recovery." });
+    }
+    if (!actions.length) {
+      if (runs.length < 8) actions.push({ k: "g", t: "Data masih tipis. Lari konsisten 3–4×/minggu dengan HR tercatat agar tren bisa dibaca." });
+      else actions.push({ k: "g", t: "Tren stabil. Pertahankan frekuensi; progress kecil di long atau 1 quality terkontrol tiap 7–10 hari." });
+    }
+    const actHtml = '<section class="prg-card"><h4>Yang perlu kamu lakukan</h4><div class="sub">Dari tren periode ini' + (goal && goal !== "Umum" ? " · target " + goal : "") + (tsbNote ? " · " + tsbNote : "") + ". Maksimal beberapa aksi — jangan ubah semua sekaligus.</div>" +
+      actions.slice(0, 4).map((a) => '<div class="prg-sumrow"><div class="top"><b>' + (a.k === "r" ? "Prioritas" : a.k === "y" ? "Perbaiki" : "Lanjut") + '</b>' +
+        pill(a.k === "r" ? "dn" : a.k === "y" ? "flat" : "up", a.k === "r" ? "Penting" : a.k === "y" ? "Fokus" : "OK") +
+        '</div><div class="nt">' + a.t + '</div></div>').join("") + '</section>';
 
     /* =============== KUALITAS DATA =============== */
     const excl = rawInRange - runs.length, withHr = runs.filter(hrOk).length;
@@ -5519,7 +5628,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       } else nymHtml = card("Pace &amp; durasi nyaman", "Butuh minimal 8 lari ber-HR dan LTHR (atau HR istirahat/maksimal) di Pengaturan.", "", "", "");
     } catch (_) { nymHtml = ""; }
 
-    el.innerHTML = summary + nymHtml + perfHtml + durHtml + capHtml + susHtml + dq;
+    /* aeroHtml sempat dihitung tapi tidak di-render — diperbaiki di sini */
+    el.innerHTML = summary + actHtml + nymHtml + perfHtml + aeroHtml + capHtml + durHtml + susHtml + dq;
     backfillDurability(runs);
     prefetchPace(perfNeed.map(x => ({ act: x }))).then(n => { if (n) renderProgress(); });
   }
@@ -5891,33 +6001,45 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       <div class="sa-note">${note}</div><div class="sa-sub">Sesi dipilih berdasarkan jenis dan jarak ±35%; bukan perbandingan laboratorium atau rute identik.</div></div>`;
   }
 
-  /* Kesimpulan menyatukan temuan, sinyal yang perlu diperhatikan, dan tindak lanjut. */
+  /* Kesimpulan: verdict eksekusi dulu, lalu sinyal dan aksi. */
   function saCoachSummaryHTML(rev) {
-    const sections=rev&&Array.isArray(rev.sections)?rev.sections:[];
-    const notes=sections.flatMap(x=>(x.notes||[]).map(n=>({title:x.title,...n})));
-    const caution=notes.find(n=>n.k==="r")||notes.find(n=>n.k==="y");
-    const positive=notes.find(n=>n.k==="g"&&(n.title==="Intensitas"||n.title==="Eksekusi"));
-    const next=notes.find(n=>n.title==="Lanjut");
-    if(!rev||(!caution&&!positive&&!next))return "";
-    const line=(label,n)=>n?`<div class="sa-note"><b>${label}:</b> ${n.text}</div>`:"";
-    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Kesimpulan Coach</span><span class="sa-pill">ringkasan sesi</span></div>
-      ${line("Yang berjalan baik",positive)}
-      ${line("Perlu diperhatikan",caution)}
-      ${line("Langkah berikutnya",next)}
-      <div class="sa-sub">Kesimpulan dibangun dari data sesi dan catatan yang tersedia. Bagian yang datanya tidak cukup tidak disimpulkan.</div></div>`;
+    const sections = rev && Array.isArray(rev.sections) ? rev.sections : [];
+    const notes = sections.flatMap((x) => (x.notes || []).map((n) => ({ title: x.title, ...n })));
+    const caution = notes.find((n) => n.k === "r") || notes.find((n) => n.k === "y" && n.title !== "Lanjut");
+    const positive = notes.find((n) => n.k === "g" && (n.title === "Intensitas" || n.title === "Eksekusi"));
+    const next = notes.find((n) => n.title === "Lanjut" && /^Verdict:/.test(n.text || ""));
+    const nextAlt = notes.find((n) => n.title === "Lanjut");
+    if (!rev || (!caution && !positive && !next && !nextAlt && !rev.verdict)) return "";
+    const v = rev.verdict;
+    const vTone = v ? (v.k === "hard" ? "r" : v.k === "on" ? "g" : "y") : rev.tone || "g";
+    const vLabel = v ? v.label : (rev.tone === "r" ? "Perlu perhatian" : rev.tone === "y" ? "Campuran" : "Terkendali");
+    const vAction = v ? v.action : (next && next.text) || (nextAlt && nextAlt.text) || "";
+    const line = (label, n) => (n ? `<div class="sa-note"><b>${label}:</b> ${n.text}</div>` : "");
+    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Verdict eksekusi</span><span class="sa-pill">${v ? v.k : "ringkas"}</span></div>
+      <div class="review-note ${vTone}" style="font-weight:800;font-size:15px;margin:0 0 8px">${vLabel}</div>
+      ${vAction ? `<div class="sa-note" style="font-size:14px;line-height:1.5"><b>Aksi:</b> ${vAction}</div>` : ""}
+      ${line("Yang berjalan baik", positive)}
+      ${line("Perlu diperhatikan", caution && (!vAction || caution.text !== vAction) ? caution : null)}
+      <div class="sa-sub">Verdict dari HR, pace, drift, zona, dan RPE bila ada. Tanpa stream, penilaian lebih kasar.</div></div>`;
   }
 
   function sessionBodyHTML(act, rev) {
     const sx = act[9] && state.sx ? state.sx[String(act[9])] : null;
     SA.sess = null;
     let h = "";
-    if (rev.headline) h += `<div class="review-note ${rev.tone}" style="font-weight:700">${rev.headline}</div>`;
+    if (rev.verdict) {
+      const vt = rev.verdict.k === "hard" ? "r" : rev.verdict.k === "on" ? "g" : "y";
+      h += `<div class="review-note ${vt}" style="font-weight:800;font-size:15px">${rev.verdict.label}</div>`;
+      h += `<p class="hint" style="margin:6px 0 10px;line-height:1.5"><b>Aksi:</b> ${rev.verdict.action}</p>`;
+    } else if (rev.headline) {
+      h += `<div class="review-note ${rev.tone}" style="font-weight:700">${rev.headline}</div>`;
+    }
     if (rev.summary) h += `<p class="hint" style="font-family:var(--mono)">${rev.summary}</p>`;
     const isRun = act[1] === "run";
     const rg = saRingsHTML(act, sx, rev);
-    if (rg) h += saSec('Ringkas sesi', '', rg);
+    if (rg) h += saSec("Ringkas sesi", "", rg);
     const coach = saCoachSummaryHTML(rev);
-    if (coach) h += saSec("Kesimpulan", "Temuan utama dan tindak lanjut dari data sesi ini.", coach);
+    if (coach) h += saSec("Kesimpulan", "Verdict eksekusi dan tindak lanjut dari data sesi ini.", coach);
     if (isRun) {
       const e1 = saExecHTML(act, sx) + saZonesHTML(act, sx) + saNotes(rev, "Eksekusi");
       h += saSec("Eksekusi", "Bagaimana lari ini dijalankan (pace) dan bagaimana tubuh merespons (detak jantung).", e1);
@@ -5925,7 +6047,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const c1 = saLoadHTML(act) + saLoadTrendHTML(act) + climAct(act) + saNotes(rev, "Beban & konteks");
     if (c1) h += saSec("Beban & konteks", "Beban sesi, perubahan beban sebelum sesi, dan kondisi saat berlari.", c1);
     const ad = sessionAdaptationHTML(act) + saProgressTrendHTML(act);
-    if (ad) h += saSec("Dibanding sesi sejenis", "Efisiensi dan tren beberapa sesi dengan jenis serta jarak yang sebanding.", ad);
+    if (ad) h += saSec("Hubungan dengan progres", "Sesi ini dibaca dalam konteks perkembangan performa dan efisiensi aerobik: dibandingkan dengan latihan sejenis, lalu dilihat trennya. Satu sesi bukan bukti adaptasi jangka panjang.", ad);
     const i1 = saIntensityHTML(act, rev) + saNotes(rev, "Intensitas");
     if (i1) h += saSec("Pembanding kapasitas", "Seberapa berat sesi ini dibanding model kapasitas (skala METs), sebagai pembanding, bukan penilai utama.", i1);
     return `<div class="sa-flow">${saMore(h)}</div>`;
