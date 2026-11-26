@@ -2590,7 +2590,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       ["RACE READY", "Pick a goal,", "own the plan.", "Atur target lomba dan jadwal latihan mingguanmu."],
       ["CONNECTED", "Data in,", "insight out.", "Cek sumber data yang tersambung dan status sinkron."],
       ["YOUR RHYTHM", "Train the way", "that fits you.", "Gaya latihan dan tema aplikasi bisa kamu sesuaikan."],
-      ["BODY BASICS", "Know your", "baseline.", "Detak istirahat dan maksimal jadi dasar semua perhitungan."]
+      ["BODY BASICS", "Know your", "baseline.", "Detak istirahat dan maksimal membantu membaca intensitas latihan."]
     ]
   }).forEach(([k, v]) => HERO_POOL[k].push(...v));
   function rotateHero(name) {
@@ -4991,10 +4991,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       metric("Kardio hari ini", val(sum(cardioToday, 2), "menit"), cardioToday.length + " sesi kardio") +
       metric("Kardio minggu ini", val(minsWeek, "menit"), cardioActs.length + " sesi kardio") +
       metric("Jarak minggu ini", val(kmWeek, "km"), "Semua jenis aktivitas") +
-      metric("Kalori hari ini", todayCalRows.length ? fmt(kcalToday) + " kcal" : "—", "Kalori latihan jika dikirim sumber") +
+      metric("Kalori hari ini", todayCalRows.length ? fmt(kcalToday) + " kcal" : "—", "Kalori latihan") +
       metric("Kalori minggu ini", kcalText, calRows.length ? "Kalori aktivitas Intervals" : "Tidak tersedia dari sumber") +
-      metric("Langkah hari ini", val(stepsToday, "langkah"), "Wellness Intervals.icu") +
-      metric("Jarak harian turunan", derivedToday.distanceMeters ? val(derivedToday.distanceMeters/1000,"km") : "Datanya belum cukup", derivedToday.distanceMeters ? "Aktivitas + sisa langkah × panjang langkah personal" : "Perlu stream cadence jalan dan langkah harian") +
+      metric("Langkah hari ini", val(stepsToday, "langkah"), "Data wellness") +
+      metric("Jarak harian turunan", derivedToday.distanceMeters ? val(derivedToday.distanceMeters/1000,"km") : "Datanya belum cukup", derivedToday.distanceMeters ? "Jarak dari aktivitas dan langkah harian" : "Perlu stream cadence jalan dan langkah harian") +
       metric("Kardio zona LTHR · 7 hari", cardioZones.activities ? cardioZones.zoneMinutes.map((v,i)=>"Z"+(i+1)+" "+fmt(v)+"m").join(" · ") : "Belum ada stream HR", cardioZones.activities+" aktivitas · cakupan HR "+fmt(cardioZones.coverageMinutes)+" menit") +
       metric("Resting HR", val(rhrToday, "bpm"), "Data wellness harian") +
       metric("HRV RMSSD", val(hrvToday, "ms"), "Data wellness harian") +
@@ -5570,9 +5570,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         nymHtml = card("Pace &amp; durasi nyaman", "",
           '<div class="sub" style="margin:4px 0 2px">Pace nyaman (makin ke atas = makin cepat)</div>' + lineChart("prgNymP", pI, v => fmtP(v), true, "Pace nyaman") +
           (dI.length > 1 ? '<div class="sub" style="margin:12px 0 2px">Durasi nyaman</div>' + lineChart("prgNymD", dI, v => Math.round(v) + " mnt", false, "Durasi nyaman") : ""),
-          "Sepanjang grafik, pace nyaman berubah " + (dP > 0 ? "+" : "") + dP + " dtk/km" + (dD != null ? " dan durasi nyaman " + (dD > 0 ? "+" : "") + dD + " menit" : "") + ". " + gtx + " Selisih di bawah ±10–15 dtk/km masih dalam noise pengukuran.",
+          "Sepanjang grafik, pace nyaman berubah " + (dP > 0 ? "+" : "") + dP + " dtk/km" + (dD != null ? " dan durasi nyaman " + (dD > 0 ? "+" : "") + dD + " menit" : "") + ". " + gtx + " ",
           nv.ok && nv.n >= 25 ? "sedang" : "rendah");
-      } else nymHtml = card("Pace &amp; durasi nyaman", "Butuh minimal 8 lari ber-HR dan LTHR (atau HR istirahat/maksimal) di Pengaturan.", "", "", "");
+      } else nymHtml = card("Pace &amp; durasi nyaman", "Belum cukup data untuk membaca tren pace nyaman.", "", "", "");
     } catch (_) { nymHtml = ""; }
 
     /* aeroHtml sempat dihitung tapi tidak di-render — diperbaiki di sini */
@@ -5671,7 +5671,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const lc = $("#lowConf");
     const low = !a.mets || (a.est && a.est.conf === "rendah");
     lc.style.display = low ? "" : "none";
-    lc.textContent = low ? "Keyakinan rendah: estimasi dari data tipis. Isi usia/detak, atau lakukan tes 12 menit di bawah." : "";
+    lc.textContent = low ? "Keyakinan rendah: estimasi dari data tipis. Isi tanggal lahir dan data detak, atau lakukan tes 12 menit di bawah." : "";
     const refs = [["Jalan cepat 10:40", 4.8], ["Run-walk", 6.0], ["Pace 8:15–8:30", 7.8], ["Pace 7:15–7:30", 8.5], ["Pace 6:00", 9.3]];
     $("#refList").innerHTML = a.mets
       ? refs.map(([n, m]) => {
