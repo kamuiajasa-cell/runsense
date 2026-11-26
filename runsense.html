@@ -1210,7 +1210,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       <div class="sg">
         <div class="sg-t">Data tubuh &amp; detak</div>
         <div class="sgroup">
-          <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><span class="srow-t">Usia</span><input type="number" inputmode="numeric" id="inAge" placeholder="—" oninput="saveProfile()"></div>
+          <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><span class="srow-t">Tanggal lahir</span><input type="date" id="inBirthDate" oninput="saveProfile()"><span class="srow-s" id="agePreview"></span></div>
           <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M8 7h8M8 17h8"/></svg></span><span class="srow-t">Berat badan<span class="srow-s">kg · konteks Planner</span></span><input type="number" inputmode="decimal" id="inWeight" min="25" max="250" step="0.1" placeholder="—" oninput="saveProfile()"></div>
           <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18M9 3v3M9 9v3M9 15v3M9 21h10"/></svg></span><span class="srow-t">Tinggi badan<span class="srow-s">cm · konteks Planner &amp; kadens</span></span><input type="number" inputmode="numeric" id="inHeight" min="100" max="230" placeholder="—" oninput="saveProfile()"></div>
           <div class="srow has-hint"><span class="sic y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z"/></svg></span><span class="srow-t">Detak istirahat<span class="srow-s">Rata-rata 28 hari</span></span><input type="number" inputmode="numeric" id="inRest" placeholder="—" oninput="saveProfile()"><div class="srow-hint" id="inRestHint"></div></div>
@@ -1490,6 +1490,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     ltpC: 0,        // LTPace custom (detik/km), 0 = pakai auto
     max: 0,
     age: 0,
+    birthDate: "",
     weight: 0,       // kg; konteks tubuh untuk Planner, bukan RAI
     height: 0,       // cm; konteks antropometri untuk Planner, bukan RAI
     weightHistory: [], // [{date: yyyy-mm-dd, weight: kg}]
@@ -1577,6 +1578,13 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (state.restManual) return;
     const r = rhr28();
     if (r) state.rest = r.avg;
+  }
+  function ageFromBirthDate(value) {
+    if (!value) return 0;
+    const d = new Date(value + "T00:00:00"); if (!isFinite(+d) || d > new Date()) return 0;
+    const now = new Date(); let age = now.getFullYear() - d.getFullYear();
+    if (now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate())) age--;
+    return age >= 12 && age <= 100 ? age : 0;
   }
   function maxHr() { return +state.max > 0 ? +state.max : (+state.age > 0 ? Math.round(208 - 0.7 * state.age) : 0); }
 
@@ -5471,66 +5479,6 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     }
 
     if (durRuns.length && durHtml) durHtml = durHtml.replace(/<\/section>$/, fuNote(durRuns) + "</section>");
-    /* ===== Running Economy & Adaptation Layer (RE-A) =====
-       Proxy only: activity summaries cannot measure oxygen cost directly.
-       Connects comparable easy-run data, durability, strength adherence,
-       cadence/form self-check and fueling notes without causal claims. */
-    const reEasy = runs.filter(a => typeOf(a) === "easy" && hrOk(a) && a[4] > 0 && a[3] >= 2)
-      .map(a => ({a, pace: a[2] / a[3], hr: +a[4], ms: a[0], cad: cadOf(a), stride: strideOf(a)}))
-      .filter(x => x.pace >= 4 && x.pace <= 12 && x.hr > 0)
-      .sort((a,b) => a.ms - b.ms);
-    const reRefHr = med(reEasy.map(x => x.hr));
-    const reNorm = reEasy.map(x => ({...x, np: x.pace * (reRefHr / x.hr)}));
-    const reSplit = Math.ceil(reNorm.length / 2), reEarly = reNorm.slice(0, reSplit), reLate = reNorm.slice(reSplit);
-    const reEarlyP = med(reEarly.map(x => x.np)), reLateP = med(reLate.map(x => x.np));
-    const reDelta = reEarlyP != null && reLateP != null ? (reEarlyP - reLateP) / reEarlyP * 100 : null;
-    const reTrend = reDelta == null || reNorm.length < 4 ? "Datanya belum cukup untuk membandingkan tren pada HR yang sebanding."
-      : reDelta > 1.5 ? "Pada detak jantung yang sebanding, pace belakangan ini lebih cepat. Ini bisa menjadi tanda efisiensi aerobik membaik."
-      : reDelta < -1.5 ? "Pada detak jantung yang sebanding, pace belakangan ini lebih lambat. Kondisi ini bisa dipengaruhi cuaca, pemulihan, atau kondisi tubuh."
-      : "Pace-mu relatif stabil pada detak jantung yang sebanding.";
-    const reSpan = reEasy.length > 1 ? (reEasy[reEasy.length - 1].ms - reEasy[0].ms) / DAY : 0;
-    const reConf = reNorm.length >= 8 && reSpan >= 42 ? "sedang" : reNorm.length >= 4 && reSpan >= 21 ? "rendah–sedang" : "rendah";
-    const reCad = med(reEasy.map(x => x.cad).filter(x => x > 0)), reStride = med(reEasy.map(x => x.stride).filter(x => x > 0));
-    const reStrength28 = STR.log.filter(e => e.d >= yAgo(28)), reDone = reStrength28.filter(e => e.s === "done").length, reSkip = reStrength28.filter(e => e.s === "skip").length;
-    const reFuRuns = durRuns.filter(o => FU[o.x[0]] && FU[o.x[0]] >= 2);
-    const reFuN = durRuns.filter(o => FU[o.x[0]]).length;
-    const reForm = STR.fc && STR.fc.d >= yAgo(28) ? STR.fc : null;
-    const reTestLatest = TS[TS.length - 1];
-    const reAsym = reTestLatest && reTestLatest.cl && reTestLatest.cr ? Math.abs(reTestLatest.cl - reTestLatest.cr) / Math.max(reTestLatest.cl, reTestLatest.cr) : 0;
-    const reReady = readiness();
-    const reFactors = [];
-    if (reReady != null && reReady < 50) reFactors.push({p:0,t:"Pemulihan didahulukan",why:"Readiness rendah (" + reReady + "/100). Fokus adaptasi ditunda; ikuti guardrail istirahat/pemulihan yang sudah ada."});
-    if (reForm && reForm.pn) reFactors.push({p:-1,t:"Ada catatan nyeri atau bengkak",why:"Jangan mengejar latihan saat nyeri/bengkak masih terasa; kurangi atau hentikan dan periksakan bila menetap, memburuk, atau mengganggu berjalan."});
-    if (reNorm.length < 4) reFactors.push({p:1,t:"Data lari ringan pembanding masih sedikit",why:"Tambah beberapa lari ringan dengan HR dan pace valid agar tren efisiensi dapat dibaca."});
-    else if (reDelta != null && reDelta < -1.5) reFactors.push({p:2,t:"Efisiensi aerobik perlu dipantau",why:"Pace setara-HR melambat; interpretasi tetap mempertimbangkan cuaca, tidur, elevasi, dan hidrasi."});
-    if (durV === "dn") reFactors.push({p:2,t:"daya tahan perlu perhatian",why:"Analisis lari panjang menunjukkan penurunan kestabilan; jangan buru-buru menambah durasi."});
-    if (reStrength28.length >= 3 && reDone < 2) reFactors.push({p:3,t:"Konsistensi latihan kekuatan",why:"Catatan 28 hari menunjukkan sesi kekuatan selesai masih sedikit; pilih menu ringan dan realistis."});
-    if (reForm && (reForm.hd || reForm.ov)) reFactors.push({p:3,t:"Cek teknik secara terarah",why:"Ada catatan mandiri form; gunakan video/observasi, bukan diagnosis dari cadence atau stride."});
-    if (reAsym > 0.2) reFactors.push({p:3,t:"Periksa perbedaan kekuatan kiri–kanan",why:"Tes mini terakhir menunjukkan selisih lebih dari 20% pada angkat tumit. Ulangi tes dengan teknik konsisten dan prioritaskan sisi lebih lemah tanpa memaksakan."});
-    if (reFuN >= 2 && reFuRuns.length === 0) reFactors.push({p:3,t:"Fueling belum tercatat pada lari panjang",why:"Log fueling belum menunjukkan sesi dengan asupan; catat untuk evaluasi, bukan menganggap itu penyebab."});
-    if (reCad && reCad < 160) reFactors.push({p:4,t:"Cadence sebagai petunjuk, bukan target",why:"Kadence easy relatif rendah. Nilai bersama kenyamanan, stride, dan observasi form; tidak perlu mengejar angka 180."});
-    if (!reFactors.length) reFactors.push({p:5,t:"Pertahankan fondasi yang sudah berjalan",why:"Data belum menunjukkan satu faktor yang dominan membatasi; utamakan konsistensi, easy effort, dan progres bertahap."});
-    reFactors.sort((a,b)=>a.p-b.p);
-    const reFocus = reFactors[0];
-    const reCoach = reReady != null && reReady < 50 ? "Readiness rendah (" + reReady + "/100). Hari ini prioritaskan pemulihan dan jangan menambah beban demi mengejar adaptasi. " + reFocus.t + " menjadi fokus setelah pulih."
-      : "Fokus berikut: " + reFocus.t.toLowerCase() + ". " + reFocus.why;
-    const reRows = [
-      row("Readiness hari ini", reReady == null ? "Data belum cukup" : reReady + "/100"),
-      row("Easy run pembanding", reNorm.length + " sesi · Kecukupan data: " + reConf),
-      row("Pace setara-HR (median)", reEarlyP != null && reLateP != null ? fmtP(reEarlyP * 60) + " → " + fmtP(reLateP * 60) + " /km" : "Datanya belum cukup"),
-      row("Tren perkiraan efisiensi", reDelta != null && reNorm.length >= 4 ? sgn(reDelta,1) + "% (bagian terbaru)" : "Belum dapat dinilai"),
-      row("Daya tahan", durV === "up" ? "Baik / stabil" : durV === "flat" ? "Perlu dipantau" : durV === "dn" ? "Perlu perhatian" : "Datanya belum cukup"),
-      row("Kekuatan · 28 hari", reStrength28.length ? reDone + " selesai · " + reSkip + " dilewati" : "Belum ada catatan"),
-      row("Tes mini kekuatan", reTestLatest ? reTestLatest.d + (reAsym > 0.2 ? " · selisih sisi >20%" : " · tercatat") : "Belum ada tes"),
-      row("Cadence & stride easy", reCad ? Math.round(reCad) + " spm" + (reStride ? " · " + m2(reStride) + " m/langkah" : "") : "Belum tersedia")
-    ].join("");
-    const reHtml = '<section class="prg-card"><h4>Running Economy &amp; Adaptasi</h4><div class="sub">Lapisan interpretasi: efisiensi, durability, kekuatan, teknik dan fueling. Ini proxy, bukan pengukuran konsumsi oksigen.</div>' +
-      '<div class="prg-insight"><b>Tren:</b> ' + reTrend + ' Keyakinan ' + reConf + '.</div>' + reRows +
-      '<div class="prg-insight"><b>Faktor pembatas yang diprioritaskan:</b> ' + reFocus.t + '. ' + reFocus.why + '</div>' +
-      '<div class="prg-insight"><b>Coach:</b> ' + reCoach + '</div>' +
-      (reFuN ? '<div class="prg-insight">Fueling tercatat pada ' + reFuRuns.length + ' dari ' + reFuN + ' sesi durability yang punya log. Data ini belum cukup untuk menyimpulkan efek fueling.</div>' : '<div class="prg-insight">Fueling lari panjang belum cukup tercatat untuk dibandingkan dengan durability.</div>') +
-      '<div class="prg-note">Pace setara-HR menormalkan pace terhadap median HR easy di periode ini. Kondisi cuaca, elevasi, permukaan, tidur, hidrasi dan fueling tidak seluruhnya dikontrol; jangan baca sebagai running economy fisiologis langsung.</div></section>';
-
     const susHtml = card("Keberlanjutan", "Konsistensi dan sinyal pemulihan dibanding baseline pribadi.", consRows + strRow() + wRows.join(""), susNote, susConf);
 
     /* =============== RINGKASAN =============== */
@@ -5675,10 +5623,13 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
   function renderMe(a, g) {
     g = g || state.goalEst || {};
-    [["#inAge", state.age], ["#inWeight", state.weight], ["#inHeight", state.height], ["#inRest", state.rest], ["#inMax", state.max]].forEach(([s, v]) => {
+    [["#inWeight", state.weight], ["#inHeight", state.height], ["#inRest", state.rest], ["#inMax", state.max]].forEach(([s, v]) => {
       const el = $(s);
       if (el && document.activeElement !== el) el.value = v > 0 ? v : "";
     });
+    const bd = $("#inBirthDate"), ap = $("#agePreview");
+    if (bd && document.activeElement !== bd) bd.value = state.birthDate || "";
+    if (ap) ap.textContent = state.age > 0 ? "Usia " + state.age + " tahun" : "";
     const elL = $("#inLthr"), elP = $("#inLtp");
     if (elL && document.activeElement !== elL) elL.value = state.lthrC > 0 ? state.lthrC : "";
     if (elP && document.activeElement !== elP) elP.value = state.ltpC > 0 ? mp(state.ltpC / 60) : "";
@@ -5743,7 +5694,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   function setHist(k) { histF = k; renderHistory(); }
   function toggleAdv() { localStorage.setItem("runsense_adv", localStorage.getItem("runsense_adv") === "1" ? "0" : "1"); if (state.athlete) renderMe(state.athlete); }
   function saveProfile() {
-    state.age = Math.max(0, Math.min(90, +$("#inAge").value || 0));
+    const bd = $("#inBirthDate") ? $("#inBirthDate").value : "";
+    state.birthDate = bd && ageFromBirthDate(bd) ? bd : "";
+    state.age = ageFromBirthDate(state.birthDate);
     const wt = +$("#inWeight").value || 0, ht = +$("#inHeight").value || 0;
     state.weight = wt >= 25 && wt <= 250 ? Math.round(wt * 10) / 10 : 0;
     state.height = ht >= 100 && ht <= 230 ? Math.round(ht) : 0;
@@ -6210,7 +6163,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     state.icuName = "Demo Runner";
     state.rest = 52;
     state.max = 185;
-    state.age = 32;
+    state.age = 32; state.birthDate = "";
     state.afS = 3;
     state.icuLast = Date.now();
     state.vx = {};
@@ -6251,7 +6204,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     localStorage.removeItem(KEY_STORE);
     state.src = "";
     state.hwLast = 0;
-    state.rest = state.max = state.age = state.weight = state.height = state.afS = state.restManual = state.lthrC = state.ltpC = 0;
+    state.rest = state.max = state.age = state.weight = state.height = state.afS = state.restManual = state.lthrC = state.ltpC = 0; state.birthDate = "";
     state.weightHistory = [];
     state.athlete = null;
     state.apiKey = null;
@@ -6285,6 +6238,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
           ltpC: state.ltpC,
           max: state.max,
           age: state.age,
+          birthDate: state.birthDate,
           weight: state.weight,
           height: state.height,
           weightHistory: state.weightHistory,
@@ -6317,7 +6271,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         state.lthrC = d.lthrC || 0;
         state.ltpC = d.ltpC || 0;
         state.max = d.max || 0;
-        state.age = d.age || 0;
+        state.birthDate = d.birthDate || "";
+        state.age = ageFromBirthDate(state.birthDate) || d.age || 0;
         state.weight = d.weight || 0;
         state.height = d.height || (+localStorage.getItem("runsense_ht") || 0);
         state.weightHistory = Array.isArray(d.weightHistory) ? d.weightHistory : [];
