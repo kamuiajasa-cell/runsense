@@ -1129,6 +1129,15 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 </style>
 <style>
 /* Penyajian ringkas: data tetap utuh, uraian panjang tidak mendominasi kartu. */
+/* Kartu di seluruh tab: uraian pendamping dibatasi, angka dan status tetap utuh. */
+#screen-home .hint,#screen-home .sub,#screen-history .hint,#screen-history .sub,
+#screen-progress .hint,#screen-progress .sub,#screen-me .hint,#screen-me .sub,
+#screen-healthconnect .hint,#screen-healthconnect .sub{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
+  line-height:1.45;
+}
+#screen-home .lowconf,#screen-me .lowconf{font-size:12px;line-height:1.45}
+
 .sa-details,.prg-details{margin-top:12px;border:1px solid var(--card-border);border-radius:12px;padding:0 12px;background:var(--card)}
 .sa-details>summary,.prg-details>summary{cursor:pointer;list-style:none;padding:12px 0;font-weight:700;color:var(--primary);font-size:13px}
 .sa-details>summary::-webkit-details-marker,.prg-details>summary::-webkit-details-marker{display:none}
