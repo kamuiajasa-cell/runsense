@@ -5470,12 +5470,12 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         t: "<b>" + dm(o.x[0]) + "</b> · " + fmt(o.x[3]) + " km · pace " + sgn(o.d.paceDrift, 1) + "%" + (o.d.hrDrift != null ? ", HR " + sgn(o.d.hrDrift, 1) + " bpm" : "") + (o.d.effDrop != null ? ", efisiensi " + sgn(-o.d.effDrop, 1) + "%" : "") }));
       durNote = (durV === "up" ? "Pace dan detak jantung cenderung bertahan sampai sepertiga akhir lari panjang." : durV === "flat" ? "Ada penurunan efisiensi moderat di sepertiga akhir; wajar bila lari panjangnya bertambah jauh." : "Efisiensi turun cukup besar di sepertiga akhir. Bisa berarti start terlalu cepat, asupan energi kurang, atau panas.") + trend +
         "";
-      durHtml = card("daya tahan", "Kestabilan di sepertiga akhir lari panjang · " + durRuns.length + " sesi easy/lari panjang ≥ 5 km atau ≥ 40 menit",
+      durHtml = card("Daya tahan", "Kestabilan pace dan HR pada lari panjang.",
         lineChart("prgDur", items, v => fmt(v) + "%", true, "Penurunan efisiensi akhir vs tengah (%)") +
         row("Perubahan pace (median)", sgn(pd, 1) + "%") + (hd != null ? row("Perubahan HR (median)", sgn(hd, 1) + " bpm") : "") + (ed != null ? row("Penurunan efisiensi (median)", fmt(ed) + "%") : "") + trendRow,
         durNote, durConf);
     } else {
-      durHtml = card("daya tahan", "Kestabilan pace dan HR di sepertiga akhir lari panjang", '<p class="prg-note">' + durRuns.length + ' sesi memenuhi syarat dari minimal 3. Lari interval, tempo, dan lomba tidak dipakai karena pace-nya memang bervariasi.</p>', "", "");
+      durHtml = card("Daya tahan", "", '<p class="prg-note">Belum cukup data untuk membaca tren.</p>', "", "");
     }
 
     if (durRuns.length && durHtml) durHtml = durHtml.replace(/<\/section>$/, fuNote(durRuns) + "</section>");
