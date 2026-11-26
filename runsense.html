@@ -1172,6 +1172,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         <div class="rows">
           <div class="row"><span>Kesiapan</span><b id="rdy">—</b></div>
           <div class="row"><span>Minggu ini</span><b id="wkTxt">—</b></div>
+          <div class="row"><span>Strength · 4 minggu</span><b id="homeStrength">—</b></div>
         </div>
         <div class="body-line" id="bodyLine" style="display:none"></div>
         <div class="week" id="weekDays"></div>
@@ -5111,6 +5112,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
     /* Kesiapan, minggu ini, tren */
     $("#rdy").textContent = a.formLabel === "Data kurang" ? "Data belum cukup" : a.formLabel === "Baik" ? "Baik, boleh lari" : a.formLabel === "Lelah" ? "Lelah, hati-hati" : "Cukup";
+    const hs = $("#homeStrength"); if (hs) { const sd = STR.log.filter(e => e.s === "done" && e.d >= yAgo(28)).length, ss = STR.log.filter(e => e.s === "skip" && e.d >= yAgo(28)).length; hs.textContent = sd + " sudah · " + ss + " skip"; }
     const start = today() - ((new Date().getDay() + 6) % 7) * 864e5;
     let wkm = 0, ws = 0;
     const days = [];
@@ -5479,7 +5481,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     }
 
     if (durRuns.length && durHtml) durHtml = durHtml.replace(/<\/section>$/, fuNote(durRuns) + "</section>");
-    const susHtml = card("Keberlanjutan", "Konsistensi dan sinyal pemulihan dibanding baseline pribadi.", consRows + strRow() + wRows.join(""), susNote, susConf);
+    const susHtml = card("Keberlanjutan", "Konsistensi dan sinyal pemulihan dibanding baseline pribadi.", consRows + wRows.join(""), susNote, susConf);
 
     /* =============== RINGKASAN =============== */
     const sumRow = (name, v, label, note, c) => '<div class="prg-sumrow"><div class="top"><b>' + name + '</b>' + pill(v, label) + '</div><div class="nt">' + note + '</div></div>';
@@ -7037,7 +7039,6 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     let h = "", ins = [];
     if (runs.length >= 3) { const sl = runs.map(strideOf).filter((v) => v > 0); h += pr("Kadens easy, median 8 minggu", Math.round(mdn(runs.map(cadOf))) + " langkah/menit") + (sl.length ? pr("Panjang langkah easy", m2(mdn(sl))) : ""); }
     else h += '<p class="prg-note">Kadens muncul setelah minimal 3 lari ringan dengan data kadens (sinkron ulang bila baru).</p>';
-    h += strRow();
     const t = TS[TS.length - 1];
     if (t) {
       const f = (l, a, b, u) => (a || b ? pr(l, (a || "—") + " / " + (b || "—") + " " + u) : "");
