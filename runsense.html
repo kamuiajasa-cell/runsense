@@ -814,7 +814,7 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 .sa-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.sa-metric{background:var(--el);border-radius:12px;padding:10px}.sa-metric b{display:block;font-size:17px}.sa-metric small{font-size:10px;color:var(--grey)}.sa-note{font-size:12px;line-height:1.55;color:var(--light-grey);margin-top:9px}.sa-pill{font-size:9px;color:var(--grey);background:var(--el);padding:5px 8px;border-radius:20px;white-space:nowrap}
 .sa-split{display:grid;grid-template-columns:28px 1fr 1fr;gap:8px;padding:7px 2px;border-top:1px solid var(--nav-border);font-size:12px;color:var(--grey)}.sa-split b{color:var(--tx)}.sa-split span:nth-child(2){color:var(--tx);font-weight:700}
 
-/* Progres: ringkasan, pill, keyakinan */
+/* Progres: ringkasan, pill, dukungan data: */
 .prg-pill{display:inline-block;font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap}
 .prg-pill.up{background:var(--primary-dim);color:var(--primary)}
 .prg-pill.flat,.prg-pill.na{background:var(--el);color:var(--grey);border:1px solid var(--card-border)}
@@ -1183,7 +1183,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   <!-- RIWAYAT -->
   <div id="screen-history" class="screen">
     <div class="content history-layout">
-      <header class="page-hero" data-hero="history"><span class="eyebrow">YOUR ACTIVITY LOG</span><div class="page-title">Every run<br><em>has a story.</em></div><p data-hero-sub>Jejak latihan, ritme, dan konsistensimu.</p></header>
+      <header class="page-hero" data-hero="history"><span class="eyebrow">RIWAYAT LATIHAN</span><div class="page-title">Setiap lari<br><em>punya cerita.</em></div><p data-hero-sub>Lihat kembali setiap sesi, jarak yang kamu tempuh, dan kebiasaan latihanmu.</p></header>
       <div class="filter-dock"><span>FILTER</span><div class="fchips" id="histChips"></div></div>
       <div class="hist-sum" id="histSum"></div>
       <div id="historyList"></div>
@@ -1193,7 +1193,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   <!-- PROGRES -->
   <div id="screen-progress" class="screen">
     <div class="content progress-layout">
-      <header class="page-hero progress-hero" data-hero="progress"><span class="eyebrow">PERFORMANCE INTELLIGENCE</span><div class="page-title">See how far<br><em>you've grown.</em></div><p data-hero-sub>Ringkasan perkembangan lari berdasarkan data yang tersedia.</p></header>
+      <header class="page-hero progress-hero" data-hero="progress"><span class="eyebrow">PERKEMBANGAN LARIMU</span><div class="page-title">Lihat sejauh mana<br><em>kamu berkembang.</em></div><p data-hero-sub>Ringkasan perkembangan lari berdasarkan data yang tersedia.</p></header>
       <div class="filter-dock"><span>TIMEFRAME</span><div class="fchips" id="prgChips"></div></div>
       <div id="progressBody"></div>
       <div class="sg" id="prgCap" style="margin-top:12px"><div class="sg-t">Kapasitas &amp; beban</div><div class="sgroup"><div class="sblock rows" style="padding:4px 0"><div class="row"><span>RAI · kemampuan lari</span><b id="raiValue">—</b></div><div class="row"><span>Max METs</span><b id="afMets">—</b></div><div class="row"><span>CTL / ATL / TSB</span><b id="advLoad">—</b></div><div class="row"><span>LTHR · LTPace</span><b id="advLt">—</b></div></div></div></div>
@@ -1322,7 +1322,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
             <div class="sg-t">Mode lanjutan</div>
             <div class="sgroup">
               <div class="sblock rows" style="padding:4px 0">
-                <div class="row"><span>Keyakinan RAI</span><b id="raiConf">—</b></div>
+                <div class="row"><span>Kecukupan data RAI</span><b id="raiConf">—</b></div>
                 <div class="row"><span>Profil tubuh · BMI</span><b id="bodyContext">—</b></div>
                 <div class="row"><span>Tren berat 28 hari</span><b id="bodyTrend">—</b></div>
                 <div class="row"><span>Kategori</span><b id="afBand">—</b></div>
@@ -2118,7 +2118,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         }
       }
     } else {
-      push(S_int, "y", "Belum ada estimasi Max METs yang stabil. Intensitas dibaca kasar dari HR/pace saja. Sinkron lebih banyak lari agar kapasitas terbaca.");
+      push(S_int, "y", "Perkiraan kapasitas belum stabil karena data masih terbatas. Untuk sementara, penilaian intensitas mengacu pada detak jantung dan pace. Sinkronkan beberapa sesi lagi agar gambaranmu lebih akurat.");
     }
 
     // —— HR analysis ——
@@ -2151,7 +2151,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     }
 
     // —— 2. Eksekusi: type consistency, pace vs history ——
-    push(S_ex, "g", "Jenis sesi: " + (VX_LB[det.type] || det.type) + " (keyakinan " + det.conf + "), " + det.why + ".");
+    push(S_ex, "g", "Jenis sesi: " + (VX_LB[det.type] || det.type) + " (dukungan data: " + det.conf + "), " + det.why + ".");
 
     if (det.type === "easy" && pct != null && pct > 0.75) {
       push(S_ex, "y", "Berlabel easy tapi intensitas di atas zona easy. Kalau recovery, pelankan lain kali — ini sumber kelelahan tersembunyi.");
@@ -2322,9 +2322,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (longHard) {
         verdict = { k: "hard", label: "Long terlalu berat", action: "Potong 10–15% jarak long berikutnya, atau sisip walk 1–2 menit sebelum titik lelah. Mulai 2 km lebih pelan." };
       } else if (fadePct != null && fadePct >= 6) {
-        verdict = { k: "mixed", label: "Long oke, akhir melemah", action: "Mulai 20–30 dtk/km lebih pelan; simpan tenaga untuk 30% jarak terakhir." };
+        verdict = { k: "mixed", label: "Lari panjang selesai dengan baik, tetapi bagian akhir mulai terasa berat", action: "Mulai 20–30 dtk/km lebih pelan; simpan tenaga untuk 30% jarak terakhir." };
       } else {
-        verdict = { k: "on", label: "Long terkendali", action: "Recovery 24–48 jam (easy pendek atau libur). Jangan quality dalam 48 jam." };
+        verdict = { k: "on", label: "Lari panjang terjaga dengan baik", action: "Beri tubuh 24–48 jam untuk pulih. Pilih lari ringan yang singkat atau istirahat. Jangan quality dalam 48 jam." };
       }
     } else if (det.type === "thr") {
       /* Threshold: target ~92–100% LTHR pada blok kerja; di bawah 88% = terlalu mudah, di atas 102% rata-rata = terlalu keras. */
@@ -2385,9 +2385,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     else if (verdict.k === "mixed") headline = verdict.label + ". " + verdict.action;
     else if (tone === "r") headline = "Sesi ini berat. Prioritaskan pemulihan.";
     else if (tone === "y") headline = why.length ? "Hati-hati: " + why.slice(0, 2).join(" dan ") + ". Besok santai dulu." : "Ada sinyal untuk waspada. Besok santai dulu.";
-    else if (det.type === "easy") headline = "Easy on target. Dasar aerobikmu bertambah.";
-    else if (det.type === "long") headline = "Long terkendali. Pulihkan dengan baik.";
-    else if (det.type === "thr" || det.type === "vo2") headline = "Sesi keras on target. Sekarang pulih.";
+    else if (det.type === "easy") headline = "Lari ringanmu terjaga. Kamu sedang membangun dasar aerobik.";
+    else if (det.type === "long") headline = "Lari panjang terjaga dengan baik. Pulihkan dengan baik.";
+    else if (det.type === "thr" || det.type === "vo2") headline = "Sesi intensitas tinggi selesai sesuai rencana. Fokus pada pemulihan.";
     else headline = "Sesi terkendali. Lanjut sesuai tubuh, bukan ego.";
 
     const sections = [S_int, S_ex, S_load, S_next].filter((sec) => sec.notes.length);
@@ -2506,7 +2506,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       ["WELCOME", "Let's find", "your pace.", "Sekali hubungkan, coach langsung membaca lari dan kondisimu."],
       ["GET STARTED", "Connect once,", "run smarter.", "Data dari Intervals.icu jadi arahan latihan harian yang jelas."],
       ["FIRST STEPS", "Your data,", "your coach.", "Pilih target dan gaya latihan, sisanya biar coach yang hitung."],
-      ["READY WHEN YOU ARE", "Every run", "starts here.", "Mulai dari data yang sudah kamu punya, tanpa ribet."],
+      ["READY WHEN YOU ARE", "Setiap lari", "starts here.", "Mulai dari data yang sudah kamu punya, tanpa ribet."],
       ["NEW HERE?", "Start where", "you are.", "Belum punya data? Coba demo dulu untuk melihat cara kerjanya."]
     ],
     home: [
@@ -2520,7 +2520,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       ["EASY OR HARD", "Know which", "day it is."]
     ],
     history: [
-      ["YOUR ACTIVITY LOG", "Every run", "has a story.", "Jejak latihan, ritme, dan konsistensimu."],
+      ["RIWAYAT LATIHAN", "Setiap lari", "has a story.", "Lihat kembali setiap sesi, jarak yang kamu tempuh, dan kebiasaan latihanmu."],
       ["LOGBOOK", "Miles you", "earned.", "Semua lari yang sudah kamu selesaikan."],
       ["LOOKING BACK", "Proof of", "showing up.", "Setiap sesi tercatat, sekecil apa pun."],
       ["THE LONG VIEW", "Small runs,", "big picture.", "Lihat pola latihanmu dari waktu ke waktu."],
@@ -2529,12 +2529,12 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       ["EVERY STEP COUNTS", "Nothing you ran", "is wasted.", "Riwayat lengkap, tinggal dibuka dan disaring."]
     ],
     progress: [
-      ["PERFORMANCE INTELLIGENCE", "See how far", "you've grown.", "Lima sisi dinilai terpisah: performa, aerobik, durability, kapasitas latihan, dan keberlanjutan. Setiap kesimpulan menyertakan tingkat keyakinan."],
-      ["THE TREND", "Slow gains,", "real gains.", "Kemajuan terlihat dari tren beberapa minggu, bukan satu hari lari."],
+      ["PERKEMBANGAN LARIMU", "See how far", "you've grown.", "Perkembanganmu dilihat dari lima sisi: performa, efisiensi aerobik, kapasitas, daya tahan, dan konsistensi. Setiap kesimpulan disertai penjelasan tentang seberapa kuat data pendukungnya."],
+      ["THE TREND", "Perubahan kecil,", "kemajuan nyata.", "Kemajuan terlihat dari tren beberapa minggu, bukan satu hari lari."],
       ["FITNESS CHECK", "Stronger than", "last month?", "Bandingkan performa, daya tahan, dan beban latihan."],
-      ["WHAT'S WORKING", "Numbers that", "tell the truth.", "Setiap kesimpulan disertai tingkat keyakinan datanya."],
-      ["BUILDING BLOCKS", "Base first,", "speed later.", "Lihat fondasi aerobikmu tumbuh dari periode ke periode."],
-      ["LEVEL UP", "Fitter by", "the week.", "Pantau kapasitas latihan dan seberapa konsisten kamu menjaganya."]
+      ["WHAT'S WORKING", "Angka yang", "menceritakan progres.", "Setiap kesimpulan disertai tingkat dukungan data: datanya."],
+      ["BUILDING BLOCKS", "Bangun fondasi,", "baru tambah kecepatan.", "Lihat fondasi aerobikmu tumbuh dari periode ke periode."],
+      ["LEVEL UP", "Lebih kuat", "dari minggu ke minggu.", "Pantau kapasitas latihan dan seberapa konsisten kamu menjaganya."]
     ],
     me: [
       ["ATHLETE SETTINGS", "Your", "profile.", "Atur data tubuh, sasaran lari, jadwal latihan, dan sumber data yang terhubung."],
@@ -4985,7 +4985,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       metric("Kalori hari ini", todayCalRows.length ? fmt(kcalToday) + " kcal" : "—", "Kalori latihan jika dikirim sumber") +
       metric("Kalori minggu ini", kcalText, calRows.length ? "Kalori aktivitas Intervals" : "Tidak tersedia dari sumber") +
       metric("Langkah hari ini", val(stepsToday, "langkah"), "Wellness Intervals.icu") +
-      metric("Jarak harian turunan", derivedToday.distanceMeters ? val(derivedToday.distanceMeters/1000,"km") : "Belum cukup data", derivedToday.distanceMeters ? "Aktivitas + sisa langkah × panjang langkah personal" : "Perlu stream cadence jalan dan langkah harian") +
+      metric("Jarak harian turunan", derivedToday.distanceMeters ? val(derivedToday.distanceMeters/1000,"km") : "Datanya belum cukup", derivedToday.distanceMeters ? "Aktivitas + sisa langkah × panjang langkah personal" : "Perlu stream cadence jalan dan langkah harian") +
       metric("Kardio zona LTHR · 7 hari", cardioZones.activities ? cardioZones.zoneMinutes.map((v,i)=>"Z"+(i+1)+" "+fmt(v)+"m").join(" · ") : "Belum ada stream HR", cardioZones.activities+" aktivitas · cakupan HR "+fmt(cardioZones.coverageMinutes)+" menit") +
       metric("Resting HR", val(rhrToday, "bpm"), "Data wellness harian") +
       metric("HRV RMSSD", val(hrvToday, "ms"), "Data wellness harian") +
@@ -5027,7 +5027,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     /* Kartu utama */
     const todays = (state.acts || []).filter((x) => d0(x[0]) === today() && (x[1] === "run" || x[1] === "walk")).sort((p, q) => q[2] - p[2]);
     const lowConf = a.stage && a.est && a.est.conf === "rendah"
-      ? `<p class="lowconf">Keyakinan estimasi kapasitas masih rendah. Isi usia &amp; detak di tab Saya, atau lakukan tes 12 menit.</p>` : "";
+      ? `<p class="lowconf">Data untuk memperkirakan kapasitasmu masih terbatas. Lengkapi usia dan detak jantung di tab Saya, atau lakukan tes 12 menit.</p>` : "";
     let h;
     if (r.status === "done" && !r.rested) {
       const skipped = r.tag === "SKIP";
@@ -5115,7 +5115,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     $("#wkTxt").textContent = f1(wkm) + " km · " + ws + " sesi" + (prevKm > 0 ? " · biasanya " + f1(prevKm) : "");
     $("#weekDays").innerHTML = days.map((d) => `<div class="wd${d.on ? " on" : ""}${d.km > 0 ? " done" : ""}"><small>${d.name}</small><b>${d.km > 0 ? f1(d.km) : "·"}</b></div>`).join("");
     const ac = loadDays(7), ch = loadDays(28) / 4;
-    let tr = "Belum cukup data untuk membaca tren beban.";
+    let tr = "Datanya belum cukup untuk membaca tren beban.";
     if (ch > 25) {
       const q = ac / ch;
       tr = q > 1.3 ? "Beban minggu ini agak tinggi dibanding biasanya. Jaga hari-hari santai." : q < 0.7 ? "Beban minggu ini lebih ringan dari biasanya, ada ruang untuk menambah sedikit." : "Beban minggu ini stabil, sesuai kebiasaanmu.";
@@ -5151,11 +5151,11 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const sumMin = list.reduce((n, x) => n + (+x.act[2] || 0), 0);
     const sumTl = list.reduce((n, x) => n + (x.load || 0), 0);
     $("#histSum").innerHTML = list.length
-      ? [[list.length, "Sesi"], [f1(sumKm), "km"], [fmtDur(sumMin), "Waktu"], [Math.round(sumTl), "Total TL"]]
+      ? [[list.length, "Sesi"], [f1(sumKm), "km"], [fmtDur(sumMin), "Waktu"], [Math.round(sumTl), "Total beban"]]
           .map(([v, l]) => `<div class="hs"><b>${v}</b><span>${l}</span></div>`).join("")
       : "";
 
-    if (!list.length) { $("#historyList").innerHTML = '<p class="empty">Belum ada lari di rentang ini</p>'; return; }
+    if (!list.length) { $("#historyList").innerHTML = '<p class="empty">Belum ada aktivitas lari pada periode ini.</p>'; return; }
     prefetchPace(list);
 
     const wkStart = (ms) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); };
@@ -5208,7 +5208,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const prevRuns = validAll.filter(x => x[0] >= prevFrom && x[0] < from);
     const rawInRange = rawRuns.filter(x => x[0] >= from && x[0] <= now && +x[2] > 0 && +x[3] > 0).length;
     if (!runs.length) {
-      el.innerHTML = '<div class="prg-empty"><b>Belum ada data lari pada periode ini</b>' +
+      el.innerHTML = '<div class="prg-empty"><b>Belum ada data lari pada periode ini. Coba pilih rentang waktu yang lebih panjang.</b>' +
         (validAll.length ? "Coba rentang yang lebih panjang; ada " + validAll.length + " lari di luar periode ini." : "Sinkronkan aktivitas untuk mulai melihat perkembangan.") + '</div>';
       return;
     }
@@ -5226,7 +5226,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const pill = (v, c) => '<span class="prg-pill ' + ({ up: "up", flat: "flat", dn: "dn", na: "na" }[v]) + '">' + c + '</span>';
     const row = (label, value) => '<div class="prg-row"><span>' + label + '</span><b>' + value + '</b></div>';
     const card = (title, subtitle, body, insight, conf) =>
-      '<section class="prg-card"><h4>' + title + (conf ? ' <span class="prg-conf">keyakinan ' + conf + '</span>' : '') + '</h4>' +
+      '<section class="prg-card"><h4>' + title + (conf ? ' <span class="prg-conf">dukungan data: ' + conf + '</span>' : '') + '</h4>' +
       (subtitle ? '<div class="sub">' + subtitle + '</div>' : '') + body +
       (insight ? '<div class="prg-insight">' + insight + '</div>' : '') + '</section>';
     const typeOf = x => { try { return detectType(x).type || "easy"; } catch (_) { return "easy"; } };
@@ -5441,7 +5441,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const durRuns = runs.filter(x => (+x[3] >= 5 || +x[2] >= 40) && ["easy", "long"].indexOf(typeOf(x)) >= 0)
       .map(x => ({ x, d: (state.sx && x[9] && state.sx[String(x[9])] || {}).dur })).filter(o => o.d && Number.isFinite(o.d.paceDrift));
     const durPending = runs.filter(x => (+x[3] >= 5 || +x[2] >= 40) && x[9] && !/^hw/.test(String(x[9])) && !(state.sx && state.sx[String(x[9])] && (state.sx[String(x[9])].dur || state.sx[String(x[9])].streamVersion >= 4))).length;
-    let durV = "na", durLbl = "Belum cukup data", durNote = "Butuh minimal 3 lari panjang (≥ 5 km atau ≥ 40 menit, easy atau long) dengan data stream." + (durPending && state.apiKey ? " " + durPending + " lari sedang diambil dari Intervals.icu." : ""), durConf = "rendah", durHtml = "";
+    let durV = "na", durLbl = "Datanya belum cukup", durNote = "Butuh minimal 3 lari panjang (≥ 5 km atau ≥ 40 menit, easy atau long) dengan data stream." + (durPending && state.apiKey ? " " + durPending + " lari sedang diambil dari Intervals.icu." : ""), durConf = "rendah", durHtml = "";
     if (durRuns.length >= 3) {
       const effs = durRuns.map(o => o.d.effDrop).filter(Number.isFinite), hrs = durRuns.map(o => o.d.hrDrift).filter(Number.isFinite);
       const pd = med(durRuns.map(o => o.d.paceDrift)), ed = effs.length >= 3 ? med(effs) : null, hd = hrs.length >= 3 ? med(hrs) : null;
@@ -5484,10 +5484,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const reSplit = Math.ceil(reNorm.length / 2), reEarly = reNorm.slice(0, reSplit), reLate = reNorm.slice(reSplit);
     const reEarlyP = med(reEarly.map(x => x.np)), reLateP = med(reLate.map(x => x.np));
     const reDelta = reEarlyP != null && reLateP != null ? (reEarlyP - reLateP) / reEarlyP * 100 : null;
-    const reTrend = reDelta == null || reNorm.length < 4 ? "Belum cukup data untuk membandingkan tren pada HR yang sebanding."
-      : reDelta > 1.5 ? "Proxy efisiensi membaik: pace setara-HR di bagian periode terbaru lebih cepat."
-      : reDelta < -1.5 ? "Proxy efisiensi menurun: pace setara-HR di bagian periode terbaru lebih lambat."
-      : "Proxy efisiensi relatif stabil pada HR yang sebanding.";
+    const reTrend = reDelta == null || reNorm.length < 4 ? "Datanya belum cukup untuk membandingkan tren pada HR yang sebanding."
+      : reDelta > 1.5 ? "Pada detak jantung yang sebanding, pace belakangan ini lebih cepat. Ini bisa menjadi tanda efisiensi aerobik membaik."
+      : reDelta < -1.5 ? "Pada detak jantung yang sebanding, pace belakangan ini lebih lambat. Kondisi ini bisa dipengaruhi cuaca, pemulihan, atau kondisi tubuh."
+      : "Pace-mu relatif stabil pada detak jantung yang sebanding.";
     const reSpan = reEasy.length > 1 ? (reEasy[reEasy.length - 1].ms - reEasy[0].ms) / DAY : 0;
     const reConf = reNorm.length >= 8 && reSpan >= 42 ? "sedang" : reNorm.length >= 4 && reSpan >= 21 ? "rendah–sedang" : "rendah";
     const reCad = med(reEasy.map(x => x.cad).filter(x => x > 0)), reStride = med(reEasy.map(x => x.stride).filter(x => x > 0));
@@ -5516,10 +5516,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       : "Fokus berikut: " + reFocus.t.toLowerCase() + ". " + reFocus.why;
     const reRows = [
       row("Readiness hari ini", reReady == null ? "Data belum cukup" : reReady + "/100"),
-      row("Easy run pembanding", reNorm.length + " sesi · keyakinan " + reConf),
-      row("Pace setara-HR (median)", reEarlyP != null && reLateP != null ? fmtP(reEarlyP * 60) + " → " + fmtP(reLateP * 60) + " /km" : "Belum cukup data"),
+      row("Easy run pembanding", reNorm.length + " sesi · dukungan data: " + reConf),
+      row("Pace setara-HR (median)", reEarlyP != null && reLateP != null ? fmtP(reEarlyP * 60) + " → " + fmtP(reLateP * 60) + " /km" : "Datanya belum cukup"),
       row("Tren proxy efisiensi", reDelta != null && reNorm.length >= 4 ? sgn(reDelta,1) + "% (bagian terbaru)" : "Belum dapat dinilai"),
-      row("Durability", durV === "up" ? "Baik / stabil" : durV === "flat" ? "Perlu dipantau" : durV === "dn" ? "Perlu perhatian" : "Belum cukup data"),
+      row("Durability", durV === "up" ? "Baik / stabil" : durV === "flat" ? "Perlu dipantau" : durV === "dn" ? "Perlu perhatian" : "Datanya belum cukup"),
       row("Kekuatan · 28 hari", reStrength28.length ? reDone + " selesai · " + reSkip + " dilewati" : "Belum ada log"),
       row("Tes mini kekuatan", reTestLatest ? reTestLatest.d + (reAsym > 0.2 ? " · selisih sisi >20%" : " · tercatat") : "Belum ada tes"),
       row("Cadence & stride easy", reCad ? Math.round(reCad) + " spm" + (reStride ? " · " + m2(reStride) + " m/langkah" : "") : "Belum tersedia")
@@ -5534,8 +5534,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const susHtml = card("Keberlanjutan", "Konsistensi dan sinyal pemulihan dibanding baseline pribadi.", consRows + strRow() + wRows.join(""), susNote, susConf);
 
     /* =============== RINGKASAN =============== */
-    const sumRow = (name, v, label, note, c) => '<div class="prg-sumrow"><div class="top"><b>' + name + '</b>' + pill(v, label) + '</div><div class="nt">' + note + ' <span class="prg-conf">keyakinan ' + c + '</span></div></div>';
-    const Lbl = { up: "Membaik", flat: "Stabil", dn: "Perlu perhatian", na: "Belum cukup data" };
+    const sumRow = (name, v, label, note, c) => '<div class="prg-sumrow"><div class="top"><b>' + name + '</b>' + pill(v, label) + '</div><div class="nt">' + note + ' <span class="prg-conf">dukungan data: ' + c + '</span></div></div>';
+    const Lbl = { up: "Membaik", flat: "Stabil", dn: "Perlu perhatian", na: "Datanya belum cukup" };
     const summary = '<section class="prg-card"><h4>5 Pilar Progres</h4><div class="sub">Lima dimensi perkembangan dinilai terpisah, tanpa skor gabungan. Baca keterkaitannya, bukan satu angka saja. Periode: ' + (prgR >= 26 ? dmy(from) + ' – ' + dmy(now) : dm(from) + ' – ' + dm(now)) + '.</div>' +
       sumRow("1 · Performa", perfV, perfV === "dn" ? "Lebih lambat" : Lbl[perfV], perfNote, perfConf) +
       sumRow("2 · Efisiensi aerobik", aeroV, aeroV === "dn" ? "Menurun" : Lbl[aeroV], aeroV === "na" ? "Butuh minimal 4 easy run dengan HR valid." : aeroNote.split(". ")[0] + ".", aeroConf) +
@@ -5570,15 +5570,15 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       }
     } catch (_) {}
     if (plateau) {
-      actions.push({ k: "y", t: "Plateau: performa, aerobik, dan volume relatif datar. Coba 1 quality/minggu (bila fondasi ≥3 easy/minggu) atau naikkan long 10%, jangan keduanya sekaligus." });
+      actions.push({ k: "y", t: "Dalam beberapa minggu terakhir, performa, efisiensi aerobik, dan volume latihan belum banyak berubah. Itu tidak selalu berarti kamu mandek. Pertahankan latihan ringan yang konsisten; bila tubuh sudah siap, tambahkan satu sesi berkualitas atau sedikit durasi long run—jangan keduanya sekaligus." });
     }
     if (aeroV === "dn") {
-      actions.push({ k: "y", t: "Efisiensi aerobik menurun. 2–3 minggu fokus easy terkendali (HR ≤85% LTHR); cek panas, tidur, dan elevasi sebelum menyimpulkan overtraining." });
+      actions.push({ k: "y", t: "Belakangan ini, detak jantungmu cenderung lebih tinggi untuk pace yang serupa. Belum tentu kebugaranmu menurun—cuaca, tidur, hidrasi, dan kondisi tubuh juga berpengaruh. Jalani 2–3 minggu lari ringan dengan nyaman; jangan memaksakan pace." });
     } else if (aeroV === "up" && capV !== "dn") {
       actions.push({ k: "g", t: "Aerobik membaik. Pertahankan volume; progress lewat long +5–10% atau quality terkontrol, bukan pace easy lebih kencang." });
     }
     if (durV === "dn") {
-      actions.push({ k: "y", t: "Durability melemah di akhir long. Mulai lebih pelan, atau potong long 10% sampai drift akhir stabil." });
+      actions.push({ k: "y", t: "Di beberapa lari panjang, pace atau detak jantung mulai kurang stabil menjelang akhir. Mulailah sedikit lebih pelan, dan pertahankan durasi yang terasa sanggup kamu selesaikan dengan baik." });
     }
     if (hardPct > 25) {
       actions.push({ k: "y", t: "Quality/lomba " + hardPct + "% dari menit total — terlalu tinggi. Target ~10–20%. Geser surplus ke easy." });
@@ -5592,7 +5592,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       actions.push({ k: "y", t: "Easy hanya " + easyPct + "% menit. Naikkan porsi easy agar recovery dan adaptasi aerobik cukup." });
     }
     if (susV === "dn") {
-      actions.push({ k: "r", t: "Keberlanjutan menurun (konsistensi/recovery). Prioritas: 1 hari libur ekstra/minggu dan tidur, bukan menambah volume." });
+      actions.push({ k: "r", t: "Konsistensi latihan atau pemulihanmu sedang perlu perhatian. Coba sisipkan satu hari istirahat tambahan dan prioritaskan tidur sebelum menambah jarak." });
     }
     if (capV === "up" && (aeroV === "dn" || durV === "dn")) {
       actions.push({ k: "y", t: "Volume naik tapi kebugaran/durability tidak ikut. Tahan volume 2 minggu; perbaiki kualitas easy dan recovery." });
@@ -5698,7 +5698,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     $("#advBtn").textContent = "Mode lanjutan: " + (adv ? "nyala" : "mati");
     if (!a) return;
     const rai = runningAbilityIndex(), body = bodyLoadContext();
-    $("#raiValue").textContent = rai.score == null ? "Belum cukup data" : rai.score + " / 100";
+    $("#raiValue").textContent = rai.score == null ? "Datanya belum cukup" : rai.score + " / 100";
     $("#raiConf").textContent = rai.score == null ? "—" : rai.conf + " · " + rai.n + " lari";
     $("#bodyContext").textContent = body.bmi == null ? "Belum diisi" : "BMI " + body.bmi + (body.weight ? " · " + body.weight + " kg" : "");
     const bt = $("#bodyTrend");
@@ -5716,8 +5716,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       4: "Planner terstruktur normal. Pace 6:00 terasa santai (~65%) butuh Max ≈ 14–15,5 METs."
     };
     $("#afTip").innerHTML = a.stage
-      ? `<b>T${a.stage}.</b> ${tips[a.stage] || ""}` + (a.est && a.est.src ? `<br><span style="font-size:12px">Sumber: ${a.est.src} (keyakinan ${a.est.conf}).</span>` : "")
-      : "Belum cukup data untuk membaca kapasitas.";
+      ? `<b>T${a.stage}.</b> ${tips[a.stage] || ""}` + (a.est && a.est.src ? `<br><span style="font-size:12px">Sumber: ${a.est.src} (dukungan data: ${a.est.conf}).</span>` : "")
+      : "Datanya belum cukup untuk membaca kapasitas.";
     const lc = $("#lowConf");
     const low = !a.mets || (a.est && a.est.conf === "rendah");
     lc.style.display = low ? "" : "none";
@@ -7888,7 +7888,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       return null;
     }
   }
-  /* ActivityWeatherMatcher: cuaca per segmen waktu dan titik GPS; tanpa GPS jatuh ke lokasi terakhir (keyakinan rendah) */
+  /* ActivityWeatherMatcher: cuaca per segmen waktu dan titik GPS; tanpa GPS jatuh ke lokasi terakhir (dukungan data: rendah) */
   async function clMatch() {
     if (clBusy) return;
     const needs = (x) => { const c = CL.ctx[x[0]]; if (!c) return true; if (c.gps) return false; const g = CL.gps[x[0]]; return !g || !!g.p; };
@@ -8050,7 +8050,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (!c) return bx("Konteks cuaca lari ini belum dicocokkan.");
     if (c.na) return bx("Data cuaca historis tidak tersedia untuk lari ini. Tidak ditebak.");
     let t = `<b>Kondisi saat lari</b> · ${cH(act[0])}–${cH(act[0] + act[2] * 60e3)} · ${clK(c)}<br>Suhu ${Math.round(c.t)}°C (terasa ${Math.round(c.at)}°C${c.amax - c.amin >= 2 ? ", berubah " + Math.round(c.amin) + "–" + Math.round(c.amax) + "°C selama lari" : ""}) · lembap ${Math.round(c.rh)}% · angin ${Math.round(c.w)} km/j${c.p >= 0.3 ? " · hujan" : ""}<br>` +
-      `<span style="color:var(--grey);font-size:12px">Estimasi model ${c.src} (grid ±10 km) di ${c.q}${c.gps ? "" : ", keyakinan lebih rendah"}.</span>`;
+      `<span style="color:var(--grey);font-size:12px">Estimasi model ${c.src} (grid ±10 km) di ${c.q}${c.gps ? "" : ", dukungan data: lebih rendah"}.</span>`;
     const P = clProfile(), b = P.S.sejuk;
     let ty; try { ty = detectType(act).type; } catch (_) {}
     if (ty === "easy" && act[4] > 0 && clK(c) !== "sejuk" && b && b.n >= 3 && Math.abs(act[2] / act[3] - b.pace) <= 0.5)
