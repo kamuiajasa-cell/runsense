@@ -1127,6 +1127,19 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 .bar-row b{text-align:right;font-size:13px;color:var(--text,inherit)}
 .bar-big{grid-template-columns:92px 1fr 56px}.bar-big .bt{height:12px}.bar-big b{font-size:20px}
 </style>
+<style>
+/* Penyajian ringkas: data tetap utuh, uraian panjang tidak mendominasi kartu. */
+.sa-details,.prg-details{margin-top:12px;border:1px solid var(--card-border);border-radius:12px;padding:0 12px;background:var(--card)}
+.sa-details>summary,.prg-details>summary{cursor:pointer;list-style:none;padding:12px 0;font-weight:700;color:var(--primary);font-size:13px}
+.sa-details>summary::-webkit-details-marker,.prg-details>summary::-webkit-details-marker{display:none}
+.sa-details[open],.prg-details[open]{padding-bottom:10px}
+.sa-details .sa-sec:first-child,.prg-details .prg-card:first-child{margin-top:4px}
+.sa-flow>.sa-sec .sa-desc,.sa-flow>.sa-sec .hint{line-height:1.45}
+.prg-card>.sub,.prg-card>.prg-insight,.prg-card>.prg-note{font-size:12px;line-height:1.45}
+.prg-card>.sub{margin-bottom:7px}
+.sa-flow .sa-sub{font-size:11px;line-height:1.4}
+.sa-flow .sa-sec>p,.sa-flow .sa-sec .sa-note{line-height:1.45}
+</style>
 </head>
 <body>
 <div class="app">
@@ -5601,8 +5614,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (runs.length < 8) actions.push({ k: "g", t: "Data masih tipis. Lari konsisten 3–4×/minggu dengan HR tercatat agar tren bisa dibaca." });
       else actions.push({ k: "g", t: "Tren stabil. Pertahankan frekuensi; progress kecil di lari panjang atau 1 quality terkontrol tiap 7–10 hari." });
     }
-    const actHtml = '<section class="prg-card"><h4>Yang perlu kamu lakukan</h4><div class="sub">Dari tren periode ini' + (goal && goal !== "Umum" ? " · target " + goal : "") + (tsbNote ? " · " + tsbNote : "") + ". Maksimal beberapa aksi — jangan ubah semua sekaligus.</div>" +
-      actions.slice(0, 4).map((a) => '<div class="prg-sumrow"><div class="top"><b>' + (a.k === "r" ? "Prioritas" : a.k === "y" ? "Perbaiki" : "Lanjut") + '</b>' +
+    const actHtml = '<section class="prg-card"><h4>Yang perlu kamu lakukan</h4><div class="sub">Dari tren periode ini' + (goal && goal !== "Umum" ? " · target " + goal : "") + (tsbNote ? " · " + tsbNote : "") + ". Prioritas utama periode ini.</div>" +
+      actions.slice(0, 1).map((a) => '<div class="prg-sumrow"><div class="top"><b>' + (a.k === "r" ? "Prioritas" : a.k === "y" ? "Perbaiki" : "Lanjut") + '</b>' +
         pill(a.k === "r" ? "dn" : a.k === "y" ? "flat" : "up", a.k === "r" ? "Penting" : a.k === "y" ? "Fokus" : "OK") +
         '</div><div class="nt">' + a.t + '</div></div>').join("") + '</section>';
 
@@ -5629,7 +5642,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     } catch (_) { nymHtml = ""; }
 
     /* aeroHtml sempat dihitung tapi tidak di-render — diperbaiki di sini */
-    el.innerHTML = summary + actHtml + nymHtml + perfHtml + aeroHtml + capHtml + durHtml + susHtml + dq;
+    el.innerHTML = summary + actHtml + '<details class="prg-details"><summary>Lihat rincian progres</summary>' + nymHtml + perfHtml + aeroHtml + capHtml + durHtml + susHtml + dq + '</details>';
     backfillDurability(runs);
     prefetchPace(perfNeed.map(x => ({ act: x }))).then(n => { if (n) renderProgress(); });
   }
@@ -6026,31 +6039,31 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   function sessionBodyHTML(act, rev) {
     const sx = act[9] && state.sx ? state.sx[String(act[9])] : null;
     SA.sess = null;
-    let h = "";
+    let top = "", detail = "";
     if (rev.verdict) {
       const vt = rev.verdict.k === "hard" ? "r" : rev.verdict.k === "on" ? "g" : "y";
-      h += `<div class="review-note ${vt}" style="font-weight:800;font-size:15px">${rev.verdict.label}</div>`;
-      h += `<p class="hint" style="margin:6px 0 10px;line-height:1.5"><b>Aksi:</b> ${rev.verdict.action}</p>`;
+      top += `<div class="review-note ${vt}" style="font-weight:800;font-size:15px">${rev.verdict.label}</div>`;
+      top += `<p class="hint" style="margin:6px 0 10px;line-height:1.5"><b>Aksi:</b> ${rev.verdict.action}</p>`;
     } else if (rev.headline) {
-      h += `<div class="review-note ${rev.tone}" style="font-weight:700">${rev.headline}</div>`;
+      top += `<div class="review-note ${rev.tone}" style="font-weight:700">${rev.headline}</div>`;
     }
-    if (rev.summary) h += `<p class="hint" style="font-family:var(--mono)">${rev.summary}</p>`;
+    if (rev.summary) top += `<p class="hint" style="font-family:var(--mono)">${rev.summary}</p>`;
     const isRun = act[1] === "run";
     const rg = saRingsHTML(act, sx, rev);
-    if (rg) h += saSec("Ringkas sesi", "", rg);
+    if (rg) top += saSec("Ringkas sesi", "", rg);
     const coach = saCoachSummaryHTML(rev);
-    if (coach) h += saSec("Kesimpulan", "Verdict eksekusi dan tindak lanjut dari data sesi ini.", coach);
+    if (coach) detail += saSec("Kesimpulan", "", coach);
     if (isRun) {
       const e1 = saExecHTML(act, sx) + saZonesHTML(act, sx) + saNotes(rev, "Eksekusi");
-      h += saSec("Eksekusi", "Bagaimana lari ini dijalankan (pace) dan bagaimana tubuh merespons (detak jantung).", e1);
+      if (e1) detail += saSec("Eksekusi", "", e1);
     }
     const c1 = saLoadHTML(act) + saLoadTrendHTML(act) + climAct(act) + saNotes(rev, "Beban & konteks");
-    if (c1) h += saSec("Beban & konteks", "Beban sesi, perubahan beban sebelum sesi, dan kondisi saat berlari.", c1);
+    if (c1) detail += saSec("Beban & konteks", "", c1);
     const ad = sessionAdaptationHTML(act) + saProgressTrendHTML(act);
-    if (ad) h += saSec("Hubungan dengan progres", "Sesi ini dibaca dalam konteks perkembangan performa dan efisiensi aerobik: dibandingkan dengan latihan sejenis, lalu dilihat trennya. Satu sesi bukan bukti adaptasi jangka panjang.", ad);
+    if (ad) detail += saSec("Hubungan dengan progres", "", ad);
     const i1 = saIntensityHTML(act, rev) + saNotes(rev, "Intensitas");
-    if (i1) h += saSec("Pembanding kapasitas", "Seberapa berat sesi ini dibanding model kapasitas (skala METs), sebagai pembanding, bukan penilai utama.", i1);
-    return `<div class="sa-flow">${saMore(h)}</div>`;
+    if (i1) detail += saSec("Pembanding kapasitas", "", i1);
+    return `<div class="sa-flow">${top}${detail ? '<details class="sa-details"><summary>Lihat rincian analisis</summary>' + saMore(detail) + '</details>' : ''}</div>`;
   }
 
   /* Interaksi sentuh: geser di grafik (pace & HR sinkron) dan ketuk segmen/batang */
