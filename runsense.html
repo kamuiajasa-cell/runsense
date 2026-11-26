@@ -1120,6 +1120,12 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 .sa-cad circle{fill:var(--primary)}
 .sa-line.cad{stroke:#a78bfa}
 #saR-sess{position:sticky;top:0;z-index:5;background:var(--card);padding:6px 0;border-bottom:1px solid var(--card-border)}
+.bar-list{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:grid;grid-template-columns:92px 1fr 46px;align-items:center;gap:10px;font-size:12.5px;color:var(--grey)}
+.bar-row .bt{height:8px;border-radius:99px;background:var(--el);overflow:hidden}
+.bar-row .bt i{display:block;height:100%;border-radius:99px}
+.bar-row b{text-align:right;font-size:13px;color:var(--text,inherit)}
+.bar-big{grid-template-columns:92px 1fr 56px}.bar-big .bt{height:12px}.bar-big b{font-size:20px}
 </style>
 </head>
 <body>
@@ -3220,8 +3226,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       const d=Math.max(0,xs[xs.length-1].d-xs[0].d),dt=Math.max(1,xs[xs.length-1].t-xs[0].t),running=xs.filter(x=>isRunSample(x,p));
       cadenceWindows.forEach((w,k)=>{const t=k*5;if(t<lo||t>=hi||!w.n)return;const mean=w.sum/w.n,run=!isWalk(p)&&runKeys.has(k);cadenceChecks.push({second:t,phase:p.type,label:p.label||"",cadence:mean,samples:w.n,status:isWalk(p)?"fase jalan/recovery":run?"lari":"jalan"});});
       const nWin=Math.max(1,Math.floor((hi-lo)/5)),runWin=[...Array(nWin).keys()].filter(q=>runKeys.has(Math.floor(lo/5)+q)).length,stopWin=[...Array(nWin).keys()].filter(q=>!runKeys.has(Math.floor(lo/5)+q)&&stopKeys.has(Math.floor(lo/5)+q)).length;
-      segments.push({type:p.type,index:i+1,runShare:runWin/nWin,stopShare:stopWin/nWin,duration:hi-lo,distance:d,pace:d>0?(dt/60)/(d/1000):null,hr:avg(xs,"h"),maxHr:xs.reduce((m,x)=>Math.max(m,x.h),0)||null,cadence:avg(running,"c"),cadenceSamples:running.filter(x=>x.c>0).length,label:p.label,cadenceBasis:"running-only"});
-      for(let m=0;m<hi-lo;m+=60){const a0=lo+m,a1=Math.min(hi,a0+60),ys=samples.filter(x=>x.t>=a0&&x.t<a1);if(ys.length<2)continue;const runYs=ys.filter(x=>isRunSample(x,p)),md=Math.max(0,ys[ys.length-1].d-ys[0].d),mt=Math.max(1,ys[ys.length-1].t-ys[0].t);minutes.push({minute:Math.floor(a0/60)+1,type:p.type,pace:md>0?(mt/60)/(md/1000):null,hr:avg(ys,"h"),cadence:avg(runYs,"c"),cadenceSamples:runYs.filter(x=>x.c>0).length,distance:md});}
+      segments.push({type:p.type,index:i+1,runShare:runWin/nWin,stopShare:stopWin/nWin,duration:hi-lo,distance:d,pace:(avg(running,"v")>0?1000/avg(running,"v")/60:(d>0?(dt/60)/(d/1000):null)),hr:avg(running,"h")||avg(xs,"h"),paceAll:d>0?(dt/60)/(d/1000):null,hrAll:avg(xs,"h"),maxHr:xs.reduce((m,x)=>Math.max(m,x.h),0)||null,cadence:avg(running,"c"),cadenceSamples:running.filter(x=>x.c>0).length,label:p.label,cadenceBasis:"running-only"});
+      for(let m=0;m<hi-lo;m+=60){const a0=lo+m,a1=Math.min(hi,a0+60),ys=samples.filter(x=>x.t>=a0&&x.t<a1);if(ys.length<2)continue;const runYs=ys.filter(x=>isRunSample(x,p)),md=Math.max(0,ys[ys.length-1].d-ys[0].d),mt=Math.max(1,ys[ys.length-1].t-ys[0].t);minutes.push({minute:Math.floor(a0/60)+1,type:p.type,pace:(avg(runYs,"v")>0?1000/avg(runYs,"v")/60:(md>0?(mt/60)/(md/1000):null)),hr:avg(runYs,"h")||avg(ys,"h"),paceAll:md>0?(mt/60)/(md/1000):null,hrAll:avg(ys,"h"),cadence:avg(runYs,"c"),cadenceSamples:runYs.filter(x=>x.c>0).length,distance:md});}
     });
     const cadenceValues=samples.map(x=>x.c).filter(x=>x>0&&Number.isFinite(x));
     const cadenceDiagnostics={validSamples:cadenceValues.length,windows:cadenceWindows.size,runWindows:[...cadenceWindows.values()].filter(w=>w.sum/w.n>135).length,walkWindows:[...cadenceWindows.values()].filter(w=>w.sum/w.n<=135).length,min:cadenceValues.length?Math.min(...cadenceValues):null,max:cadenceValues.length?Math.max(...cadenceValues):null,mean:cadenceValues.length?cadenceValues.reduce((a,b)=>a+b,0)/cadenceValues.length:null};
@@ -3369,7 +3375,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const cached = state.sx[id];
     if (full) sxView[id] = Date.now();
     // Cache lama hanya menyimpan pace hasil distance/time; ambil ulang untuk memakai velocity stream.
-    if ((cached && cached.streamVersion>=19 && cached.chart && cached.splits && !(full && cached.thin)) || (cached && cached.streamVersion>=19 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if ((cached && cached.streamVersion>=20 && cached.chart && cached.splits && !(full && cached.thin)) || (cached && cached.streamVersion>=20 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
@@ -3393,7 +3399,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       } catch (_) {}
       state.sx[id] = Object.assign({}, summary || { none: 1 }, planned || cadenceOnly || {}, {
         intervals:actualIntervals, planDate:savedPlan?dayKey:null,
-        streamVersion:19, checkedAt:Date.now()
+        streamVersion:20, checkedAt:Date.now()
       });
     } catch (e) {
       // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
@@ -3418,7 +3424,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (durBusy || !state.apiKey || state.apiKey === "demo" || !Array.isArray(list)) return;
     const todo = list.filter((a) => a && a[9] && !/^hw/.test(String(a[9])) && a[1] === "run" && (a[3] >= 5 || a[2] >= 40)
       && !durTried[String(a[9])]
-      && !(state.sx[String(a[9])] && state.sx[String(a[9])].streamVersion >= 19)).slice(-12);
+      && !(state.sx[String(a[9])] && state.sx[String(a[9])].streamVersion>=20)).slice(-12);
     if (!todo.length) return;
     durBusy = true;
     try { for (const a of todo) { durTried[String(a[9])] = 1; await ensureStream(a); } } catch (_) {}
@@ -3433,7 +3439,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (bfBusy || !state.apiKey || state.apiKey === 'demo') return;
     const cut = Date.now() - 180 * 864e5;
     const todo = (state.acts || []).filter((a) => a && a[9] && a[1] === 'run' && a[0] >= cut && a[2] >= 10 && !/^hw/.test(String(a[9])) && !bfTried[String(a[9])]
-      && !(state.sx[String(a[9])] && state.sx[String(a[9])].streamVersion >= 19)).sort((p, q) => q[0] - p[0]).slice(0, 6);
+      && !(state.sx[String(a[9])] && state.sx[String(a[9])].streamVersion>=20)).sort((p, q) => q[0] - p[0]).slice(0, 6);
     if (!todo.length) return;
     bfBusy = true;
     try { for (const a of todo) { bfTried[String(a[9])] = 1; await ensureStream(a); await new Promise((r) => setTimeout(r, 400)); } } catch (_) {}
@@ -5720,16 +5726,16 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const segs = sx && sx.planSource === "local-plan" && Array.isArray(sx.segments) ? sx.segments : [];
     const phaseName = t => t==="warmup"?"Pemanasan":t==="cooldown"?"Pendinginan":t==="recovery"?"Recovery":t==="walk"?"Jalan":t==="run"?"Lari":"Interval kerja";
     const phaseRows = segs.map(q=>{
-      const pace=q.pace?mp(q.pace)+"/km":"—", hr=q.hr?Math.round(q.hr)+" bpm":"—", cad=q.cadence?Math.round(q.cadence)+" spm":"—";
+      const allTxt=(q.paceAll&&q.pace&&Math.abs(q.paceAll-q.pace)>=0.03)?"<small>Termasuk jalan: "+mp(q.paceAll)+"/km"+(q.hrAll?" · HR "+Math.round(q.hrAll)+" bpm":"")+"</small>":"", pace=q.pace?mp(q.pace)+"/km":"—", hr=q.hr?Math.round(q.hr)+" bpm":"—", cad=q.cadence?Math.round(q.cadence)+" spm":"—";
       const mins=Math.floor(q.duration/60), secs=Math.round(q.duration%60);
       const target=q.label?String(q.label).replace(/^[- ]+/,""):"Target pace tidak ditetapkan";
-      return `<div class="sa-segment-row"><span><b>${phaseName(q.type)}${q.index?" "+q.index:""}</b><small>${mins}:${String(secs).padStart(2,"0")} · ${saKm(q.distance/1000)} km</small><small>Target: ${target}</small></span><span><b>${pace}</b><small>Aktual · HR ${hr} · Kadens ${cad}</small></span></div>`;
+      return `<div class="sa-segment-row"><span><b>${phaseName(q.type)}${q.index?" "+q.index:""}</b><small>${mins}:${String(secs).padStart(2,"0")} · ${saKm(q.distance/1000)} km</small><small>Target: ${target}</small></span><span><b>${pace}</b><small>Aktual (lari) · HR ${hr} · Kadens ${cad}</small>${allTxt}</span></div>`;
     }).join("");
     const minuteRows = (Array.isArray(sx.minutes) ? sx.minutes : []).map(q=>{
       const phase=phaseName(q.type), pace=q.pace?mp(q.pace)+"/km":"—", hr=q.hr?Math.round(q.hr)+" bpm":"—", cad=q.cadence?Math.round(q.cadence)+" spm":"—";
       return `<div class="sa-minute-row"><b>Menit ${q.minute}</b><span>${phase}</span><span>${pace}</span><span>${hr}</span><span>${cad}</span></div>`;
     }).join("");
-    const minuteBlock = minuteRows ? `<details class="sa-minute-details"><summary>Rincian aktual per menit (${sx.minutes.length} menit)</summary><div class="sa-minute-head"><span>Menit</span><span>Fase</span><span>Pace</span><span>HR</span><span>Kadens</span></div>${minuteRows}</details>` : "";
+    const minuteBlock = minuteRows ? `<details class="sa-minute-details"><summary>Rincian aktual per menit (${sx.minutes.length} menit)</summary><div class="sa-minute-head"><span>Menit</span><span>Fase</span><span>Pace lari</span><span>HR lari</span><span>Kadens</span></div>${minuteRows}</details>` : "";
     const actualIntervals = Array.isArray(sx.intervals) ? sx.intervals : [];
     const actualIntervalRows = actualIntervals.map((q,i)=>{
       const typ=/RECOVERY|REST/i.test(String(q.type||""))?"Recovery":/WARM/i.test(String(q.type||""))?"Pemanasan":/COOL/i.test(String(q.type||""))?"Pendinginan":"Kerja";
@@ -5763,6 +5769,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const r = 26, c = 2 * Math.PI * r, col = tone === 'r' ? 'var(--red)' : tone === 'y' ? 'var(--yellow)' : tone === 'n' ? 'var(--grey)' : 'var(--primary)';
     return `<div class="rg${big ? ' rg-big' : ''}"><div class="rgw"><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="t" cx="32" cy="32" r="${r}"/><circle cx="32" cy="32" r="${r}" stroke="${col}" stroke-dasharray="${(c * clamp(f, 0, 1)).toFixed(1)} ${c.toFixed(1)}"/></svg><span>${val}</span></div><small>${lab}</small></div>`;
   }
+  function saBar(f, val, lab, tone, big) {
+    const col = tone === 'r' ? 'var(--red)' : tone === 'y' ? 'var(--yellow)' : tone === 'n' ? 'var(--grey)' : 'var(--primary)';
+    return `<div class="bar-row${big ? ' bar-big' : ''}"><span>${lab}</span><div class="bt"><i style="width:${(clamp(f, 0, 1) * 100).toFixed(0)}%;background:${col}"></i></div><b>${val}</b></div>`;
+  }
   function saMore(h) { return h.replace(/<div class="sa-sub">([\s\S]*?)<\/div>/g, '<details class="sa-more"><summary>Catatan</summary><div class="sa-sub">$1</div></details>'); }
   /* Skor lari 0-100 = kualitas eksekusi sesi (bukan kebugaran). Komponen tanpa data tidak dihitung, bobot dinormalkan ulang. */
   function runScore(act, sx, rev) {
@@ -5783,16 +5793,16 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   function saRingsHTML(act, sx, rev) {
     const rs = [], sc = runScore(act, sx, rev), tn = (v) => (v >= 80 ? 'g' : v >= 60 ? 'y' : 'r');
     const tz = sx ? (tizNow(sx) || sx.tiz) : null;
-    if (sc) rs.push(saRing(sc.score / 100, sc.score, 'Skor lari', tn(sc.score), 1));
-    if (Array.isArray(tz)) { const lo = tz[0] + tz[1]; rs.push(saRing(lo / 100, lo + '%', 'Z1–Z2', lo >= 70 ? 'g' : lo >= 40 ? 'y' : 'r')); }
-    if (sx && sx.dec && Number.isFinite(+sx.dec.pct)) { const d = +sx.dec.pct; rs.push(saRing(d / 10, d + '%', 'Drift HR', d < 5 ? 'g' : d < 8 ? 'y' : 'r')); }
-    if (sx && sx.fade && Number.isFinite(+sx.fade.pct)) { const f = +sx.fade.pct; rs.push(saRing(f / 15, f + '%', 'Fade akhir', f <= 3 ? 'g' : f <= 8 ? 'y' : 'r')); }
-    if (sx && sx.runOnly && sx.runOnly.cadence > 0) { const c = Math.round(sx.runOnly.cadence); rs.push(saRing((c - 120) / 70, c, 'Kadens lari', 'n')); }
-    if (sx && Number.isFinite(sx.walkShare) && sx.walkShare > 0) { const w = Math.round(sx.walkShare * 100); rs.push(saRing(w / 40, w + '%', 'Porsi jalan', 'n')); }
+    if (sc) rs.push(saBar(sc.score / 100, sc.score, 'Skor lari', tn(sc.score), 1));
+    if (Array.isArray(tz)) { const lo = tz[0] + tz[1]; rs.push(saBar(lo / 100, lo + '%', 'Z1–Z2', lo >= 70 ? 'g' : lo >= 40 ? 'y' : 'r')); }
+    if (sx && sx.dec && Number.isFinite(+sx.dec.pct)) { const d = +sx.dec.pct; rs.push(saBar(d / 10, d + '%', 'Drift HR', d < 5 ? 'g' : d < 8 ? 'y' : 'r')); }
+    if (sx && sx.fade && Number.isFinite(+sx.fade.pct)) { const f = +sx.fade.pct; rs.push(saBar(f / 15, f + '%', 'Fade akhir', f <= 3 ? 'g' : f <= 8 ? 'y' : 'r')); }
+    if (sx && sx.runOnly && sx.runOnly.cadence > 0) { const c = Math.round(sx.runOnly.cadence); rs.push(saBar((c - 120) / 70, c, 'Kadens lari', 'n')); }
+    if (sx && Number.isFinite(sx.walkShare) && sx.walkShare > 0) { const w = Math.round(sx.walkShare * 100); rs.push(saBar(w / 40, w + '%', 'Porsi jalan', 'n')); }
     if (!rs.length) return '';
     const miss = ['Intensitas', 'Stabilitas', 'Disiplin', 'Respons'].filter((k) => !sc || !sc.parts.some((p) => p.k === k));
     const det = sc ? `<details class="sa-more"><summary>Rincian skor</summary><div class="sa-note">${sc.parts.map((p) => p.k + ' <b>' + p.v + '</b> (bobot ' + p.w + ')').join(' · ')}.</div>` + (miss.length ? `<div class="sa-note">Tidak dihitung (data belum ada): ${miss.join(', ')}.</div>` : '') + `<div class="sa-note">Menilai kualitas eksekusi sesi ini, bukan kebugaran. Bobot dinormalkan dari komponen yang tersedia.</div></details>` : `<div class="sa-note">Skor belum dihitung: butuh minimal 2 komponen (stream atau RPE belum cukup).</div>`;
-    return `<div class="sa-card"><div class="rg-row">${rs.join('')}</div>${det}</div>`;
+    return `<div class="sa-card"><div class="bar-list">${rs.join('')}</div>${det}</div>`;
   }
 
   /* Distribusi zona HR: satu bar bertumpuk + angka stabilitas HR */
