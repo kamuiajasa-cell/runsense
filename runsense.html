@@ -1127,28 +1127,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 .bar-row b{text-align:right;font-size:13px;color:var(--text,inherit)}
 .bar-big{grid-template-columns:92px 1fr 56px}.bar-big .bt{height:12px}.bar-big b{font-size:20px}
 </style>
-<style>
-/* Penyajian ringkas: data tetap utuh, uraian panjang tidak mendominasi kartu. */
-/* Kartu di seluruh tab: uraian pendamping dibatasi, angka dan status tetap utuh. */
-#screen-home .hint,#screen-home .sub,#screen-history .hint,#screen-history .sub,
-#screen-progress .hint,#screen-progress .sub,#screen-me .hint,#screen-me .sub,
-#screen-healthconnect .hint,#screen-healthconnect .sub{
-  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
-  line-height:1.45;
-}
-#screen-home .lowconf,#screen-me .lowconf{font-size:12px;line-height:1.45}
 
-.sa-details,.prg-details{margin-top:12px;border:1px solid var(--card-border);border-radius:12px;padding:0 12px;background:var(--card)}
-.sa-details>summary,.prg-details>summary{cursor:pointer;list-style:none;padding:12px 0;font-weight:700;color:var(--primary);font-size:13px}
-.sa-details>summary::-webkit-details-marker,.prg-details>summary::-webkit-details-marker{display:none}
-.sa-details[open],.prg-details[open]{padding-bottom:10px}
-.sa-details .sa-sec:first-child,.prg-details .prg-card:first-child{margin-top:4px}
-.sa-flow>.sa-sec .sa-desc,.sa-flow>.sa-sec .hint{line-height:1.45}
-.prg-card>.sub,.prg-card>.prg-insight,.prg-card>.prg-note{font-size:12px;line-height:1.45}
-.prg-card>.sub{margin-bottom:7px}
-.sa-flow .sa-sub{font-size:11px;line-height:1.4}
-.sa-flow .sa-sec>p,.sa-flow .sa-sec .sa-note{line-height:1.45}
-</style>
 </head>
 <body>
 <div class="app">
@@ -4984,7 +4963,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const avgHr = hrRows.length ? Math.round(hrRows.reduce((n, a) => n + Number(a[4]) * Math.max(1, Number(a[2]) || 1), 0) / hrRows.reduce((n, a) => n + Math.max(1, Number(a[2]) || 1), 0)) : null;
     const fmt = n => (Math.round(n * 10) / 10).toLocaleString("id-ID");
     const val = (n, unit) => n > 0 ? fmt(n) + " " + unit : "—";
-    const metric = (label, value, sub) => '<div class="sblock"><div class="label">' + label + '</div><b style="font-size:20px;display:block;letter-spacing:-.03em">' + value + '</b>' + (sub ? '<small style="color:var(--grey);font-size:11px">' + sub + '</small>' : '') + '</div>';
+    const metric = (label, value, sub) => '<div class="sblock"><div class="label">' + label + '</div><b style="font-size:20px;display:block;letter-spacing:-.03em">' + value + '</b></div>';
     const days = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
@@ -5020,7 +4999,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       metric("Mulai tidur", sleepClock(sleepStartMs), sleepStartMs ? "Timestamp sumber atau hasil durasi + waktu batas" : "SleepSecs saja tidak cukup") +
       metric("Jam bangun", sleepClock(sleepEndMs), sleepEndMs ? "Timestamp sumber atau hasil durasi + waktu batas" : "Belum ada waktu selesai dari sumber") +
       '</div><div class="label" style="margin-top:16px">Jarak aktivitas · 7 hari terakhir</div>' + daily +
-      '<p class="hint" style="margin:10px 0 0">Jarak turunan hanya dihitung jika langkah harian, jarak aktivitas, dan cadence aktivitas lokomosi cukup lengkap; panjang langkah dikalibrasi dari sesi jalan aktual. Menit zona dihitung dari stream HR bertimestamp memakai batas LTHR. Tidur hanya dapat dikirim sebagai sesi jika sumber menyediakan timestamp mulai dan selesai; sleepSecs saja tidak cukup.</p>';
+      '';
   }
 
   function renderAll() {
@@ -5248,8 +5227,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const pill = (v, c) => '<span class="prg-pill ' + ({ up: "up", flat: "flat", dn: "dn", na: "na" }[v]) + '">' + c + '</span>';
     const row = (label, value) => '<div class="prg-row"><span>' + label + '</span><b>' + value + '</b></div>';
     const card = (title, subtitle, body, insight, conf) =>
-      '<section class="prg-card"><h4>' + title + (conf ? ' <span class="prg-conf">Kecukupan data: ' + conf + '</span>' : '') + '</h4>' +
-      (subtitle ? '<div class="sub">' + subtitle + '</div>' : '') + body +
+      '<section class="prg-card"><h4>' + title + '</h4>' + body +
       (insight ? '<div class="prg-insight">' + insight + '</div>' : '') + '</section>';
     const typeOf = x => { try { return detectType(x).type || "easy"; } catch (_) { return "easy"; } };
     const hrMaxOk = (+state.max > 0 ? +state.max + 5 : 215);
@@ -5556,9 +5534,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const susHtml = card("Keberlanjutan", "Konsistensi dan sinyal pemulihan dibanding baseline pribadi.", consRows + strRow() + wRows.join(""), susNote, susConf);
 
     /* =============== RINGKASAN =============== */
-    const sumRow = (name, v, label, note, c) => '<div class="prg-sumrow"><div class="top"><b>' + name + '</b>' + pill(v, label) + '</div><div class="nt">' + note + ' <span class="prg-conf">Kecukupan data: ' + c + '</span></div></div>';
+    const sumRow = (name, v, label, note, c) => '<div class="prg-sumrow"><div class="top"><b>' + name + '</b>' + pill(v, label) + '</div><div class="nt">' + note + '</div></div>';
     const Lbl = { up: "Membaik", flat: "Stabil", dn: "Perlu perhatian", na: "Datanya belum cukup" };
-    const summary = '<section class="prg-card"><h4>5 Pilar Progres</h4><div class="sub">Kami melihat lima sisi perkembangan secara terpisah, bukan menjadikannya satu angka. Hubungkan hasilnya untuk memahami bagian mana yang berkembang dan bagian mana yang masih perlu waktu. Periode: ' + (prgR >= 26 ? dmy(from) + ' – ' + dmy(now) : dm(from) + ' – ' + dm(now)) + '.</div>' +
+    const summary = '<section class="prg-card"><h4>5 Pilar Progres</h4><div class="sub">Periode: ' + (prgR >= 26 ? dmy(from) + ' – ' + dmy(now) : dm(from) + ' – ' + dm(now)) + '.</div>' +
       sumRow("1 · Performa", perfV, perfV === "dn" ? "Lebih lambat" : Lbl[perfV], perfNote, perfConf) +
       sumRow("2 · Efisiensi aerobik", aeroV, aeroV === "dn" ? "Menurun" : Lbl[aeroV], aeroV === "na" ? "Butuh minimal 4 lari ringan dengan HR valid." : aeroNote.split(". ")[0] + ".", aeroConf) +
       sumRow("3 · Kapasitas", capV, capV === "dn" ? "Menurun" : Lbl[capV], capNote.split(". ")[0] + ".", capConf) +
@@ -5623,15 +5601,14 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (runs.length < 8) actions.push({ k: "g", t: "Data masih tipis. Lari konsisten 3–4×/minggu dengan HR tercatat agar tren bisa dibaca." });
       else actions.push({ k: "g", t: "Tren stabil. Pertahankan frekuensi; progress kecil di lari panjang atau 1 quality terkontrol tiap 7–10 hari." });
     }
-    const actHtml = '<section class="prg-card"><h4>Yang perlu kamu lakukan</h4><div class="sub">Dari tren periode ini' + (goal && goal !== "Umum" ? " · target " + goal : "") + (tsbNote ? " · " + tsbNote : "") + ". Prioritas utama periode ini.</div>" +
+    const actHtml = '<section class="prg-card"><h4>Prioritas berikutnya</h4>" +
       actions.slice(0, 1).map((a) => '<div class="prg-sumrow"><div class="top"><b>' + (a.k === "r" ? "Prioritas" : a.k === "y" ? "Perbaiki" : "Lanjut") + '</b>' +
         pill(a.k === "r" ? "dn" : a.k === "y" ? "flat" : "up", a.k === "r" ? "Penting" : a.k === "y" ? "Fokus" : "OK") +
         '</div><div class="nt">' + a.t + '</div></div>').join("") + '</section>';
 
     /* =============== KUALITAS DATA =============== */
     const excl = rawInRange - runs.length, withHr = runs.filter(hrOk).length;
-    const dq = '<section class="prg-card prg-dq"><h4>Kualitas data</h4><div class="sub">' + runs.length + ' lari dipakai' + (excl > 0 ? ', ' + excl + ' dikecualikan (durasi &lt; 5 menit, jarak &lt; 1 km, atau pace tak wajar)' : '') + '. HR valid di ' + withHr + ' lari.' +
-      ' daya tahan dihitung dari stream tiap lari panjang, bukan dari ringkasan aktivitas.</div></section>';
+    const dq = '<section class="prg-card prg-dq"><h4>Cakupan data</h4><div class="sub">' + runs.length + ' lari dianalisis · HR valid di ' + withHr + ' lari.</div></section>';
 
     /* =============== PACE & DURASI NYAMAN (evaluasi) =============== */
     let nymHtml = "";
@@ -5642,7 +5619,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         const dI = nS.filter(q => q.dur != null).map(q => ({ ms: q.ms, v: q.dur, t: dm(q.ms) + " · " + Math.round(q.dur) + " mnt" }));
         const dP = Math.round((nS[nS.length - 1].pace - nS[0].pace) * 60), dD = dI.length > 1 ? Math.round(dI[dI.length - 1].v - dI[0].v) : null;
         const gtx = window.NYM.gateTxt(window.NYM.gate());
-        nymHtml = card("Pace &amp; durasi nyaman", "Dari semua lari (bukan hanya easy), jendela 42 hari; satu titik = akhir tiap minggu. Pace dibaca di HR " + (nv.ok ? nv.hr : "acuan") + ".",
+        nymHtml = card("Pace &amp; durasi nyaman", "",
           '<div class="sub" style="margin:4px 0 2px">Pace nyaman (makin ke atas = makin cepat)</div>' + lineChart("prgNymP", pI, v => fmtP(v), true, "Pace nyaman") +
           (dI.length > 1 ? '<div class="sub" style="margin:12px 0 2px">Durasi nyaman</div>' + lineChart("prgNymD", dI, v => Math.round(v) + " mnt", false, "Durasi nyaman") : ""),
           "Sepanjang grafik, pace nyaman berubah " + (dP > 0 ? "+" : "") + dP + " dtk/km" + (dD != null ? " dan durasi nyaman " + (dD > 0 ? "+" : "") + dD + " menit" : "") + ". " + gtx + " Selisih di bawah ±10–15 dtk/km masih dalam noise pengukuran.",
@@ -5651,7 +5628,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     } catch (_) { nymHtml = ""; }
 
     /* aeroHtml sempat dihitung tapi tidak di-render — diperbaiki di sini */
-    el.innerHTML = summary + actHtml + '<details class="prg-details"><summary>Lihat rincian progres</summary>' + nymHtml + perfHtml + aeroHtml + capHtml + durHtml + susHtml + dq + '</details>';
+    el.innerHTML = summary + actHtml + nymHtml + perfHtml + aeroHtml + capHtml + durHtml + susHtml + dq;
     backfillDurability(runs);
     prefetchPace(perfNeed.map(x => ({ act: x }))).then(n => { if (n) renderProgress(); });
   }
@@ -6072,7 +6049,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (ad) detail += saSec("Hubungan dengan progres", "", ad);
     const i1 = saIntensityHTML(act, rev) + saNotes(rev, "Intensitas");
     if (i1) detail += saSec("Pembanding kapasitas", "", i1);
-    return `<div class="sa-flow">${top}${detail ? '<details class="sa-details"><summary>Lihat rincian analisis</summary>' + saMore(detail) + '</details>' : ''}</div>`;
+    return `<div class="sa-flow">${top}${saMore(detail)}</div>`;
   }
 
   /* Interaksi sentuh: geser di grafik (pace & HR sinkron) dan ketuk segmen/batang */
