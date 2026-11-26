@@ -5835,7 +5835,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const col = tone === 'r' ? 'var(--red)' : tone === 'y' ? 'var(--yellow)' : tone === 'n' ? 'var(--grey)' : 'var(--primary)';
     return `<div class="bar-row${big ? ' bar-big' : ''}"><span>${lab}</span><div class="bt"><i style="width:${(clamp(f, 0, 1) * 100).toFixed(0)}%;background:${col}"></i></div><b>${val}</b></div>`;
   }
-  function saMore(h) { return h.replace(/<div class="sa-sub">([\s\S]*?)<\/div>/g, '<details class="sa-more"><summary>Catatan</summary><div class="sa-sub">$1</div></details>'); }
+  function saMore(h) { return h.replace(/<div class="sa-sub">[\s\S]*?<\/div>/g, ""); }
   /* Skor lari 0-100 = kualitas eksekusi sesi (bukan kebugaran). Komponen tanpa data tidak dihitung, bobot dinormalkan ulang. */
   function runScore(act, sx, rev) {
     const m = (rev && rev.meta) || {}, ty = detectType(act).type, q = ty === 'thr' || ty === 'vo2' || ty === 'race', parts = [];
