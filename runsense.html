@@ -5327,7 +5327,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         : "Pace terbaik relatif sama dengan periode sebelumnya.";
       perfConf = perfDeltas.length >= 3 ? "sedang" : "rendah";
     }
-    const perfHtml = perfRows.length ? card("Performa", "Pace terbaik per kelompok jarak, dibanding " + prgR + " minggu sebelumnya. Memakai pace waktu bergerak dari stream bila datanya sudah lengkap untuk kedua periode (ditandai \u201cstream\u201d), selain itu rata-rata aktivitas.",
+    const perfHtml = perfRows.length ? card("Performa", "Perbandingan dengan periode sebelumnya.",
       perfRows.join("") + estRow, "Perbandingan paling kuat bila rute, cuaca, dan usaha serupa. Satu sesi cepat bisa mengubah angka ini.", perfConf) : "";
 
     /* =============== 2. AEROBIK =============== */
@@ -5362,11 +5362,11 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         : aeroV === "dn" ? "Pada HR acuan " + ref + " bpm, paruh akhir " + Math.abs(delta) + " dtk/km lebih lambat."
         : "Pace pada HR acuan relatif stabil.") + hrNote;
       const items = norm.map(x => ({ ms: x.ms, v: x.sec, t: "<b>" + dm(x.ms) + "</b> · " + fmtP(x.sec) + "/km pada " + ref + " bpm (asli " + fmtP(x.pace * 60) + "/km, HR " + Math.round(x.hr) + ")" }));
-      aeroHtml = card("Efisiensi aerobik", "Easy run ≥ 2 km, HR valid · " + norm.length + " sesi · pace " + (aeroSt ? "waktu bergerak (stream)" : "rata-rata aktivitas") + " dinormalisasi ke HR " + ref + " bpm (perkiraan linear)",
+      aeroHtml = card("Efisiensi aerobik", "Perubahan pace pada respons HR yang serupa.",
         lineChart("prgAero", items, v => fmtP(v), true, "Pace ternormalisasi pada HR acuan") +
         row("Paruh awal", fmtP(first) + "/km") + row("Paruh akhir", fmtP(last) + "/km") +
         row("Perubahan pace", '<span class="' + (delta > 0 ? "prg-up" : delta < 0 ? "prg-dn" : "") + '">' + (delta === 0 ? "0" : sgn(-delta)) + ' dtk/km</span>') + hrRows,
-        aeroNote + " Ini indikasi efisiensi, bukan bukti tunggal adaptasi. Suhu, elevasi, dan hidrasi belum dikontrol.", aeroConf);
+        aeroNote, aeroConf);
     } else {
       aeroHtml = card("Efisiensi aerobik", "Easy run ≥ 2 km dengan HR valid", '<p class="prg-note">Baru ' + easy.length + ' sesi memenuhi syarat. Butuh minimal 4 untuk membandingkan pace pada HR yang sama.</p>', "", "");
     }
