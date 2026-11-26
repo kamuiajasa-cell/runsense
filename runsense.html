@@ -20,7 +20,38 @@
   } catch (e) {}
 })();
 </script>
-<style>html.rs-boot #screen-setup{display:none!important}</style>
+<style>html.rs-boot #screen-setup{display:none!important}
+/* RunSense design system — lapisan akhir yang konsisten untuk seluruh layar */
+:root{--rs-radius:18px;--rs-gap:12px;--rs-card-shadow:0 5px 18px rgba(0,0,0,.08)}
+.content{width:min(100% - 32px,520px);padding:22px 0 calc(112px + env(safe-area-inset-bottom))}
+.page-hero{padding:5px 2px 18px}
+.page-hero .eyebrow{font-size:10px;letter-spacing:1.25px;font-weight:800;color:var(--grey)}
+.page-title{font-size:clamp(29px,8vw,36px);line-height:1.04;letter-spacing:-1.35px;margin:9px 0}
+.page-hero p{font-size:13px;line-height:1.5;max-width:38ch}
+.section-kicker{font-size:10px;letter-spacing:1.1px;font-weight:800}
+.card,.sg,.prg-card,.hist-card,.hcard{border-radius:var(--rs-radius);box-shadow:var(--rs-card-shadow)}
+.sg{margin:0 0 12px}
+.sg-t{font-size:11px;letter-spacing:.75px;font-weight:800;color:var(--grey);padding:0 3px 8px}
+.sgroup{border-radius:16px;overflow:hidden}
+.filter-dock{border-radius:14px;padding:8px 10px;margin-bottom:13px;gap:9px}
+.filter-dock>span{font-size:10px;letter-spacing:.7px;font-weight:800;color:var(--grey)}
+.prg-card{padding:15px;margin:0 0 10px;border-radius:18px;box-shadow:none}
+.prg-card h4{font-size:14px;letter-spacing:-.2px;margin:0 0 5px}
+.prg-card .sub{font-size:11.5px;line-height:1.45;margin:0 0 8px}
+.prg-card svg{margin-top:8px}
+.progress-extras{display:grid;gap:10px;margin-top:10px}
+.progress-extras .sg{margin:0}
+.progress-extras .sblock{padding:12px!important}
+.hcard{padding:13px;margin:0 0 9px;box-shadow:none}
+.plan-warn{display:grid;gap:7px;margin-top:10px}
+.plan-alert{font-size:11.5px;line-height:1.45;color:var(--yellow);background:color-mix(in srgb,var(--yellow) 9%,transparent);border-left:2px solid var(--yellow);border-radius:0 9px 9px 0;padding:8px 10px}
+.bottom-nav{bottom:calc(8px + env(safe-area-inset-bottom))!important;background:color-mix(in srgb,var(--bg) 94%,transparent)!important;border:1px solid var(--card-border)!important;box-shadow:0 8px 28px rgba(0,0,0,.2)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.nav-item{min-width:0;flex:1}
+button,select,input,textarea{-webkit-tap-highlight-color:transparent}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+@media(max-width:380px){.content{width:calc(100% - 24px)}.page-title{font-size:29px}.hist-sum{gap:5px}.hist-sum .hs{padding:10px 6px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -1161,7 +1192,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   <!-- HARI INI -->
   <div id="screen-home" class="screen">
     <div class="content home-layout">
-      <header class="page-hero home-hero" data-hero="home"><div class="home-hero-top"><span class="eyebrow">YOUR DAILY RUNNING BRIEF</span><div class="avatar-mark"><img src="icons/icon-192.png" alt="RunSense"></div></div><div class="page-title">Run with<br><em>your rhythm.</em></div><p><span class="greeting" id="greeting">Selamat pagi</span><span class="home-date" id="tdDate"></span></p></header>
+      <header class="page-hero home-hero" data-hero="home"><div class="home-hero-top"><span class="eyebrow">HARI INI</span><div class="avatar-mark"><img src="icons/icon-192.png" alt="RunSense"></div></div><div class="page-title">Lari sesuai<br><em>ritmemu.</em></div><p><span class="greeting" id="greeting">Selamat pagi</span><span class="home-date" id="tdDate"></span></p></header>
       <div class="race-line" id="raceLine"></div>
       <div class="section-kicker"><span>YOUR TRAINING</span><i></i><span>01</span></div>
       <div id="mainCard"></div>
@@ -1190,8 +1221,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   <!-- RIWAYAT -->
   <div id="screen-history" class="screen">
     <div class="content history-layout">
-      <header class="page-hero" data-hero="history"><span class="eyebrow">RIWAYAT LATIHAN</span><div class="page-title">Setiap lari<br><em>punya cerita.</em></div><p data-hero-sub>Lihat kembali setiap sesi, jarak yang kamu tempuh, dan kebiasaan latihanmu.</p></header>
-      <div class="filter-dock"><span>FILTER</span><div class="fchips" id="histChips"></div></div>
+      <header class="page-hero" data-hero="history"><span class="eyebrow">RIWAYAT LATIHAN</span><div class="page-title">Catatan<br><em>perjalananmu.</em></div><p data-hero-sub>Semua sesi latihanmu, tersusun dalam satu tempat.</p></header>
+      <div class="filter-dock"><span>JENIS</span><div class="fchips" id="histChips"></div></div>
       <div class="hist-sum" id="histSum"></div>
       <div id="historyList"></div>
     </div>
@@ -1200,18 +1231,20 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   <!-- PROGRES -->
   <div id="screen-progress" class="screen">
     <div class="content progress-layout">
-      <header class="page-hero progress-hero" data-hero="progress"><span class="eyebrow">PERKEMBANGAN LARIMU</span><div class="page-title">Lihat sejauh mana<br><em>kamu berkembang.</em></div><p data-hero-sub>Ringkasan perkembangan lari berdasarkan data yang tersedia.</p></header>
-      <div class="filter-dock"><span>TIMEFRAME</span><div class="fchips" id="prgChips"></div></div>
+      <header class="page-hero progress-hero" data-hero="progress"><span class="eyebrow">PERKEMBANGAN LARIMU</span><div class="page-title">Perkembangan<br><em>larimu.</em></div><p data-hero-sub>Ringkasan perkembangan lari berdasarkan data yang tersedia.</p></header>
+      <div class="filter-dock"><span>PERIODE</span><div class="fchips" id="prgChips"></div></div>
       <div id="progressBody"></div>
-      <div class="sg" id="prgCap" style="margin-top:12px"><div class="sg-t">Kapasitas &amp; beban</div><div class="sgroup"><div class="sblock rows" style="padding:4px 0"><div class="row"><span>RAI · kemampuan lari</span><b id="raiValue">—</b></div><div class="row"><span>Max METs</span><b id="afMets">—</b></div><div class="row"><span>CTL / ATL / TSB</span><b id="advLoad">—</b></div><div class="row"><span>LTHR · LTPace</span><b id="advLt">—</b></div></div></div></div>
-      <div class="sg" style="margin-top:12px"><div class="sg-t">Pace terbaik · 90 hari</div><div class="sgroup"><div class="sblock" id="bestSeg"></div></div></div>
+      <section class="progress-extras" aria-label="Metrik tambahan">
+        <div class="sg" id="prgCap"><div class="sg-t">Kapasitas &amp; beban</div><div class="sgroup"><div class="sblock rows" style="padding:4px 0"><div class="row"><span>RAI · kemampuan lari</span><b id="raiValue">—</b></div><div class="row"><span>Max METs</span><b id="afMets">—</b></div><div class="row"><span>CTL / ATL / TSB</span><b id="advLoad">—</b></div><div class="row"><span>LTHR · LTPace</span><b id="advLt">—</b></div></div></div></div>
+        <div class="sg"><div class="sg-t">Pace terbaik · 90 hari</div><div class="sgroup"><div class="sblock" id="bestSeg"></div></div></div>
+      </section>
     </div>
   </div>
 
   <!-- SAYA -->
   <div id="screen-me" class="screen">
     <div class="content profile-layout">
-      <header class="page-hero" data-hero="me"><span class="eyebrow">ATHLETE SETTINGS</span><div class="page-title">Your<br><em>profile.</em></div><p data-hero-sub>Data tubuh, target, jadwal, dan koneksi.</p></header>
+      <header class="page-hero" data-hero="me"><span class="eyebrow">PENGATURAN</span><div class="page-title">Profil<br><em>pelari.</em></div><p data-hero-sub>Data tubuh, target, jadwal, dan koneksi.</p></header>
 
       <div class="sg">
         <div class="sg-t">Data tubuh &amp; detak</div>
@@ -1367,7 +1400,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   <!-- HEALTH CONNECT: hanya ditampilkan oleh shim native di APK RunSense -->
   <div id="screen-healthconnect" class="screen">
     <div class="content profile-layout">
-      <header class="page-hero"><span class="eyebrow">ANDROID HEALTH DATA</span><div class="page-title">Health<br><em>Connect.</em></div><p>Kelola izin dan kirim data latihan serta wellness RunSense ke Health Connect.</p></header>
+      <header class="page-hero"><span class="eyebrow">KONEKSI KESEHATAN</span><div class="page-title">Health<br><em>Connect.</em></div><p>Kelola izin dan kirim data latihan serta wellness RunSense ke Health Connect.</p></header>
       <div class="sg">
         <div class="sg-t">Sinkronisasi kesehatan</div>
         <div class="sgroup" id="rsHcGroup">
@@ -3808,7 +3841,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       const progressionText = mileageBase.confidence === "high"
         ? "Batas target progresi +10%: " + safeTarget.toFixed(1) + " km/minggu."
         : "Riwayat belum konsisten (" + mileageBase.activeWeeks + "/4 minggu aktif); progresi ditahan pada rata-rata " + safeTarget.toFixed(1) + " km/minggu sampai data lebih stabil.";
-      msgs.push("Baseline 4 minggu: " + wkKm.toFixed(1) + " km/minggu (" + mileageBase.weeks.map(v => v.toFixed(1)).join(" / ") + " km). " + progressionText + forecastText);
+      msgs.push("Rata-rata 4 minggu " + wkKm.toFixed(1) + " km/minggu. " + progressionText);
       if (tot > 0 && tot > safeTarget + 0.05) msgs.push("Rencana " + tot.toFixed(1) + " km, " + pctUp + "% di atas rata-rata 4 minggu. Turunkan target ke maksimal " + safeTarget.toFixed(1) + " km atau tahan volume; +10% adalah plafon, bukan kewajiban.");
     } else if (mileageBase.hasHistory && tot > 0) {
       msgs.push("Tidak ada volume lari pada 4 minggu lengkap terakhir. Jangan menerapkan kenaikan +10% dari nol; mulai kembali dengan dosis ringan dan tahan progresi sampai ada riwayat baru.");
@@ -3822,7 +3855,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       const a = ty(d), b = ty(nx[0]);
       if ((a === "quality" && b === "long") || (a === "long" && b === "quality")) msgs.push(`${n} dan ${nx[1]}: quality dan lari panjang berdekatan (<48 jam).`);
     });
-    if (w) w.textContent = msgs.join(" ");
+    if (w) w.innerHTML = msgs.map((m) => '<div class="plan-alert">' + m + '</div>').join("");
   }
   function setPlan(d, f, v) {
     const p = state.plan[d] || (state.plan[d] = { t: "auto", km: 0 });
