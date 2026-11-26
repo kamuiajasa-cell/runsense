@@ -5853,7 +5853,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       return `<div class="sa-segment-row"><span><b>${typ} ${i+1}</b><small>${Math.floor(sec/60)}:${String(Math.round(sec%60)).padStart(2,"0")} · ${dist>0?(dist/1000).toFixed(2)+" km":"jarak —"}</small></span><span><b>${pace}</b><small>HR ${q.hr?Math.round(q.hr)+" bpm":"—"} · Kadens ${q.cadenceRunningOnly?(q.cadence?Math.round(q.cadence)+" spm":"—")+" (lari)":(q.cadence?Math.round(q.cadence)+" spm":"—")}</small></span></div>`;
     }).join("");
     const actualIntervalBlock = actualIntervalRows ? `<details class="sa-minute-details"><summary>Interval aktual dari Intervals.icu (${actualIntervals.length} segmen)</summary>${actualIntervalRows}</details>` : "";
-    const segmentBlock = segs.length || actualIntervalRows ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Struktur latihan tersimpan</span><span class="sa-pill">${segs.length?segs.filter(x=>x.type==="work").length:actualIntervals.length} segmen</span></div><div class="sa-sub">Rencana dibaca dari penyimpanan lokal RunSense. Kadens dihitung hanya dari sampel saat berlari (rerata kadens per jendela 5 detik >135 spm); fase jalan/pemulihan berjalan tidak dicampur. Rincian menit memakai stream sensor.</div>${phaseRows}${minuteBlock}${actualIntervalBlock}</div>` : "";
+    const segmentBlock = segs.length || actualIntervalRows ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Struktur latihan tersimpan</span><span class="sa-pill">${segs.length?segs.filter(x=>x.type==="work").length:actualIntervals.length} segmen</span></div>${phaseRows}${minuteBlock}${actualIntervalBlock}</div>` : "";
     let cadSvg = '';
     const cad = pts.map((q) => (q[4] > 0 ? q[4] : null)), cv = cad.filter((v) => v != null);
     if (cv.length >= 8) {
@@ -5925,7 +5925,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     let stab = "";
     if (sx.dec && Number.isFinite(sx.dec.pct)) {
       const d = sx.dec.pct, lbl = d <= 3 ? "sangat stabil" : d < 5 ? "stabil" : d < 8 ? "mulai drift" : "drift jelas";
-      stab = `<div class="sa-metrics"><div class="sa-metric"><b>${d}%</b><small>Stabilitas HR · ${lbl}</small></div><div class="sa-metric"><b>${low}% / ${high}%</b><small>Waktu Z1–Z2 / Z3 ke atas</small></div></div><div class="sa-sub">Stabilitas = penurunan efisiensi (pace per detak) di paruh kedua dibanding tengah sesi. Makin kecil makin stabil.</div>`;
+      stab = `<div class="sa-metrics"><div class="sa-metric"><b>${d}%</b><small>Stabilitas HR · ${lbl}</small></div><div class="sa-metric"><b>${low}% / ${high}%</b><small>Waktu Z1–Z2 / Z3 ke atas</small></div></div>`;
     }
     return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Waktu di zona detak jantung</span><span class="sa-pill">% waktu</span></div>` +
       `<div class="sa-find">${low >= 70 ? `<b>${low}%</b> waktu ada di Z1–Z2 (aerobik): lari ini dominan ringan.` : high >= 50 ? `<b>${high}%</b> waktu ada di Z3 ke atas: lebih keras dari easy murni.` : `<b>${low}%</b> di Z1–Z2 dan <b>${high}%</b> di Z3 ke atas: campuran aerobik dan sedang.`}</div>` +
@@ -5974,7 +5974,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Beban akut & kebiasaan 4 minggu</span><span class="sa-pill">sebelum sesi</span></div>
       <div class="sa-metrics"><div class="sa-metric"><b>${fmt(acute)} TL</b><small>7 hari sebelum sesi</small></div><div class="sa-metric"><b>${fmt(chronic)} TL/minggu</b><small>Rerata 28 hari sebelumnya</small></div></div>
       <div class="sa-find">${detail}</div>
-      <div class="sa-sub">${prior.length} aktivitas tercatat · ${activeWeeks}/4 minggu memiliki beban. TL dari Intervals.icu bila tersedia; selain itu estimasi RunSense.</div></div>`;
+      </div>`;
   }
 
   /* Tren performa: median tiga sesi terbaru vs tiga sebelumnya, hanya sesi sejenis
@@ -5997,7 +5997,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     else note+=" Perubahan ini perlu dibaca bersama tujuan sesi, cuaca, elevasi, dan kualitas data.";
     return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Tren progres sesi sejenis</span><span class="sa-pill">6 sesi · 90 hari</span></div>
       <div class="sa-metrics"><div class="sa-metric"><b>${mp(ep)}/km → ${mp(rp)}/km</b><small>Median pace · 3 sesi lama ke 3 terbaru</small></div><div class="sa-metric"><b>${eh?Math.round(eh)+" → "+(rh?Math.round(rh):"—"):"—"} bpm</b><small>Median HR</small></div></div>
-      <div class="sa-note">${note}</div><div class="sa-sub">Sesi dipilih berdasarkan jenis dan jarak ±35%; bukan perbandingan laboratorium atau rute identik.</div></div>`;
+      <div class="sa-note">${note}</div></div>`;
   }
 
   /* Kesimpulan: verdict eksekusi dulu, lalu sinyal dan aksi. */
@@ -6019,7 +6019,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       ${vAction ? `<div class="sa-note" style="font-size:14px;line-height:1.5"><b>Aksi:</b> ${vAction}</div>` : ""}
       ${line("Yang berjalan baik", positive)}
       ${line("Perlu diperhatikan", caution && (!vAction || caution.text !== vAction) ? caution : null)}
-      <div class="sa-sub">Verdict dari HR, pace, drift, zona, dan RPE bila ada. Tanpa stream, penilaian lebih kasar.</div></div>`;
+      </div>`;
   }
 
   function sessionBodyHTML(act, rev) {
@@ -6115,8 +6115,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       const last=after[0], r0=median(before.filter(w=>w.restingHR>0).map(w=>w.restingHR)), h0=median(before.filter(w=>w.hrv>0&&!w.hrvSpot).map(w=>w.hrv));
       if(last.restingHR>0&&r0!=null) html+='<div class="sa-note">Respons setelah sesi: RHR '+Math.round(last.restingHR)+' bpm ('+(last.restingHR-r0>=0?'+':'')+Math.round(last.restingHR-r0)+' dari median sebelum sesi).</div>';
       if(last.hrv>0&&!last.hrvSpot&&h0!=null) html+='<div class="sa-note">HRV setelah sesi: '+Math.round(last.hrv)+' ms ('+(last.hrv-h0>=0?'+':'')+Math.round(last.hrv-h0)+' dari median sebelum sesi).</div>';
-      html+='<div class="sa-sub">Ini asosiasi waktu, bukan bukti bahwa satu sesi menyebabkan perubahan. Ketersediaan dan sumber data memengaruhi interpretasi.</div>';
-    } else html+='<div class="sa-sub" style="margin-top:8px">Respons RHR/HRV pascalatihan belum bisa dibandingkan: butuh data wellness sebelum dan 1–3 hari setelah sesi.</div>';
+      html+='';
+    } else html+='';
     return html+'</div>';
   }
 
@@ -7068,10 +7068,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const checks = sx && Array.isArray(sx.cadenceChecks) ? sx.cadenceChecks : [];
     const checkRows = checks.map(q => `<div class="sa-minute-row" style="grid-template-columns:.8fr 1fr 1fr 1fr"><b>${Math.floor(q.second/60)}:${String(q.second%60).padStart(2,"0")}</b><span>${phaseName(q.phase)}</span><span>${Math.round(q.cadence)} spm</span><span>${q.status}</span></div>`).join("");
     const cd=sx&&sx.cadenceDiagnostics?sx.cadenceDiagnostics:null;
-    const diagnosticLine=cd?`<div class="sa-sub">Data sensor: ${cd.validSamples} sampel valid · stream dikonversi ×2: ${cd.min==null?"—":Math.round(cd.min)+"–"+Math.round(cd.max)+" spm"} · rerata ${cd.mean==null?"—":Math.round(cd.mean)+" spm"}. Jendela lari ${cd.runWindows}, jalan ${cd.walkWindows}.</div>`:"";
-    const analysis = segRows ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Kadens per segmen</span></div><div class="sa-sub">Pemeriksaan dilakukan per jendela 5 detik. Rerata di atas 135 spm dihitung sebagai lari; di bawah atau sama dengan 135 spm sebagai jalan. Fase recovery/jalan tetap dikecualikan dari kadens lari.</div>${diagnosticLine}${segRows}${checkRows ? `<details class="sa-minute-details"><summary>Pemeriksaan tiap 5 detik (${checks.length} jendela)</summary><div class="sa-minute-head" style="grid-template-columns:.8fr 1fr 1fr 1fr"><span>Waktu</span><span>Fase</span><span>Kadens</span><span>Klasifikasi</span></div>${checkRows}</details>` : ""}</div>` : `<div class="sa-note">Rincian per segmen belum tersedia. Sinkronkan aktivitas ke Intervals.icu dan buka ulang detail aktivitas agar stream sensor dan rencana segmennya diproses.</div>`;
+    const diagnosticLine="";
+    const analysis = segRows ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Kadens per segmen</span></div>${diagnosticLine}${segRows}${checkRows ? `<details class="sa-minute-details"><summary>Pemeriksaan tiap 5 detik (${checks.length} jendela)</summary><div class="sa-minute-head" style="grid-template-columns:.8fr 1fr 1fr 1fr"><span>Waktu</span><span>Fase</span><span>Kadens</span><span>Klasifikasi</span></div>${checkRows}</details>` : ""}</div>` : `<div class="sa-note">Rincian per segmen belum tersedia. Sinkronkan aktivitas ke Intervals.icu dan buka ulang detail aktivitas agar stream sensor dan rencana segmennya diproses.</div>`;
     return `<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Kadens & langkah</span></div><div class="sa-metrics"><div class="sa-metric"><b>${runCadence == null ? "—" : runCadence}</b><small>Kadens lari saja (spm)</small></div><div class="sa-metric"><b>${st ? m2(st) : "—"}</b><small>Panjang langkah</small></div></div>` +
-      analysis + n.map((t) => `<div class="sa-note">${t}</div>`).join("") + `<div class="sa-sub">Konteks tinggi badan diambil otomatis dari Pengaturan Profil.</div></div></div>`;
+      analysis + n.map((t) => `<div class="sa-note">${t}</div>`).join("") + `</div></div>`;
   }
   const TS = ld("runsense_tests", []);
   function saveTest() {
