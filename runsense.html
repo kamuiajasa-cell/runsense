@@ -698,6 +698,11 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 #screen-me .profile-layout .chips{gap:7px}
 #screen-me .profile-layout .hint{line-height:1.55}
 #screen-me #planGrid{margin-top:8px}
+.strength-week{margin-top:12px;padding-top:11px;border-top:1px solid var(--card-border)}
+.strength-week-title{font-size:11px;font-weight:700;color:var(--grey);margin-bottom:7px}
+.strength-week-list{display:flex;flex-wrap:wrap;gap:6px 12px}
+.strength-week-item{display:flex;gap:5px;align-items:center;font-size:12px;color:var(--grey)}
+.strength-week-item b{font-weight:600;color:var(--tx)}
 #screen-me #advBox .card{padding:16px}
 #screen-me .logout{padding-bottom:8px}
 @media(max-width:370px){#screen-me .page-title{font-size:33px}#screen-me .profile-layout>.card{padding:15px}#screen-me .field input{flex-basis:104px;width:104px;max-width:104px}}
@@ -1172,8 +1177,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         <div class="rows">
           <div class="row"><span>Kesiapan</span><b id="rdy">—</b></div>
           <div class="row"><span>Minggu ini</span><b id="wkTxt">—</b></div>
-          <div class="row"><span>Strength · 4 minggu</span><b id="homeStrength">—</b></div>
         </div>
+        <div class="strength-week" id="homeStrengthWeek" style="display:none"></div>
         <div class="body-line" id="bodyLine" style="display:none"></div>
         <div class="week" id="weekDays"></div>
         <p class="trend" id="trendTxt"></p>
@@ -3770,11 +3775,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (!g) return;
     g.innerHTML = PLAN_DAYS.map(([d, n]) => {
       const p = state.plan[d] || {};
-      const strength = strDayEntry(d);
-      const strengthText = strength ? (strength.s === "done" ? "Strength ✓ " : "Strength · skip ") + strMenuName(strength.m) : "Strength —";
       return `<div class="plan-row"><b>${n}</b><select onchange="setPlan(${d},'t',this.value)">` +
         PLAN_TY.map(([v, l]) => `<option value="${v}"${(p.t || "auto") === v ? " selected" : ""}>${l}</option>`).join("") +
-        `</select><input type="number" min="0" max="60" step="1" inputmode="numeric" placeholder="km" value="${p.km || ""}" onchange="setPlan(${d},'km',this.value)" /></div><div class="plan-strength">${strengthText}</div>`;
+        `</select><input type="number" min="0" max="60" step="1" inputmode="numeric" placeholder="km" value="${p.km || ""}" onchange="setPlan(${d},'km',this.value)" /></div>`;
     }).join("");
     const rd = $("#raceDate");
     if (rd) rd.value = state.race || "";
@@ -5112,7 +5115,20 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
     /* Kesiapan, minggu ini, tren */
     $("#rdy").textContent = a.formLabel === "Data kurang" ? "Data belum cukup" : a.formLabel === "Baik" ? "Baik, boleh lari" : a.formLabel === "Lelah" ? "Lelah, hati-hati" : "Cukup";
-    const hs = $("#homeStrength"); if (hs) { const sd = STR.log.filter(e => e.s === "done" && e.d >= yAgo(28)).length, ss = STR.log.filter(e => e.s === "skip" && e.d >= yAgo(28)).length; hs.textContent = sd + " sudah · " + ss + " skip"; }
+    const strengthWeek = $("#homeStrengthWeek");
+    if (strengthWeek) {
+      const entries = PLAN_DAYS.map(([dow, name]) => {
+        const entry = strDayEntry(dow);
+        return entry ? { name, entry } : null;
+      }).filter(Boolean);
+      strengthWeek.style.display = entries.length ? "" : "none";
+      strengthWeek.innerHTML = entries.length
+        ? '<div class="strength-week-title">Strength minggu ini</div><div class="strength-week-list">' +
+          entries.map(({name, entry}) => '<div class="strength-week-item"><span>' + name + '</span><b>' +
+            (entry.s === "done" ? "✓ " : "Lewati · ") + strMenuName(entry.m) + '</b></div>').join("") +
+          '</div>'
+        : "";
+    }
     const start = today() - ((new Date().getDay() + 6) % 7) * 864e5;
     let wkm = 0, ws = 0;
     const days = [];
