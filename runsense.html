@@ -5411,7 +5411,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const wellIn = wellAll.filter(w => wTs(w) >= from && wTs(w) <= now);
     const ctls = wellIn.filter(w => +w.ctl > 0);
     const ctlRow = ctls.length >= 7 ? row("Kebugaran (CTL)", fmt(+ctls[0].ctl) + " → " + fmt(+ctls[ctls.length - 1].ctl)) : "";
-    const capHtml = card("Kapasitas latihan", "Beban eksternal yang dilakukan, per minggu kalender (minggu kosong dihitung).",
+    const capHtml = card("Kapasitas latihan", "Perkembangan volume latihan mingguan.",
       tiles + barChart("prgCap", barItems) + volRows + row("Sesi per minggu", fmt(avgSes || 0)) + row("Total durasi", Math.round(totMin) + " menit") + ctlRow + distHtml,
       capNote, capConf);
 
@@ -5469,11 +5469,11 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       const items = durRuns.map(o => ({ ms: o.x[0], v: o.d.effDrop != null ? o.d.effDrop : o.d.paceDrift,
         t: "<b>" + dm(o.x[0]) + "</b> · " + fmt(o.x[3]) + " km · pace " + sgn(o.d.paceDrift, 1) + "%" + (o.d.hrDrift != null ? ", HR " + sgn(o.d.hrDrift, 1) + " bpm" : "") + (o.d.effDrop != null ? ", efisiensi " + sgn(-o.d.effDrop, 1) + "%" : "") }));
       durNote = (durV === "up" ? "Pace dan detak jantung cenderung bertahan sampai sepertiga akhir lari panjang." : durV === "flat" ? "Ada penurunan efisiensi moderat di sepertiga akhir; wajar bila lari panjangnya bertambah jauh." : "Efisiensi turun cukup besar di sepertiga akhir. Bisa berarti start terlalu cepat, asupan energi kurang, atau panas.") + trend +
-        " Pace dan HR dibanding sepertiga tengah lari, bukan sepertiga awal, supaya pemanasan tidak ikut terhitung.";
+        "";
       durHtml = card("daya tahan", "Kestabilan di sepertiga akhir lari panjang · " + durRuns.length + " sesi easy/lari panjang ≥ 5 km atau ≥ 40 menit",
         lineChart("prgDur", items, v => fmt(v) + "%", true, "Penurunan efisiensi akhir vs tengah (%)") +
         row("Perubahan pace (median)", sgn(pd, 1) + "%") + (hd != null ? row("Perubahan HR (median)", sgn(hd, 1) + " bpm") : "") + (ed != null ? row("Penurunan efisiensi (median)", fmt(ed) + "%") : "") + trendRow,
-        durNote + " Elevasi, suhu, dan konsumsi gel belum dikontrol.", durConf);
+        durNote, durConf);
     } else {
       durHtml = card("daya tahan", "Kestabilan pace dan HR di sepertiga akhir lari panjang", '<p class="prg-note">' + durRuns.length + ' sesi memenuhi syarat dari minimal 3. Lari interval, tempo, dan lomba tidak dipakai karena pace-nya memang bervariasi.</p>', "", "");
     }
