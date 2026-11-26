@@ -3591,9 +3591,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
           if (name) state.icuName = name.slice(0, 40);
           if (!(+state.max > 0) && a.max_hr > 0) state.max = a.max_hr;
           if (!(+state.rest > 0) && a.resting_hr > 0) state.rest = a.resting_hr;
-          if (!(+state.age > 0) && a.birthday) {
+          if (!state.birthDate && a.birthday) {
             const by = new Date(a.birthday);
-            if (isFinite(+by)) state.age = Math.max(12, Math.min(90, new Date().getFullYear() - by.getFullYear()));
+            if (isFinite(+by)) { state.birthDate = by.getFullYear() + "-" + String(by.getMonth()+1).padStart(2,"0") + "-" + String(by.getDate()).padStart(2,"0"); state.age = ageFromBirthDate(state.birthDate); }
           }
         }
       } catch (_) {}
