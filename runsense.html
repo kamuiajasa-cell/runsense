@@ -1108,6 +1108,18 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 @media (prefers-reduced-motion: reduce) {
   button, [role="button"], .style-option { transition: none !important; }
 }
+.rg{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.rg-row{display:flex;flex-wrap:wrap;gap:12px 6px}.rg-row .rg{width:calc(33.33% - 4px)}.rg-row .rg-big{width:100%}
+.rgw{position:relative;width:64px;height:64px}.rg-big .rgw{width:92px;height:92px}
+.rgw svg{width:100%;height:100%;transform:rotate(-90deg)}
+.rgw circle{fill:none;stroke-width:6;stroke-linecap:round}.rgw .t{stroke:var(--el)}
+.rgw span{position:absolute;inset:0;display:grid;place-items:center;font-size:14px;font-weight:800}.rg-big .rgw span{font-size:24px}
+.rg small{font-size:10.5px;color:var(--grey);line-height:1.3}
+.sa-flow .sa-lead{display:none}
+.sa-more summary{font-size:11px;color:var(--grey);cursor:pointer}.sa-more[open] summary{margin-bottom:6px}
+.sa-cad circle{fill:var(--primary)}
+.sa-line.cad{stroke:#a78bfa}
+#saR-sess{position:sticky;top:0;z-index:5;background:var(--card);padding:6px 0;border-bottom:1px solid var(--card-border)}
 </style>
 </head>
 <body>
@@ -2886,6 +2898,19 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     pcBusy = false;
     return todo.length;
   }
+  function sxDec(ch, k) {
+    const o = [];
+    for (let i = 0; i < ch.length; i += k) {
+      const g = ch.slice(i, i + k), m = (j) => { const v = g.map((q) => q[j]).filter((n) => n > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0; }, l = g[g.length - 1];
+      o.push([l[0], Math.round(m(1) * 100) / 100, Math.round(m(2)), l[3], Math.round(m(4))]);
+    }
+    return o;
+  }
+  const sxView = {};
+  function sxPrune() {
+    const ms = {}; (state.acts || []).forEach((a) => { if (a && a[9]) ms[String(a[9])] = a[0]; });
+    Object.keys(state.sx).filter((k) => state.sx[k] && state.sx[k].chart && !state.sx[k].thin && !(sxView[k] && Date.now() - sxView[k] < 20 * 60e3)).sort((a, b) => (ms[b] || 0) - (ms[a] || 0)).slice(12).forEach((k) => { const e = state.sx[k]; e.chart = sxDec(e.chart, 10); e.thin = 1; });
+  }
   function summarizeStream(raw, a, minN) {
     const src = raw && !Array.isArray(raw) && Array.isArray(raw.streams) ? raw.streams : raw;
     const get = (t) => {
@@ -2983,7 +3008,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (Object.keys(bt).length) out.best = bt;
     }
     // Sampel ringkas untuk grafik, sumbu = jarak: [km, pace, hr, detik]; pace dihaluskan (rata-rata 5 titik).
-    const stride = Math.max(1, Math.floor((time.length - 1) / 180));
+    const stride = Math.max(1, Math.ceil((time.length - 1) / 7200)), cK = cadence && cadence.length === time.length ? rwCadUnit(cadence) : 0;
     const smp = [];
     let prev = 0;
     for (let i = stride; i < time.length; i += stride) {
@@ -2992,15 +3017,38 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       const v = velocity && velocity.length === time.length ? Number(velocity[i]) : NaN;
       const p = Number.isFinite(v) && v > 0.25 ? 1000 / v / 60 : dt > 0 && dd > 0 ? (dt / 60) / dd : 0;
       const h = hr && hr.length === time.length ? Number(hr[i]) : 0;
-      if (p >= 2.5 && p <= 20 && time[i] > time[0]) smp.push({ d: (Number(dist[i]) - Number(dist[0])) / 1000, p, h: h > 40 ? h : 0, t: Number(time[i]) - Number(time[0]) });
+      if (p >= 2.5 && p <= 20 && time[i] > time[0]) { const cv = cK ? Number(cadence[i]) * cK : 0; smp.push({ d: (Number(dist[i]) - Number(dist[0])) / 1000, p, h: h > 40 ? h : 0, c: cv > 40 && cv < 260 ? cv : 0, t: Number(time[i]) - Number(time[0]) }); }
       prev = i;
     }
     const chart = smp.map((q, i) => {
       const w = smp.slice(Math.max(0, i - 2), i + 3);
-      const hs = w.filter(x => x.h > 0);
-      return [Math.round(q.d * 1000) / 1000, Math.round(mean(w.map(x => x.p)) * 100) / 100, hs.length ? Math.round(mean(hs.map(x => x.h))) : 0, Math.round(q.t)];
+      const hs = w.filter(x => x.h > 0), cs = w.filter(x => x.c > 0);
+      return [Math.round(q.d * 1000) / 1000, Math.round(mean(w.map(x => x.p)) * 100) / 100, hs.length ? Math.round(mean(hs.map(x => x.h))) : 0, Math.round(q.t), cs.length ? Math.round(mean(cs.map(x => x.c))) : 0];
     });
     if (chart.length >= 8) out.chart = chart;
+    {
+      const N = time.length, vOK = velocity && velocity.length === N, hOK = hr && hr.length === N, t0 = Number(time[0]);
+      const ap = []; if (vOK) for (let i = 1; i < N; i++) { const v = Number(velocity[i]); if (v > 0.8) ap.push(1000 / v / 60); }
+      const med0 = ap.length ? med(ap) : 0;
+      let rs = 0, sp = 0, sh = 0; const blk = {}, bn = {};
+      for (let i = 1; i < N; i++) {
+        const dt = Number(time[i]) - Number(time[i - 1]); if (!(dt > 0) || dt > 10) continue;
+        const v = vOK ? Number(velocity[i]) : (Number(dist[i]) - Number(dist[i - 1])) / dt, h = hOK ? Number(hr[i]) : 0, c = cK ? Number(cadence[i]) * cK : 0, p = v > 0.3 ? 1000 / v / 60 : 0;
+        if (!(v > 1.2 && h > 40 && (cK ? c > 135 : p > 0 && p <= med0 * 1.2))) continue;
+        rs += dt; sp += p * dt; sh += h * dt; { const hb = Math.round(h / 5) * 5, q = bn[hb] || (bn[hb] = [0, 0]); q[0] += dt; q[1] += v * dt; }
+        const k = Math.floor((Number(time[i]) - t0) / 60), b = blk[k] || (blk[k] = [0, 0]); b[0] += dt; b[1] += (v / h) * dt;
+      }
+      if (rs >= 300) {
+        const eff = []; const last = Math.floor((Number(time[N - 1]) - t0) / 60);
+        for (let k = 0; k <= last; k++) eff.push(blk[k] && blk[k][0] >= 25 ? blk[k][1] / blk[k][0] : null);
+        const base = eff.slice(3, 10).filter((e) => e != null); let drift = 0;
+        if (base.length >= 4) {
+          const b0 = mean(base);
+          for (let k = 10; k + 2 < eff.length && !drift; k++) if (eff[k] != null && eff[k + 1] != null && eff[k + 2] != null && (eff[k] + eff[k + 1] + eff[k + 2]) / 3 < b0 * 0.95) drift = k;
+        }
+        out.nym = { rs: Math.round(rs), pace: Math.round((sp / rs) * 1000) / 1000, hr: Math.round((sh / rs) * 10) / 10, drift, tot: Math.round((Number(time[N - 1]) - t0) / 60), bins: Object.keys(bn).map((k) => [+k, Math.round(bn[k][0]), Math.round((bn[k][1] / bn[k][0]) * 100) / 100]) };
+      }
+    }
 
     // Segmentasi aktivitas memakai rencana workout kalender, bukan tebakan pace.
     const T = time[time.length - 1] - time[0];
@@ -3314,13 +3362,14 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     return {zoneMinutes:sums.map(v=>Math.round(v/60*10)/10),coverageMinutes:Math.round(coverage/60),activities,lthr:lthrNow()};
   }
 
-  async function ensureStream(a) {
+  async function ensureStream(a, full) {
     if (!a || !a[9] || !state.apiKey || state.apiKey === "demo") return;
     const id = String(a[9]);
     if (/^hw/.test(id)) return; // latihan dari jam: ringkasan dihitung dari titik data jam saat masuk, bukan dari ICU
     const cached = state.sx[id];
+    if (full) sxView[id] = Date.now();
     // Cache lama hanya menyimpan pace hasil distance/time; ambil ulang untuk memakai velocity stream.
-    if ((cached && cached.streamVersion>=16 && cached.chart && cached.splits) || (cached && cached.streamVersion>=16 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
+    if ((cached && cached.streamVersion>=19 && cached.chart && cached.splits && !(full && cached.thin)) || (cached && cached.streamVersion>=19 && cached.none && cached.checkedAt && Date.now() - cached.checkedAt < 6 * 3600e3) || sxBusy[id]) return;
     if (a[1] !== "run" || a[2] < 5 || a[3] < 0.3) return;
     sxBusy[id] = 1;
     try {
@@ -3344,7 +3393,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       } catch (_) {}
       state.sx[id] = Object.assign({}, summary || { none: 1 }, planned || cadenceOnly || {}, {
         intervals:actualIntervals, planDate:savedPlan?dayKey:null,
-        streamVersion:16, checkedAt:Date.now()
+        streamVersion:19, checkedAt:Date.now()
       });
     } catch (e) {
       // Kegagalan jaringan/auth tidak disimpan permanen; 404/422 dicoba ulang setelah jeda.
@@ -3354,7 +3403,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (state.sx[id]) {
       const ks = Object.keys(state.sx);
       if (ks.length > 400) ks.slice(0, ks.length - 400).forEach((x) => delete state.sx[x]);
-      ks.slice(-400, -60).forEach((x) => { const e = state.sx[x]; if (e && (e.chart || e.splits)) { delete e.chart; delete e.splits; e.lite = 1; } });
+      ks.slice(-400, -60).forEach((x) => { const e = state.sx[x]; if (e && (e.chart || e.splits)) { delete e.chart; delete e.splits; e.lite = 1; } }); sxPrune();
       persist();
       if (state.athlete) renderAll();
       const mo = $("#actModal");
@@ -3369,12 +3418,27 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (durBusy || !state.apiKey || state.apiKey === "demo" || !Array.isArray(list)) return;
     const todo = list.filter((a) => a && a[9] && !/^hw/.test(String(a[9])) && a[1] === "run" && (a[3] >= 5 || a[2] >= 40)
       && !durTried[String(a[9])]
-      && !(state.sx[String(a[9])] && state.sx[String(a[9])].streamVersion >= 16)).slice(-12);
+      && !(state.sx[String(a[9])] && state.sx[String(a[9])].streamVersion >= 19)).slice(-12);
     if (!todo.length) return;
     durBusy = true;
     try { for (const a of todo) { durTried[String(a[9])] = 1; await ensureStream(a); } } catch (_) {}
     durBusy = false;
     setTimeout(() => backfillDurability(list), 50); /* lanjut sampai semua lari periode terpilih terisi */
+  }
+
+  /* Isi otomatis: stream semua lari 180 hari terakhir yang belum punya ringkasan terbaru; berurutan, jeda pendek. Data mentah langsung diciutkan oleh sxPrune. */
+  let bfBusy = false;
+  const bfTried = {};
+  async function backfillRuns() {
+    if (bfBusy || !state.apiKey || state.apiKey === 'demo') return;
+    const cut = Date.now() - 180 * 864e5;
+    const todo = (state.acts || []).filter((a) => a && a[9] && a[1] === 'run' && a[0] >= cut && a[2] >= 10 && !/^hw/.test(String(a[9])) && !bfTried[String(a[9])]
+      && !(state.sx[String(a[9])] && state.sx[String(a[9])].streamVersion >= 19)).sort((p, q) => q[0] - p[0]).slice(0, 6);
+    if (!todo.length) return;
+    bfBusy = true;
+    try { for (const a of todo) { bfTried[String(a[9])] = 1; await ensureStream(a); await new Promise((r) => setTimeout(r, 400)); } } catch (_) {}
+    bfBusy = false;
+    setTimeout(backfillRuns, 300);
   }
 
   function kind(t) {
@@ -3724,7 +3788,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
             tone: rev.tone, headline: strip(rev.headline), summary: strip(rev.summary),
             sections: (rev.sections || []).map((sec) => ({ title: strip(sec.title), notes: (sec.notes || []).map((n) => strip(n.text)).filter(Boolean).slice(0, 8) }))
           } : null,
-          streamAvailable: has,
+          score: (() => { try { const sc = runScore(x, sx, rev); return sc ? { total: sc.score, parts: sc.parts } : null; } catch (_) { return null; } })(), streamAvailable: has,
           splits: has && sx.splits ? sx.splits.map((q) => ({ km: q.km, paceMinPerKm: r1(q.pace), hr: q.hr ? Math.round(q.hr) : null })) : null,
           drift: has ? { dec: sx.dec || null, fade: sx.fade || null, fast: sx.fast || null } : null,
           runOnly: has ? sx.runOnly || null : null, walkShare: has ? r1(sx.walkShare) : null,
@@ -4969,10 +5033,14 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       const rev = reviewRun(todayRun);
       if (rev && (rev.headline || rev.summary)) {
         reviewCard.style.display = "block";
-        $("#reviewBody").innerHTML =
-          (rev.headline ? `<div class="review-note ${rev.tone || "g"}" style="font-weight:750">${rev.headline}</div>` : "") +
-          (rev.summary ? `<p class="hint" style="margin:9px 0 0">${rev.summary}</p>` : "") +
-          `<button class="btn btn-outline sm" style="margin-top:12px" type="button" onclick="openAct(${todayRun[0]})">Lihat analisis di Riwayat</button>`;
+        $("#reviewBody").innerHTML = (() => {
+          const sxT = todayRun[9] && state.sx ? state.sx[String(todayRun[9])] : null, scT = runScore(todayRun, sxT, rev), coT = saCoachSummaryHTML(rev);
+          return (rev.headline ? `<div class="review-note ${rev.tone || "g"}" style="font-weight:750">${rev.headline}</div>` : "") +
+            `<div style="display:flex;gap:12px;align-items:center;margin-top:10px">` +
+            (scT ? `<div style="flex:none">${saRing(scT.score / 100, scT.score, "Skor lari", scT.score >= 80 ? "g" : scT.score >= 60 ? "y" : "r", 1)}</div>` : "") +
+            (coT ? `<div style="flex:1;min-width:0">${coT}</div>` : (rev.summary ? `<p class="hint" style="margin:0;flex:1">${rev.summary}</p>` : "")) + `</div>` +
+            `<button class="btn btn-outline sm" style="margin-top:12px" type="button" onclick="openAct(${todayRun[0]})">Lihat analisis di Riwayat</button>`;
+        })();
       } else reviewCard.style.display = "none";
     } else {
       reviewCard.style.display = "none";
@@ -5590,7 +5658,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   const saKm = (k) => (Math.round(k * 10) / 10).toString().replace(".", ",");
   const ZN = [["Z1", "recovery", "#5b8def"], ["Z2", "aerobic", "var(--primary)"], ["Z3", "tempo", "var(--yellow)"], ["Z4", "subthreshold", "#ff8a3d"], ["Z5", "superthreshold", "var(--red)"], ["Z6", "aerobic capacity", "#d65bd6"], ["Z7", "anaerobic", "#d94343"]];
   const saSec = (title, lead, inner) => `<section class="sa-sec"><div class="section-label">${title}</div>${lead ? `<p class="sa-lead">${lead}</p>` : ""}${inner}</section>`;
-  const saNotes = (rev, title) => { const s = (rev.sections || []).find((x) => x.title === title); return s ? s.notes.map((n) => `<div class="review-note ${n.k}">${n.text}</div>`).join("") : ""; };
+  const saNotes = (rev, title) => { const s = (rev.sections || []).find((x) => x.title === title); if (!s || !s.notes.length) return ''; const w = s.notes.some((n) => n.k !== 'g'), rd = s.notes.some((n) => n.k === 'r'); return `<details class="sa-more"${rd ? ' open' : ''}><summary>Catatan coach (${s.notes.length})${w ? ' · ada yang perlu dicek' : ''}</summary>${s.notes.map((n) => `<div class="review-note ${n.k}">${n.text}</div>`).join('')}</details>`; };
   const saMean = (x) => x.reduce((p, q) => p + q, 0) / x.length;
 
   /* Intensitas: satu indikator terpadu (kapasitas terpakai) + pace sesi vs pace ambang */
@@ -5671,10 +5739,60 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     }).join("");
     const actualIntervalBlock = actualIntervalRows ? `<details class="sa-minute-details"><summary>Interval aktual dari Intervals.icu (${actualIntervals.length} segmen)</summary>${actualIntervalRows}</details>` : "";
     const segmentBlock = segs.length || actualIntervalRows ? `<div class="sa-segments"><div class="sa-head"><span class="sa-title">Struktur latihan tersimpan</span><span class="sa-pill">${segs.length?segs.filter(x=>x.type==="work").length:actualIntervals.length} segmen</span></div><div class="sa-sub">Rencana dibaca dari penyimpanan lokal RunSense. Kadens dihitung hanya dari sampel saat berlari (rerata kadens per jendela 5 detik >135 spm); fase jalan/pemulihan berjalan tidak dicampur. Rincian menit memakai stream sensor.</div>${phaseRows}${minuteBlock}${actualIntervalBlock}</div>` : "";
-    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Pace & detak jantung</span><span class="sa-pill">per jarak</span></div>` + segmentBlock +
-      `<div class="sa-read" id="saR-sess">Geser jari di grafik untuk melihat pace dan HR di titik yang sama.</div>` +
-      `<div class="sa-chart-label">Pace <span>menit/km · garis lebih tinggi = lebih cepat</span></div>${pf ? `<div class="sa-find">${pf}</div>` : ""}${paceSvg}${hrBlock}` +
-      `<div class="sa-sub">Garis dihaluskan dari sampel sensor, bukan rata-rata seluruh aktivitas. Perubahan pace dan HR yang berjalan bersamaan bisa jadi tanda tanjakan, panas, atau kelelahan.</div></div>`;
+    let cadSvg = '';
+    const cad = pts.map((q) => (q[4] > 0 ? q[4] : null)), cv = cad.filter((v) => v != null);
+    if (cv.length >= 8) {
+      const lo = Math.floor((Math.min(...cv) - 3) / 5) * 5, hi = Math.ceil((Math.max(...cv) + 3) / 5) * 5;
+      const cy = (v) => T + (1 - (v - lo) / Math.max(1, hi - lo)) * ph;
+      let cd = '', pv = -9;
+      pts.forEach((q, i) => { if (cad[i] == null) return; cd += (pv >= i - 4 ? 'L' : 'M') + x(q[0]).toFixed(1) + ',' + cy(cad[i]).toFixed(1); pv = i; });
+      cadSvg = `<svg class="sa-chart sa-touch" data-k="c" viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik kadens terhadap jarak">${grid((v) => Math.round(v), lo, hi, false)}<path class="sa-line cad" d="${cd}"/>${xax}${mk}</svg>`;
+      SA.sess.cy = cad.map((v) => (v != null ? cy(v) : null)); SA.sess.cad = cad;
+    }
+    const notes = [pf, hf].filter(Boolean).map((t) => `<div class="sa-note">${t}</div>`).join('');
+    return `<div class="sa-card"><div class="sa-head"><span class="sa-title">Pace, detak jantung${cadSvg ? ' & kadens' : ''}</span><span class="sa-pill">per jarak</span></div>` + segmentBlock +
+      `<div class="sa-read" id="saR-sess">Geser jari di grafik: garis penanda ikut bergerak di semua grafik.</div>` +
+      `<div class="sa-chart-label">Pace <span>menit/km · lebih tinggi = lebih cepat</span></div>${paceSvg}` +
+      (hrSvg ? `<div class="sa-chart-label">Detak jantung <span>bpm</span></div>${hrSvg}` : '') +
+      (cadSvg ? `<div class="sa-chart-label">Kadens <span>spm · termasuk saat jalan</span></div>${cadSvg}` : '') +
+      `<details class="sa-more"><summary>Catatan grafik</summary>${notes}<div class="sa-note">Garis dihaluskan dari sampel sensor, bukan rata-rata seluruh aktivitas. Pace, HR, dan kadens yang bergerak bersamaan bisa jadi tanda tanjakan, panas, atau kelelahan.</div></details></div>`;
+  }
+
+  /* ---------- Cincin ringkas, skor lari, grafik kadens ---------- */
+  function saRing(f, val, lab, tone, big) {
+    const r = 26, c = 2 * Math.PI * r, col = tone === 'r' ? 'var(--red)' : tone === 'y' ? 'var(--yellow)' : tone === 'n' ? 'var(--grey)' : 'var(--primary)';
+    return `<div class="rg${big ? ' rg-big' : ''}"><div class="rgw"><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="t" cx="32" cy="32" r="${r}"/><circle cx="32" cy="32" r="${r}" stroke="${col}" stroke-dasharray="${(c * clamp(f, 0, 1)).toFixed(1)} ${c.toFixed(1)}"/></svg><span>${val}</span></div><small>${lab}</small></div>`;
+  }
+  function saMore(h) { return h.replace(/<div class="sa-sub">([\s\S]*?)<\/div>/g, '<details class="sa-more"><summary>Catatan</summary><div class="sa-sub">$1</div></details>'); }
+  /* Skor lari 0-100 = kualitas eksekusi sesi (bukan kebugaran). Komponen tanpa data tidak dihitung, bobot dinormalkan ulang. */
+  function runScore(act, sx, rev) {
+    const m = (rev && rev.meta) || {}, ty = detectType(act).type, q = ty === 'thr' || ty === 'vo2' || ty === 'race', parts = [];
+    const lin = (v, a, b) => clamp((v - a) / (b - a), 0, 1);
+    if (m.pct != null) { const p = m.pct; parts.push({ k: 'Intensitas', w: 35, v: Math.round(q ? (p >= 0.78 ? 100 : 50 + lin(p, 0.6, 0.78) * 50) : (p <= 0.68 ? 100 : p <= 0.78 ? 100 - lin(p, 0.68, 0.78) * 40 : 60 - lin(p, 0.78, 0.95) * 40)) }); }
+    const st = [];
+    if (sx && sx.dec && Number.isFinite(+sx.dec.pct)) { const d = +sx.dec.pct; st.push(d <= 3 ? 100 : d <= 5 ? 100 - (d - 3) * 7.5 : d <= 8 ? 85 - (d - 5) * 8 : Math.max(30, 61 - (d - 8) * 7)); }
+    if (sx && sx.fade && Number.isFinite(+sx.fade.pct)) st.push(clamp(100 - Math.max(0, +sx.fade.pct - 3) * 6, 20, 100));
+    if (st.length) parts.push({ k: 'Stabilitas', w: 30, v: Math.round(saMean(st)) });
+    if (sx && sx.planSource === 'local-plan' && Number.isFinite(sx.walkShare)) parts.push({ k: 'Disiplin', w: 15, v: Math.round(100 - lin(sx.walkShare, 0.05, 0.3) * 70) });
+    const fe = typeof FEEL !== 'undefined' && FEEL.sessions ? FEEL.sessions[act[0]] : null;
+    if (fe && fe.rpe > 0) { let v = 100 - Math.max(0, fe.rpe - (q ? 7 : 4)) * 12; if (fe.legs >= 2) v -= 20; parts.push({ k: 'Respons', w: 20, v: Math.round(clamp(v, 10, 100)) }); }
+    if (parts.length < 2) return null;
+    const W = parts.reduce((u, p) => u + p.w, 0);
+    return { score: Math.round(parts.reduce((u, p) => u + p.v * p.w, 0) / W), parts };
+  }
+  function saRingsHTML(act, sx, rev) {
+    const rs = [], sc = runScore(act, sx, rev), tn = (v) => (v >= 80 ? 'g' : v >= 60 ? 'y' : 'r');
+    const tz = sx ? (tizNow(sx) || sx.tiz) : null;
+    if (sc) rs.push(saRing(sc.score / 100, sc.score, 'Skor lari', tn(sc.score), 1));
+    if (Array.isArray(tz)) { const lo = tz[0] + tz[1]; rs.push(saRing(lo / 100, lo + '%', 'Z1–Z2', lo >= 70 ? 'g' : lo >= 40 ? 'y' : 'r')); }
+    if (sx && sx.dec && Number.isFinite(+sx.dec.pct)) { const d = +sx.dec.pct; rs.push(saRing(d / 10, d + '%', 'Drift HR', d < 5 ? 'g' : d < 8 ? 'y' : 'r')); }
+    if (sx && sx.fade && Number.isFinite(+sx.fade.pct)) { const f = +sx.fade.pct; rs.push(saRing(f / 15, f + '%', 'Fade akhir', f <= 3 ? 'g' : f <= 8 ? 'y' : 'r')); }
+    if (sx && sx.runOnly && sx.runOnly.cadence > 0) { const c = Math.round(sx.runOnly.cadence); rs.push(saRing((c - 120) / 70, c, 'Kadens lari', 'n')); }
+    if (sx && Number.isFinite(sx.walkShare) && sx.walkShare > 0) { const w = Math.round(sx.walkShare * 100); rs.push(saRing(w / 40, w + '%', 'Porsi jalan', 'n')); }
+    if (!rs.length) return '';
+    const miss = ['Intensitas', 'Stabilitas', 'Disiplin', 'Respons'].filter((k) => !sc || !sc.parts.some((p) => p.k === k));
+    const det = sc ? `<details class="sa-more"><summary>Rincian skor</summary><div class="sa-note">${sc.parts.map((p) => p.k + ' <b>' + p.v + '</b> (bobot ' + p.w + ')').join(' · ')}.</div>` + (miss.length ? `<div class="sa-note">Tidak dihitung (data belum ada): ${miss.join(', ')}.</div>` : '') + `<div class="sa-note">Menilai kualitas eksekusi sesi ini, bukan kebugaran. Bobot dinormalkan dari komponen yang tersedia.</div></details>` : `<div class="sa-note">Skor belum dihitung: butuh minimal 2 komponen (stream atau RPE belum cukup).</div>`;
+    return `<div class="sa-card"><div class="rg-row">${rs.join('')}</div>${det}</div>`;
   }
 
   /* Distribusi zona HR: satu bar bertumpuk + angka stabilitas HR */
@@ -5786,6 +5904,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (rev.headline) h += `<div class="review-note ${rev.tone}" style="font-weight:700">${rev.headline}</div>`;
     if (rev.summary) h += `<p class="hint" style="font-family:var(--mono)">${rev.summary}</p>`;
     const isRun = act[1] === "run";
+    const rg = saRingsHTML(act, sx, rev);
+    if (rg) h += saSec('Ringkas sesi', '', rg);
     const coach = saCoachSummaryHTML(rev);
     if (coach) h += saSec("Kesimpulan", "Temuan utama dan tindak lanjut dari data sesi ini.", coach);
     if (isRun) {
@@ -5798,7 +5918,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (ad) h += saSec("Dibanding sesi sejenis", "Efisiensi dan tren beberapa sesi dengan jenis serta jarak yang sebanding.", ad);
     const i1 = saIntensityHTML(act, rev) + saNotes(rev, "Intensitas");
     if (i1) h += saSec("Pembanding kapasitas", "Seberapa berat sesi ini dibanding model kapasitas (skala METs), sebagai pembanding, bukan penilai utama.", i1);
-    return `<div class="sa-flow">${h}</div>`;
+    return `<div class="sa-flow">${saMore(h)}</div>`;
   }
 
   /* Interaksi sentuh: geser di grafik (pace & HR sinkron) dan ketuk segmen/batang */
@@ -5807,7 +5927,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (!S || !root) return;
     const q = S.pts[i], xx = S.L + (q[0] / S.D) * S.pw;
     root.querySelectorAll("svg.sa-touch").forEach((svg) => {
-      const g = svg.querySelector(".mk"), cy = svg.dataset.k === "h" ? S.hy[i] : S.py[i];
+      const g = svg.querySelector(".mk"), cy = svg.dataset.k === "h" ? S.hy[i] : svg.dataset.k === "c" ? S.cy[i] : S.py[i];
       if (!g) return;
       g.style.display = "";
       const ln = g.querySelector("line"), ci = g.querySelector("circle");
@@ -5815,7 +5935,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       if (cy == null) ci.style.display = "none"; else { ci.style.display = ""; ci.setAttribute("cx", xx); ci.setAttribute("cy", cy); }
     });
     const out = root.querySelector("#saR-sess");
-    if (out) out.innerHTML = `<span><b>km ${saKm(q[0])}</b> · menit ${Math.round(q[3] / 60)} · pace <b>${mp(q[1])}/km</b>${q[2] > 0 ? " · HR <b>" + q[2] + " bpm</b>" : ""}</span>`;
+    if (out) out.innerHTML = `<span><b>km ${saKm(q[0])}</b> · menit ${Math.round(q[3] / 60)} · pace <b>${mp(q[1])}/km</b>${q[2] > 0 ? " · HR <b>" + q[2] + " bpm</b>" : ""}${S.cad && S.cad[i] > 0 ? " · kadens <b>" + Math.round(S.cad[i]) + " spm</b>" : ""}</span>`;
   }
   function saBind() {
     const root = $("#mBody");
@@ -5873,7 +5993,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const act = (state.acts || []).find((x) => x[0] === ms);
     if (!act) return;
     curAct = ms;
-    ensureStream(act);
+    ensureStream(act, true);
     const det = detectType(act);
     const rev = reviewRun(act);
     const pace = actPace(act);
@@ -6276,7 +6396,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (state.acts.length > 1500) state.acts = state.acts.slice(-1500);
     const ks = Object.keys(state.sx);
     if (ks.length > 400) ks.slice(0, ks.length - 400).forEach((x) => delete state.sx[x]);
-      ks.slice(-400, -60).forEach((x) => { const e = state.sx[x]; if (e && (e.chart || e.splits)) { delete e.chart; delete e.splits; e.lite = 1; } });
+      ks.slice(-400, -60).forEach((x) => { const e = state.sx[x]; if (e && (e.chart || e.splits)) { delete e.chart; delete e.splits; e.lite = 1; } }); sxPrune();
 
     state.hwLast = Date.now();
     persist();
@@ -6898,7 +7018,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   function durasiNyaman(runs, lthr) {
     const m = fit(runs); if (!m || !(lthr > 0)) return null;
     const tol = 0.018 * lthr;
-    const ok = runs.filter(valid).filter((r) => r.hr - (m.a + m.b * pace(r)) <= tol).map((r) => r.min).sort((x, y) => x - y);
+    const ok = runs.filter(valid).filter((r) => r.hr - (m.a + m.b * pace(r)) <= tol).map((r) => (r.dur > 0 ? r.dur : r.min)).sort((x, y) => x - y);
     if (ok.length < 6) return null;
     return { n: ok.length, menit: ok[Math.floor((ok.length - 1) * 0.75)] };
   }
@@ -6933,22 +7053,22 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     let memo = { k: "", v: null }, gmemo = { k: "", v: null };
     const sx = (p) => { const s = Math.round(p * 60); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
     const runsAll = () => (state.acts || []).filter((a) => a[1] === "run" && +a[2] >= 8 && +a[3] > 0 && +a[4] > 0)
-      .map((a) => ({ ms: a[0], min: +a[2], km: +a[3], hr: +a[4] })).sort((x, y) => x.ms - y.ms);
+      .map((a) => { const r = { ms: a[0], min: +a[2], km: +a[3], hr: +a[4] }, n = state.sx && state.sx[String(a[9])] && state.sx[String(a[9])].nym; if (n && n.rs >= 480 && n.hr > 40 && n.pace >= 3.5) { r.min = n.rs / 60; r.km = r.min / n.pace; r.hr = n.hr; r.dur = n.drift > 0 ? n.drift : n.tot; r.s = 1; } return r; }).sort((x, y) => x.ms - y.ms);
     const hrOK = () => { const L = lthrNow(); return L >= 100 && L <= 220 ? L : 0; };   // satu sumber LTHR yang sama dengan analisis lain
     function now() {
       const runs = runsAll(), hp = hrOK(), t = Date.now();
-      const k = runs.length + ":" + (runs.length ? runs[runs.length - 1].ms : 0) + ":" + (hp || "-") + ":" + new Date(t).toDateString();
+      const k = runs.length + ":" + (runs.length ? runs[runs.length - 1].ms : 0) + ":" + (hp || "-") + ":" + new Date(t).toDateString() + ":" + runs.filter((r) => r.s).length;
       if (memo.k === k) return memo.v;
       let v = { ok: false, n: runs.length, why: hp ? "data" : "hr" };
       if (hp) {
         const w = runs.filter((r) => t - r.ms < WIN), pn = C.paceNyaman(w, hp), dn = C.durasiNyaman(w, hp);
-        if (pn) v = { ok: true, n: pn.n, pace: pn.pace, cepat: pn.cepat, lambat: pn.lambat, hr: Math.round(C.hrTarget(hp)), lthr: hp, dur: dn ? dn.menit : null, durN: dn ? dn.n : 0 };
+        if (pn) v = { ok: true, ns: w.filter((r) => r.s).length, n: pn.n, pace: pn.pace, cepat: pn.cepat, lambat: pn.lambat, hr: Math.round(C.hrTarget(hp)), lthr: hp, dur: dn ? dn.menit : null, durN: dn ? dn.n : 0 };
       }
       memo = { k, v }; return v;
     }
     function gate() {
       const runs = runsAll(), hp = hrOK(); if (!hp) return { verdict: "DATA KURANG" };
-      const k = runs.length + ":" + (runs.length ? runs[runs.length - 1].ms : 0) + ":" + hp + ":" + new Date().toDateString();
+      const k = runs.length + ":" + (runs.length ? runs[runs.length - 1].ms : 0) + ":" + hp + ":" + new Date().toDateString() + ":" + runs.filter((r) => r.s).length;
       if (gmemo.k === k) return gmemo.v;
       let g; try { g = C.gate(runs, Date.now(), hp); } catch (_) { g = { verdict: "DATA KURANG" }; }
       gmemo = { k, v: g }; return g;
@@ -6963,7 +7083,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       return '<div class="label">Nyaman kamu</div><div style="display:flex;gap:18px;margin-top:8px">' +
         '<div style="flex:1"><div style="' + sm + '">Pace nyaman</div><div style="' + big + '">' + sx(v.pace) + '<span style="' + unit + '"> /km</span></div><div style="' + sm + '">di HR ' + v.hr + ' (85% LTHR ' + v.lthr + ') · rentang ' + sx(v.cepat) + "–" + sx(v.lambat) + "</div></div>" +
         '<div style="flex:1"><div style="' + sm + '">Durasi nyaman</div><div style="' + big + '">' + (v.dur != null ? Math.round(v.dur) : "–") + '<span style="' + unit + '"> mnt</span></div><div style="' + sm + '">' + (v.dur != null ? "dari " + v.durN + " lari yang tidak berat" : "belum cukup lari") + "</div></div></div>" +
-        '<div class="sa-note" style="margin-top:10px">' + (gateTxt(g) ? gateTxt(g) + " " : "") + "Dihitung dari " + v.n + " lari (42 hari). Keyakinan pace " + conf + ", durasi rendah (perkiraan awal).</div>";
+        '<div class="sa-note" style="margin-top:10px">' + (gateTxt(g) ? gateTxt(g) + " " : "") + "Dihitung dari " + v.n + " lari (42 hari), " + v.ns + " memakai stream (hanya saat lari; durasi sampai drift bila ada). Keyakinan pace " + conf + ", durasi rendah (perkiraan awal).</div>";
     }
     /* seri mingguan (akhir tiap minggu) dengan jendela 42 hari; titik terakhir = angka di kartu */
     function series(from, to) {
@@ -7509,16 +7629,27 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
      dikelompokkan per 2 poin suhu efektif (suhu udara + efek matahari). Bin paling efisien = optimum;
      ambang = ujung atas bin yang efisiensinya masih dalam 1,5 / 4 poin persen dari optimum. */
   function clPers() {
-    const key = Object.keys(CL.ctx).length + ":" + (state.acts || []).length;
+    const key = Object.keys(CL.ctx).length + ":" + (state.acts || []).length + ":" + Object.keys(state.sx || {}).filter((k) => state.sx[k] && state.sx[k].nym && state.sx[k].nym.bins).length;
     if (clPers.k === key && clPers.v) return clPers.v;
-    const rows = [];
+    const rows0 = [];
     (state.acts || []).forEach((a) => {
       const c = CL.ctx[a[0]];
       if (!c || c.na || c.t == null || a[1] !== "run" || !(a[4] > 0) || !(a[3] >= 2) || !(a[2] > 0)) return;
       let ty; try { ty = detectType(a).type; } catch (_) { return; }
       if (ty !== "easy") return;
-      rows.push({ ms: a[0], v: clV(c), e: (a[3] * 1000 / a[2]) / a[4] });
+      rows0.push({ ms: a[0], v: clV(c), e: (a[3] * 1000 / a[2]) / a[4] });
     });
+    const sRows = [], L0 = lthrNow();
+    if (L0 >= 100) (state.acts || []).forEach((a) => {
+      const c = CL.ctx[a[0]], n = state.sx && state.sx[String(a[9])] && state.sx[String(a[9])].nym;
+      if (!c || c.na || c.t == null || a[1] !== "run" || !n || !n.bins) return;
+      let ty; try { ty = detectType(a).type; } catch (_) { return; }
+      if (ty === "vo2" || ty === "race") return;
+      let sec = 0, sv = 0, sh = 0;
+      n.bins.forEach((b) => { if (b[0] >= L0 * 0.8 && b[0] <= L0 * 0.92) { sec += b[1]; sv += b[1] * b[2]; sh += b[1] * b[0]; } });
+      if (sec >= 300) sRows.push({ ms: a[0], v: clV(c), e: (sv / sec) / (sh / sec) });
+    });
+    const useS = sRows.length >= 12, rows = useS ? sRows : rows0;
     const rr = [];
     rows.forEach((r) => {
       const nb = rows.filter((x) => x !== r && Math.abs(x.ms - r.ms) <= 28 * 864e5);
@@ -7555,13 +7686,13 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         break;
       }
     }
-    clPers.k = key; clPers.v = out; return out;
+    out.src = useS ? 's' : 'a'; out.ns = sRows.length; clPers.k = key; clPers.v = out; return out;
   }
   const clSc = (c) => { const v = clV(c), P = clPers(); return P.ok ? (v < P.opt ? (P.opt - v) * 0.5 : v - P.opt) : v; };
   function clPersTxt() {
     const P = clPers();
-    if (!P.ok) return `Ambang masih default (25,8° / 27,1°, skala Indonesia): ${P.reason}.`;
-    return `Ambang pribadi dari ${P.n} easy run (${P.conf}): paling efisien ±${Math.round(P.opt)}°C · nyaman < ${P.cool != null ? P.cool + "°C" : "25,8°C (default)"} · berat ≥ ${P.hot != null ? P.hot + "°C" : "27,1°C (default)"}. Suhu efektif = suhu udara + efek matahari.`;
+    if (!P.ok) return `Ambang masih default (25,8° / 27,1°, skala Indonesia): ${P.reason}. Lari berstream dengan cuaca: ${P.ns || 0} dari 12 yang dibutuhkan.`;
+    return `Ambang pribadi dari ${P.n} ${P.src === 's' ? 'lari (stream, HR sama 80–92% LTHR; VO2 dan race tidak dihitung)' : 'easy run'} (${P.conf}): paling efisien ±${Math.round(P.opt)}°C · nyaman < ${P.cool != null ? P.cool + "°C" : "25,8°C (default)"} · berat ≥ ${P.hot != null ? P.hot + "°C" : "27,1°C (default)"}. Suhu efektif = suhu udara + efek matahari.`;
   }
   function clStat(c) {
     const v = clV(c);
@@ -7749,7 +7880,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (!el) { el = document.createElement("div"); el.id = "climCard"; el.style.margin = "12px 0"; mc.insertAdjacentElement("afterend", el); }
     if (state.apiKey === "demo") { el.style.display = "none"; return; }
     const go = async () => {
-      clMatch();
+      clMatch(); backfillRuns();
       if (!CL.loc) { el.style.display = ""; el.innerHTML = `<div style="padding:18px;border:1px solid var(--border,#e5e7eb);border-radius:22px;background:var(--card,#fff)"><b>Cuaca</b> · belum aktif, coach memakai logika latihan biasa. <a href="#" onclick="clLoc();return false" style="color:var(--primary)">Pilih lokasi</a></div>`; return; }
       const o = await wxGet(CL.loc.lat, CL.loc.lon, "fc");
       el.style.display = "";
