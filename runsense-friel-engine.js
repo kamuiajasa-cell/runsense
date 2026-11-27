@@ -148,9 +148,10 @@
     };
     const longRun = () => {
       const cap = phase.name === "prep" ? 40 : phase.name === "base1" ? 55 : phase.name === "base2" ? 70 : phase.name === "base3" ? 85 : 120;
-      const recentLong = runs.filter(a=>a.timestamp>=now-42*DAY && a.duration>=Math.max(50,baseDuration*1.3)).map(a=>a.duration);
-      const longest = recentLong.length ? Math.max(...recentLong) : baseDuration;
-      const target = Math.min(cap, longest * 1.05);
+      const recentRuns = runs.filter(a=>a.timestamp>=now-42*DAY).map(a=>a.duration);
+      const longest = recentRuns.length ? Math.max(...recentRuns) : baseDuration;
+      const phaseCap = Math.max(cap, longest);
+      const target = Math.min(phaseCap, longest * 1.05);
       const mins = Math.round(clamp(Math.max(baseDuration,target), 25, cap));
       return easy("Long Run mudah", mins, "Sasaran daya tahan aerobik. Durasi hanya bertambah bertahap dari lari panjang yang sudah ditoleransi; intensitas tetap mudah.", "LONG");
     };
