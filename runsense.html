@@ -4278,7 +4278,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const now = Date.now(), L = lthrNow(), edges = L > 0 ? lthrZoneEdges() : [];
     const activities = (state.acts || []).map((a) => {
       const duration = Number(a[2]) || 0, distance = Number(a[3]) || 0;
-      const item = { timestamp:Number(a[0]) || 0, kind:a[1] === "run" ? "run" : a[1], duration, distance, hr:Number(a[4]) || 0 };
+      const sessionFeel = FEEL.sessions && FEEL.sessions[a[0]] || {};
+      const item = { timestamp:Number(a[0]) || 0, kind:a[1] === "run" ? "run" : a[1], duration, distance, hr:Number(a[4]) || 0, rpe:Number(sessionFeel.rpe) || 0 };
       try { item.quality = ["thr","vo2","race"].includes(detectType(a).type); } catch (_) {}
       try {
         const sx = state.sx && state.sx[String(a[9])], chart = sx && Array.isArray(sx.chart) ? sx.chart : null;
