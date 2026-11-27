@@ -1202,6 +1202,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     <div class="content progress-layout">
       <header class="page-hero progress-hero" data-hero="progress"><span class="eyebrow">PERKEMBANGAN LARIMU</span><div class="page-title">Perkembangan<br><em>larimu.</em></div><p data-hero-sub>Ringkasan perkembangan lari berdasarkan data yang tersedia.</p></header>
       <div class="filter-dock"><span>PERIODE</span><div class="fchips" id="prgChips"></div></div>
+      <div id="periodizationBody"></div>
       <div id="progressBody"></div>
       <section class="progress-extras" aria-label="Metrik tambahan">
         <div class="sg" id="prgCap"><div class="sg-t">Kapasitas &amp; beban</div><div class="sgroup"><div class="sblock rows" style="padding:4px 0"><div class="row"><span>RAI · kemampuan lari</span><b id="raiValue">—</b></div><div class="row"><span>Max METs</span><b id="afMets">—</b></div><div class="row"><span>CTL / ATL / TSB</span><b id="advLoad">—</b></div><div class="row"><span>LTHR · LTPace</span><b id="advLt">—</b></div></div></div></div>
@@ -4852,7 +4853,26 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   let prgR = 8;
   function setPrg(n) { prgR = n; renderProgress(); }
   window.setPrg = setPrg;
+  function renderPeriodization() {
+    const el = $("#periodizationBody"); if (!el) return;
+    const plan = frielPlanInfo();
+    if (!plan || !plan.calendar) { el.innerHTML = ""; return; }
+    const phaseName = plan.phase && plan.phase.name;
+    const label = {prep:"Persiapan",base1:"Base 1",base2:"Base 2",base3:"Base 3",build:"Build spesifik lomba",peak:"Peak",taper:"Taper",race:"Lomba",transition:"Transisi"};
+    const fmt = value => value ? new Date(value+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"}) : "—";
+    const rows = plan.calendar.phases || [];
+    const timeline = rows.map(p => {
+      const current = p.name === phaseName;
+      const duration = p.name === "race" ? "Hari lomba" : (p.days || 0) + " hari";
+      return '<div class="prg-row" style="align-items:flex-start;gap:10px"><span style="min-width:0"><b>'+label[p.name]+'</b>'+(current?' <span class="prg-pill up">Fase sekarang</span>':'')+'<small style="display:block;color:var(--muted,#777);margin-top:3px">'+fmt(p.start)+' – '+fmt(p.end)+'</small></span><b style="white-space:nowrap">'+duration+'</b></div>';
+    }).join("");
+    const noRace = !state.race;
+    const recovery = plan.recovery || {};
+    el.innerHTML = '<section class="prg-card" style="margin-bottom:14px"><h4>Kalender periodisasi</h4><div class="prg-insight">'+(noRace?'Belum ada tanggal lomba. Fase dasar mengikuti riwayat latihan.':'Menuju lomba '+fmt(state.race)+' · '+Math.max(0,plan.phase.raceDays||0)+' hari lagi')+'</div>'+timeline+'<div class="prg-insight">Siklus pemulihan '+(recovery.cycle||'3:1')+' · pekan fase '+(recovery.week||1)+(recovery.isRecoveryWeek?' · pekan pemulihan':'')+'</div>'+(rows.some(p=>p.compressed)?'<div class="prg-insight">Sebagian fase awal dipadatkan karena tanggal mulai latihan lebih dekat daripada jadwal ideal. Jangan mengejar volume yang terlewat.</div>':'')+'</section>';
+  }
+
   function renderProgress() {
+    renderPeriodization();
     const el = $("#progressBody"); if (!el) return;
     $("#prgChips").innerHTML = [[8, "8 minggu"], [12, "12 minggu"], [26, "6 bulan"], [52, "1 tahun"]]
       .map(([n, t]) => `<button type="button" class="fchip${prgR === n ? " active" : ""}" onclick="setPrg(${n})">${t}</button>`).join("");
