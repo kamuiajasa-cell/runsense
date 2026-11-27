@@ -22,6 +22,10 @@ jobs:
           node-version: 22
       - name: Test adaptive coach with synthetic data
         run: node tests/adaptive-coach.synthetic.test.js
+      - name: Test Friel training engine regression rules
+        run: node tests/friel-engine.regression.test.js
+      - name: Test four-week mileage and quality dose
+        run: node tests/four-week-mileage.test.js
       - name: Test workout pipeline with synthetic data
         run: node tests/workout-pipeline.synthetic.test.js
       - name: Test session analysis with synthetic data
