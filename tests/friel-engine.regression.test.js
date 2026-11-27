@@ -4,7 +4,7 @@ const source=fs.readFileSync(path.join(__dirname,"..","runsense-friel-engine.js"
 const context={window:{},Date,Map,Math,Number,Object,Array,String};
 vm.runInNewContext(source,context);
 const engine=context.window.RunSenseFrielEngine;
-assert.equal(engine.version,"1.5.0");
+assert.equal(engine.version,"1.6.0");
 const DAY=864e5, now=Date.UTC(2026,10,28,12);
 const run=(daysAgo,minutes,extra={})=>({timestamp:now-daysAgo*DAY,kind:"run",duration:minutes,distance:5,hr:140,rpe:3,...extra});
 function inspect(activities=[],extra={}){return engine.inspect({now,activities,...extra});}
@@ -46,6 +46,17 @@ check("10K race 33 days away remains Build-Peak-Taper-Race",()=>{
  const result=inspect([run(1,35)],{raceDate:"2026-12-31",raceDistance:10});
  assert.deepEqual(Array.from(result.calendar.phases,p=>p.name),["build","peak","taper","race"]);
  assert.deepEqual(Array.from(result.calendar.phases,p=>p.days),[19,7,7,1]);
+});
+check("Races 8–14 days away use Peak then seven-day Taper, with no leftover Build day",()=>{
+ for(let days=8;days<=14;days++){
+  const race=new Date(now+days*DAY).toISOString().slice(0,10);
+  const state=inspect([run(1,35)],{raceDate:race,raceDistance:10});
+  const phases=Array.from(state.calendar.phases,p=>({name:p.name,days:p.days}));
+  assert.equal(phases.some(p=>p.name==="build"),false,days+" days out must not leave a Build day");
+  assert.equal(phases.find(p=>p.name==="peak")?.days,days-7,days+" days out Peak duration");
+  assert.equal(phases.find(p=>p.name==="taper")?.days,7,days+" days out Taper duration");
+  assert.ok(["peak","taper"].includes(state.phase.name),days+" days out current phase");
+ }
 });
 check("Races 2–7 days away are entirely in taper with no quality recommendation",()=>{
  for(let days=2;days<=7;days++){
