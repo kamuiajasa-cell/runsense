@@ -30,7 +30,8 @@ check("Load trend uses only activities before the selected session",()=>{
   acts.push([now+DAY,"run",30,5,140,0,"future","",0,"future",999]);
   const out=loadFn({acts},loadOf,DAY)([now,"run",30,5]);
   assert.match(out,/Beban 7 hari sebelum sesi/);
-  assert.match(out,/Rerata 28 hari sebelumnya/);\n  assert.match(out,/Beban 7 hari sebelum sesi dekat dengan kebiasaan/);
+  assert.match(out,/Rerata 28 hari sebelumnya/);
+  assert.match(out,/Beban 7 hari sebelum sesi dekat dengan kebiasaan/);
   assert.doesNotMatch(out,/999/);
 });
 check("Progress trend waits for six comparable sessions",()=>{
