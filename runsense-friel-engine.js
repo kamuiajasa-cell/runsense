@@ -95,8 +95,12 @@
     const recentDurations = runs.filter(a=>a.timestamp >= now-28*DAY && a.duration >= 15 && a.duration <= 150).map(a=>a.duration);
     const baseDuration = median(recentDurations) || 25;
     const weeklyRuns = runs.filter(a=>a.timestamp >= now-7*DAY).length;
-    const weekNo = Math.floor((today - start) / (7*DAY));
-    const recoveryWeek = (phase.week || weekNo + 1) % (Number(input.recoveryCycle) === 2 ? 3 : 4) === 0;
+    const trainingWeek = Math.max(1, Math.floor((today - dateOnly(first)) / (7*DAY)) + 1);
+    const recoveryWeek = trainingWeek % (Number(input.recoveryCycle) === 2 ? 3 : 4) === 0;
+    const currentMinutes = last7.reduce((sum,a)=>sum+(Number(a.duration)||0),0);
+    const priorWeeks = [1,2,3,4].map(w => acts.filter(a=>a.timestamp>=today-w*7*DAY && a.timestamp<today-(w-1)*7*DAY).reduce((sum,a)=>sum+(Number(a.duration)||0),0));
+    const baselineMinutes = priorWeeks.reduce((sum,v)=>sum+v,0)/4;
+    const loadRatio = baselineMinutes>0 ? currentMinutes/baselineMinutes : null;
     const isLongDay = input.preferredLongDay != null ? new Date(now).getDay() === Number(input.preferredLongDay) : new Date(now).getDay() === 6;
     const plannedHardDay = input.preferredQualityDays ? input.preferredQualityDays.includes(new Date(now).getDay()) : [2,5].includes(new Date(now).getDay());
     const raceDays = phase.raceDays;
@@ -115,18 +119,19 @@
       reason:why, steps:[["Pilihan","Jalan santai 10–20 menit hanya jika terasa nyaman"]], score:readiness, tag:"RECOVERY"
     });
     const quality = (kind) => {
-      const threshold = kind === "threshold";
-      const reps = threshold ? (phase.name === "base3" ? 3 : 2) : 5;
-      const work = threshold ? (phase.name === "base3" ? 6 : 5) : 2;
-      const restMin = threshold ? 2 : 2;
-      const total = 15 + reps * (work + restMin);
-      const label = threshold ? "Threshold terkendali" : "Interval aerobik cepat";
-      const zone = threshold ? "Zone 4 · sekitar LTHR" : "Zone 5 · singkat dan terkendali";
+      const strides = kind === "strides", hills = kind === "hills", threshold = kind === "threshold";
+      const reps = strides ? 6 : hills ? 6 : threshold ? (phase.name === "base3" ? 3 : 2) : 5;
+      const work = strides ? 20 : hills ? 1 : threshold ? 6 : 2;
+      const restMin = strides ? 1 : 2;
+      const total = strides ? 30 : 15 + reps * (work + restMin);
+      const label = strides ? "Strides dan teknik lari" : hills ? "Tanjakan terkontrol" : threshold ? "Threshold terkendali" : "Interval aerobik cepat";
+      const zone = strides ? "Cepat-rileks · bukan sprint" : hills ? "RPE 6–7 · kuat, teknik terjaga" : threshold ? "Zone 4 · sekitar LTHR" : "Zone 5 · singkat dan terkendali";
+      const main = strides ? reps+"× 20 dtk strides rileks, jeda 1 mnt jalan" : reps+"× "+work+" mnt kerja terkontrol, jeda "+restMin+" mnt jog/jalan";
       return {
         k:"quality", status:"train", title:label, duration:total+" menit", hr:zone,
         pace:threshold && input.ltPace ? input.ltPace+" /km (panduan, bukan paksaan)" : "Berdasarkan usaha; ulangi dengan teknik rapi",
-        reason:"Sesi kualitas terpilih sesuai fase "+phase.name+". Pemanasan dan pendinginan wajib; hentikan repetisi bila teknik atau kondisi memburuk.",
-        steps:[["Pemanasan","10 mnt jog mudah + mobilitas"],["Inti",reps+"× "+work+" mnt kerja terkontrol, jeda "+restMin+" mnt jog/jalan"],["Pendinginan","5 mnt jog sangat mudah"]],
+        reason:"Sesi sesuai fase "+phase.name+". Pemanasan dan pendinginan wajib; hentikan repetisi bila teknik atau kondisi memburuk.",
+        steps:[["Pemanasan","10 mnt jog mudah + mobilitas"],["Inti",main],["Pendinginan","5 mnt jog sangat mudah"]],
         score:readiness, tag:"QUALITY"
       };
     };
@@ -139,24 +144,38 @@
     if (input.pain >= 2 || feel.pain >= 2) return rest("Ada nyeri yang jelas atau mengubah gerak. Jangan menjalankan sesi lari; kembali bertahap setelah aktivitas harian dan jalan nyaman bebas nyeri.");
     if (input.illness) return rest("Kondisi sakit mengalahkan rencana latihan. Pulihkan diri terlebih dahulu.");
     if (phase.name === "race") return { k:"race", status:"train", title:"Hari lomba", duration:"Sesuai jarak lomba", hr:"Mulai terkendali", pace:"Ikuti target realistis", reason:"Hari lomba. Awali konservatif dan jangan mengejar pace pada kilometer awal.", steps:[["Pemanasan","10–15 mnt mudah"],["Lomba","Atur usaha bertahap sesuai jarak"],["Pemulihan","Jalan ringan setelah finis"]], score:readiness, tag:"LOMBA" };
-    if (phase.name === "transition" || phase.name === "taper" && raceDays < 4) return rest("Fase "+phase.name+"; prioritaskan pemulihan dan kesegaran menjelang lomba atau setelah lomba.");
+    if (phase.name === "transition") return rest("Fase transisi setelah lomba atau siklus latihan. Pulihkan diri sebelum membangun siklus berikutnya.");
+    if (phase.name === "taper" && raceDays < 4) return easy("Easy taper", 15, "Jaga kaki tetap segar. Tidak ada sesi kualitas atau penambahan volume menjelang lomba.", "TAPER");
     if (recoveryWeek || readiness < 42 || yesterday && yesterday.stress) {
       return easy("Easy recovery", Math.max(15, Math.round(baseDuration * .65)), recoveryWeek ? "Pekan pemulihan terjadwal: kurangi volume, pertahankan gerak mudah, tanpa sesi kualitas." : "Beri jarak pemulihan setelah beban berat atau kesiapan rendah.", "RECOVERY");
     }
     if (readiness < 55) return easy("Easy terbatas", Math.max(15, Math.round(baseDuration * .7)), "Kesiapan belum mendukung latihan berat. Pertahankan intensitas rendah dan evaluasi respons tubuh.", "EASY");
     if (isLongDay && weeklyRuns >= 1 && stressDays < 2 && !taper) return longRun();
-    const maxQuality = phase.name === "prep" || phase.name === "base1" ? 1 : 2;
-    const qualityAllowed = plannedHardDay && qualityDays < maxQuality && stressDays < 2 && readiness >= 65 && !taper;
+    const maxQuality = phase.name === "prep" || phase.name === "base1" || phase.name === "base2" ? 1 : 2;
+    const qualityAllowed = plannedHardDay && qualityDays < maxQuality && stressDays < 2 && readiness >= 65 && !taper && !(loadRatio != null && loadRatio >= 1.1);
     if (qualityAllowed) {
-      const type = phase.name === "base3" || phase.name === "build" ? "threshold" : "vo2";
+      const type = phase.name === "prep" || phase.name === "base1" ? "strides" : phase.name === "base2" ? "hills" : phase.name === "base3" ? "threshold" : (trainingWeek % 2 ? "threshold" : "vo2");
       return quality(type);
     }
-    const easyMins = Math.round(clamp(baseDuration * (taper ? .7 : 1), 15, 65) / 5) * 5;
+    let easyMins = Math.round(clamp(baseDuration * (taper ? .7 : 1), 15, 65) / 5) * 5;
+    if (loadRatio != null && loadRatio >= 1.1) easyMins = Math.max(15, Math.round(easyMins * (loadRatio >= 1.3 ? .8 : .9)));
     const reason = "Fase "+phase.name+" · hari mudah. Beban keras minggu ini "+stressDays+"/2 hari; mayoritas latihan dijaga ringan agar adaptasi dan pemulihan berjalan.";
     const r = easy("Easy Run", easyMins, reason, taper ? "TAPER" : "EASY");
     if (heat) { r.duration = Math.max(15, Math.round(easyMins*.85))+" menit"; r.reason += " Cuaca panas: kurangi durasi dan utamakan rasa nyaman."; }
     if (rain) r.reason += " Hujan: pilih rute aman atau pindahkan sesi.";
+    if (loadRatio != null && loadRatio >= 1.1) r.reason += " Durasi disesuaikan karena total menit 7 hari mendekati atau melampaui baseline 4 minggu.";
     if (metrics.efficiencyChangePct != null) r.reason += " Efisiensi aerobik terbaru "+(metrics.efficiencyChangePct>0?"+":"")+metrics.efficiencyChangePct+"% dibanding kelompok sesi sebelumnya (indikator tren, bukan diagnosis).";
+    const strength = phase.name === "prep" || phase.name === "base1"
+      ? "2 sesi/minggu; utamakan teknik, kekuatan umum dan progresi bertahap."
+      : phase.name === "base2"
+      ? "2 sesi/minggu; mulai beban lebih menantang dengan repetisi rendah-menengah dan teknik terjaga."
+      : phase.name === "base3" || phase.name === "build"
+      ? "1 sesi/minggu pemeliharaan; sekitar 2 set per gerakan, hindari kelelahan yang mengganggu sesi lari kunci."
+      : phase.name === "peak"
+      ? "1 sesi ringan opsional; kurangi volume dan jangan mencoba beban baru."
+      : "Hindari strength berat; cukup aktivasi dan mobilitas ringan.";
+    r.strengthGuidance = strength;
+    r.reason += " Strength fase ini: " + strength;
     return r;
   }
   function inspect(input) {
