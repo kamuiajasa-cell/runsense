@@ -250,6 +250,22 @@
 
     if (input.pain >= 2 || feel.pain >= 2) return rest("Ada nyeri yang jelas atau mengubah gerak. Jangan menjalankan sesi lari; kembali bertahap setelah aktivitas harian dan jalan nyaman bebas nyeri.");
     if (input.illness) return rest("Kondisi sakit mengalahkan rencana latihan. Pulihkan diri terlebih dahulu.");
+    // Satu sesi lari yang sudah tercatat pada tanggal lokal hari ini menutup
+    // rekomendasi lari tambahan. Jangan meminta pengguna berlari dua kali
+    // hanya karena jadwal harian masih memiliki slot latihan.
+    const completedRunsToday = acts.filter(a =>
+      a.kind === "run" && dateOnly(a.timestamp) === today && Number(a.duration) > 0
+    );
+    if (completedRunsToday.length) {
+      const completedMinutes = completedRunsToday.reduce((sum,a)=>sum+(Number(a.duration)||0),0);
+      const completedKm = completedRunsToday.reduce((sum,a)=>sum+(Number(a.distance)||0),0);
+      return {
+        k:"ok", status:"done", title:"Sudah lari hari ini",
+        duration:Math.round(completedMinutes)+" menit",
+        hr:"—", pace:"—", tag:"DONE", score:readiness, steps:[],
+        reason:"Aktivitas lari hari ini sudah tercatat"+(completedKm>0?" ("+completedKm.toFixed(2)+" km)":"")+". Tidak perlu menambah sesi lari. Pulihkan diri dan lanjutkan rencana besok."
+      };
+    }
     if (phase.name === "race") return { k:"race", status:"train", title:"Hari lomba", duration:"Sesuai jarak lomba", hr:"Mulai terkendali", pace:"Ikuti target realistis", reason:"Hari lomba. Awali konservatif dan jangan mengejar pace pada kilometer awal.", adaptation:"Eksekusi performa spesifik lomba", steps:[["Pemanasan","10–15 mnt mudah"],["Lomba","Atur usaha bertahap sesuai jarak"],["Pemulihan","Jalan ringan setelah finis"]], score:readiness, tag:"LOMBA" };
     if (phase.name === "transition") return rest("Fase transisi setelah lomba atau siklus latihan. Pulihkan diri sebelum membangun siklus berikutnya.");
     if (plannedType === "rest") return rest("Hari ini ditetapkan sebagai hari istirahat dalam jadwal mingguan.");
@@ -304,5 +320,5 @@
     recent.forEach(a=>{const k=dateOnly(a.timestamp),c=classify(a,Number(input.lthr)||0,typicalDuration),v=dayMap.get(k)||{stress:false,quality:false};v.stress=v.stress||c.stress;v.quality=v.quality||c.quality;dayMap.set(k,v);});
     return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), weekly:phasePrescription(phase.name), recovery:{cycle:recoveryCycle+":1",week:trainingWeek,isRecoveryWeek:recoveryWeek,recoveryDue,applies:recoveryApplies}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
   }
-  root.RunSenseFrielEngine = Object.freeze({ version:"1.6.0", recommend, inspect });
+  root.RunSenseFrielEngine = Object.freeze({ version:"1.6.1", recommend, inspect });
 })(typeof window !== "undefined" ? window : this);
