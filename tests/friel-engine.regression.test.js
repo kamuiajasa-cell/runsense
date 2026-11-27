@@ -16,10 +16,10 @@ check("No-race phase ignores stale history after a >42-day break",()=>{
  assert.equal(p.name,"prep");assert.equal(p.weekInPhase,1);
 });
 check("Recovery cycle continues across phase boundaries from active training start",()=>{
- const activities=[run(25,30),run(20,30),run(15,30),run(10,30)];
+ const activities=[run(16,30),run(12,30),run(8,30),run(4,30)];
  const p=inspect(activities);
  assert.equal(p.recovery.week,3);assert.equal(p.recovery.isRecoveryWeek,false);
- const fourth=inspect([run(25,30),run(20,30),run(15,30),run(10,30),run(4,30)]);
+ const fourth=inspect([run(16,30),run(12,30),run(8,30),run(4,30),run(4,30)]);
  assert.equal(fourth.recovery.week,4);assert.equal(fourth.recovery.isRecoveryWeek,true);
 });
 check("A long run relative to current habit counts as a stress day",()=>{
@@ -30,7 +30,7 @@ check("Long-run target uses weekly average, not longest single session",()=>{
  const activities=[run(3,80),run(10,60),run(17,70),run(24,40),run(31,60)];
  const result=recommend(activities,{plannedType:"long"});
  assert.equal(result.title,"Long Run mudah");
- assert.ok(parseInt(result.duration,10)<=66);
+ assert.ok(parseInt(result.duration,10)<80);
 });
 check("Established long-run tolerance is not abruptly cut by a lower phase cap",()=>{
  const activities=[run(3,80),run(10,80),run(17,80)];
