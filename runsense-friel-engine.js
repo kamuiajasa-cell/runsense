@@ -24,8 +24,8 @@
     if(shortRace){
       // Jika lomba tinggal 7 hari atau kurang, seluruh hari tersisa adalah taper.
       // Jangan sisakan satu hari Build yang masih bisa memicu sesi kualitas.
-      const taper = daysUntilRace <= 7 ? Math.max(0, daysUntilRace) : Math.min(7, Math.max(0, daysUntilRace - 1));
-      const peak = daysUntilRace <= 7 ? 0 : Math.min(distance >= 21 ? 14 : 7, Math.max(0, daysUntilRace - taper - 1));
+      const taper = daysUntilRace <= 7 ? Math.max(0, daysUntilRace) : 7;
+      const peak = daysUntilRace <= 7 ? 0 : Math.min(distance >= 21 ? 14 : 7, Math.max(0, daysUntilRace - taper));
       const build = Math.max(0, daysUntilRace - taper - peak);
       return [["prep",0],["build",build],["peak",peak],["taper",taper],["race",0]];
     }
