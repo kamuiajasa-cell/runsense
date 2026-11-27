@@ -47,8 +47,8 @@
     const z = Array.isArray(a.zoneSeconds) ? a.zoneSeconds : [];
     const hardZone = z.reduce((s, n, i) => s + (i >= 3 ? Number(n || 0) : 0), 0);
     const quality = !!a.quality || rpe >= 7 || (lthr > 0 && hr >= lthr * .95) || (duration > 0 && hardZone / 60 >= 8);
-    const long = duration >= 80 || (Number(a.distance) >= 0.75 && Number(a.distance) >= Number(a.weeklyDistance || 0) * .25);
-    return { quality, long, stress: quality || (long && duration >= 75) };
+    const long = duration >= 75;
+    return { quality, long, stress: quality || long };
   }
   function phaseLabel(name) {
     return ({prep:"Persiapan",base1:"Base 1",base2:"Base 2",base3:"Base 3",build:"Build spesifik lomba",peak:"Peak",taper:"Taper",race:"Lomba",transition:"Transisi"})[name] || name;
