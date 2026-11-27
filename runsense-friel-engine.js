@@ -50,6 +50,9 @@
     const long = duration >= 80 || (Number(a.distance) >= 0.75 && Number(a.distance) >= Number(a.weeklyDistance || 0) * .25);
     return { quality, long, stress: quality || (long && duration >= 75) };
   }
+  function phaseLabel(name) {
+    return ({prep:"Persiapan",base1:"Base 1",base2:"Base 2",base3:"Base 3",build:"Build spesifik lomba",peak:"Peak",taper:"Taper",race:"Lomba",transition:"Transisi"})[name] || name;
+  }
   function strengthForPhase(name) {
     if (name === "prep" || name === "base1") return "2 sesi/minggu; utamakan teknik, kekuatan umum dan progresi bertahap.";
     if (name === "base2") return "2 sesi/minggu; mulai beban lebih menantang dengan repetisi rendah-menengah dan teknik terjaga.";
@@ -138,7 +141,7 @@
       return {
         k:"quality", status:"train", title:label, duration:total+" menit", hr:zone,
         pace:threshold && input.ltPace ? input.ltPace+" /km (panduan, bukan paksaan)" : "Berdasarkan usaha; ulangi dengan teknik rapi",
-        reason:"Sesi sesuai fase "+phase.name+". Pemanasan dan pendinginan wajib; hentikan repetisi bila teknik atau kondisi memburuk.",
+        reason:"Sesi sesuai fase "+phaseLabel(phase.name)+". Pemanasan dan pendinginan wajib; hentikan repetisi bila teknik atau kondisi memburuk.",
         steps:[["Pemanasan","10 mnt jog mudah + mobilitas"],["Inti",main],["Pendinginan","5 mnt jog sangat mudah"]],
         score:readiness, tag:"QUALITY"
       };
@@ -172,7 +175,7 @@
     }
     let easyMins = Math.round(clamp(baseDuration * (taper ? .7 : 1), 15, 65) / 5) * 5;
     if (loadRatio != null && loadRatio >= 1.1) easyMins = Math.max(15, Math.round(easyMins * (loadRatio >= 1.3 ? .8 : .9)));
-    const reason = "Fase "+phase.name+" · hari mudah. Beban keras minggu ini "+stressDays+"/2 hari; mayoritas latihan dijaga ringan agar adaptasi dan pemulihan berjalan.";
+    const reason = "Fase "+phaseLabel(phase.name)+" · hari mudah. Beban keras minggu ini "+stressDays+"/2 hari; mayoritas latihan dijaga ringan agar adaptasi dan pemulihan berjalan.";
     const r = easy("Easy Run", easyMins, reason, taper ? "TAPER" : "EASY");
     if (heat) { r.duration = Math.max(15, Math.round(easyMins*.85))+" menit"; r.reason += " Cuaca panas: kurangi durasi dan utamakan rasa nyaman."; }
     if (rain) r.reason += " Hujan: pilih rute aman atau pindahkan sesi.";
