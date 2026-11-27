@@ -148,7 +148,7 @@
       const recentLong = runs.filter(a=>a.timestamp>=now-42*DAY && a.duration>=Math.max(50,baseDuration*1.3)).map(a=>a.duration);
       const longest = recentLong.length ? Math.max(...recentLong) : baseDuration;
       const target = Math.min(cap, longest * 1.05);
-      const mins = Math.round(clamp(Math.max(baseDuration,target), 25, cap) / 5) * 5;
+      const mins = Math.round(clamp(Math.max(baseDuration,target), 25, cap));
       return easy("Long Run mudah", mins, "Sasaran daya tahan aerobik. Durasi hanya bertambah bertahap dari lari panjang yang sudah ditoleransi; intensitas tetap mudah.", "LONG");
     };
 
