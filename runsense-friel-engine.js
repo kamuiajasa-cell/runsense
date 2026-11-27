@@ -181,10 +181,11 @@
     const recoveryCycle = Number(input.recoveryCycle) === 2 ? 2 : 3;
     const phaseWeek = Number(phase.weekInPhase || phase.week || cycleWeek);
     // Siklus 3:1 dihitung sejak awal blok aktif, tetapi Recovery terjadwal
-    // hanya diterapkan selama Build. Peak memiliki beban yang sudah diturunkan
-    // dan tetap membutuhkan sesi sharpening; Taper mengambil alih pemulihan akhir.
+    // diterapkan pada fase pembentukan (Prep/Base/Build), bukan Peak/Taper.
+    // Peak tetap punya sesi sharpening; Taper mengambil alih pemulihan akhir.
     const recoveryDue = trainingWeek % (recoveryCycle + 1) === 0;
-    const recoveryWeek = phase.name === "build" && recoveryDue;
+    const recoveryApplies = ["prep","base1","base2","base3","build"].includes(phase.name);
+    const recoveryWeek = recoveryApplies && recoveryDue;
     const currentMinutes = last7.filter(a=>a.kind === "run").reduce((sum,a)=>sum+(Number(a.duration)||0),0);
     const priorWeeks = [1,2,3,4].map(w => acts.filter(a=>a.kind === "run" && a.timestamp>=today-(6+w*7)*DAY && a.timestamp<today-(6+(w-1)*7)*DAY).reduce((sum,a)=>sum+(Number(a.duration)||0),0));
     const baselineMinutes = priorWeeks.reduce((sum,v)=>sum+v,0)/4;
@@ -299,7 +300,7 @@
     const recoveryWeek = trainingWeek % (recoveryCycle+1) === 0;
     const dayMap = new Map();
     recent.forEach(a=>{const k=dateOnly(a.timestamp),c=classify(a,Number(input.lthr)||0,typicalDuration),v=dayMap.get(k)||{stress:false,quality:false};v.stress=v.stress||c.stress;v.quality=v.quality||c.quality;dayMap.set(k,v);});
-    return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), weekly:phasePrescription(phase.name), recovery:{cycle:recoveryCycle+":1",week:trainingWeek,isRecoveryWeek:recoveryWeek,recoveryDue,applies:phase.name==="build"}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
+    return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), weekly:phasePrescription(phase.name), recovery:{cycle:recoveryCycle+":1",week:trainingWeek,isRecoveryWeek:recoveryWeek,recoveryDue,applies:recoveryApplies}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
   }
   root.RunSenseFrielEngine = Object.freeze({ version:"1.6.0", recommend, inspect });
 })(typeof window !== "undefined" ? window : this);
