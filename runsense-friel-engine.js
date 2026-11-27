@@ -112,8 +112,9 @@
     const priorWeeks = [1,2,3,4].map(w => acts.filter(a=>a.timestamp>=today-w*7*DAY && a.timestamp<today-(w-1)*7*DAY).reduce((sum,a)=>sum+(Number(a.duration)||0),0));
     const baselineMinutes = priorWeeks.reduce((sum,v)=>sum+v,0)/4;
     const loadRatio = baselineMinutes>0 ? currentMinutes/baselineMinutes : null;
-    const isLongDay = input.preferredLongDay != null ? new Date(now).getDay() === Number(input.preferredLongDay) : new Date(now).getDay() === 6;
-    const plannedHardDay = input.preferredQualityDays ? input.preferredQualityDays.includes(new Date(now).getDay()) : [2,4].includes(new Date(now).getDay());
+    const isLongDay = plannedType === "long" || (plannedType === "auto" && (input.preferredLongDay != null ? new Date(now).getDay() === Number(input.preferredLongDay) : new Date(now).getDay() === 6));
+    const plannedType = input.plannedType || "auto";
+    const plannedHardDay = plannedType === "quality" || (plannedType === "auto" && (input.preferredQualityDays ? input.preferredQualityDays.includes(new Date(now).getDay()) : [2,4].includes(new Date(now).getDay())));
     const raceDays = phase.raceDays;
     const taper = phase.name === "taper" || phase.name === "peak";
     const metrics = aerobicMetrics(acts);
@@ -160,6 +161,7 @@
     if (input.illness) return rest("Kondisi sakit mengalahkan rencana latihan. Pulihkan diri terlebih dahulu.");
     if (phase.name === "race") return { k:"race", status:"train", title:"Hari lomba", duration:"Sesuai jarak lomba", hr:"Mulai terkendali", pace:"Ikuti target realistis", reason:"Hari lomba. Awali konservatif dan jangan mengejar pace pada kilometer awal.", steps:[["Pemanasan","10–15 mnt mudah"],["Lomba","Atur usaha bertahap sesuai jarak"],["Pemulihan","Jalan ringan setelah finis"]], score:readiness, tag:"LOMBA" };
     if (phase.name === "transition") return rest("Fase transisi setelah lomba atau siklus latihan. Pulihkan diri sebelum membangun siklus berikutnya.");
+    if (plannedType === "rest") return rest("Hari ini ditetapkan sebagai hari istirahat dalam jadwal mingguan.");
     if (phase.name === "taper" && raceDays < 4) return easy("Easy taper", 15, "Jaga kaki tetap segar. Tidak ada sesi kualitas atau penambahan volume menjelang lomba.", "TAPER");
     if (recoveryWeek || readiness < 42 || yesterday && yesterday.stress) {
       return easy("Easy recovery", Math.max(15, Math.round(baseDuration * .65)), recoveryWeek ? "Pekan pemulihan terjadwal: kurangi volume, pertahankan gerak mudah, tanpa sesi kualitas." : "Beri jarak pemulihan setelah beban berat atau kesiapan rendah.", "RECOVERY");
@@ -167,9 +169,9 @@
     if (readiness < 55) return easy("Easy terbatas", Math.max(15, Math.round(baseDuration * .7)), "Kesiapan belum mendukung latihan berat. Pertahankan intensitas rendah dan evaluasi respons tubuh.", "EASY");
     const hasRecentLong = runs.some(a=>a.timestamp>=now-42*DAY && a.duration>=75);
     const longIsStressful = hasRecentLong || baseDuration >= 70;
-    if (isLongDay && weeklyRuns >= 1 && (stressDays < 2 || !longIsStressful) && !taper) return longRun();
+    if (plannedType !== "easy" && isLongDay && weeklyRuns >= 1 && (stressDays < 2 || !longIsStressful) && !taper) return longRun();
     const maxQuality = phase.name === "prep" || phase.name === "base1" || phase.name === "base2" || longIsStressful ? 1 : 2;
-    const qualityAllowed = plannedHardDay && qualityDays < maxQuality && stressDays < 2 && readiness >= 65 && !taper && !(loadRatio != null && loadRatio >= 1.1);
+    const qualityAllowed = plannedType !== "easy" && plannedHardDay && qualityDays < maxQuality && stressDays < 2 && readiness >= 65 && !taper && !(loadRatio != null && loadRatio >= 1.1);
     if (qualityAllowed) {
       const type = phase.name === "prep" || phase.name === "base1" ? "strides" : phase.name === "base2" ? "hills" : phase.name === "base3" ? "threshold" : (trainingWeek % 2 ? "threshold" : "vo2");
       return quality(type);
