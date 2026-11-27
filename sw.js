@@ -1,5 +1,5 @@
 // RunSense service worker v2: selalu ambil versi terbaru dari server, cache hanya cadangan offline.
-const CACHE = "runsense-v11";
+const CACHE = "runsense-v12";
 const ASSETS = [
   "./runsense.html",
   "./runsense-friel-engine.js",
