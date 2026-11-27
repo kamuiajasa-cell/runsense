@@ -123,12 +123,13 @@
       k:"easy", status:"train", title, duration:mins+" menit",
       hr:lthr ? "Zone 1–2 · di bawah 90% LTHR" : "RPE 2–3 · bisa ngobrol",
       pace:input.easyPace || "Nyaman, tanpa mengejar pace",
-      reason:why, steps:[["Pemanasan","5 mnt sangat mudah"],["Inti",Math.max(10,mins-10)+" mnt lari santai, napas terkendali"],["Pendinginan","5 mnt jalan atau jog ringan"]],
+      reason:why, adaptation:tag === "LONG" ? "Durability dan aerobic endurance" : tag === "RECOVERY" ? "Pemulihan" : tag === "TAPER" ? "Menjaga kesegaran" : "Aerobic endurance dan aerobic efficiency",
+      steps:[["Pemanasan","5 mnt sangat mudah"],["Inti",Math.max(10,mins-10)+" mnt lari santai, napas terkendali"],["Pendinginan","5 mnt jalan atau jog ringan"]],
       score:readiness, tag:tag || "EASY"
     });
     const rest = (why) => ({
       k:"rest", status:"rest", title:"Istirahat / pemulihan", duration:"—", hr:"—", pace:"—",
-      reason:why, steps:[["Pilihan","Jalan santai 10–20 menit hanya jika terasa nyaman"]], score:readiness, tag:"RECOVERY"
+      reason:why, adaptation:"Pemulihan", steps:[["Pilihan","Jalan santai 10–20 menit hanya jika terasa nyaman"]], score:readiness, tag:"RECOVERY"
     });
     const quality = (kind) => {
       const strides = kind === "strides", hills = kind === "hills", threshold = kind === "threshold";
@@ -143,6 +144,7 @@
         k:"quality", status:"train", title:label, duration:total+" menit", hr:zone,
         pace:threshold && input.ltPace ? input.ltPace+" /km (panduan, bukan paksaan)" : "Berdasarkan usaha; ulangi dengan teknik rapi",
         reason:"Sesi sesuai fase "+phaseLabel(phase.name)+". Pemanasan dan pendinginan wajib; hentikan repetisi bila teknik atau kondisi memburuk.",
+        adaptation:strides ? "Speed dan keterampilan neuromuskular" : hills ? "Strength endurance dan durability" : threshold ? "Threshold" : "Aerobic power dan speed",
         steps:[["Pemanasan","10 mnt jog mudah + mobilitas"],["Inti",main],["Pendinginan","5 mnt jog sangat mudah"]],
         score:readiness, tag:"QUALITY"
       };
@@ -159,7 +161,7 @@
 
     if (input.pain >= 2 || feel.pain >= 2) return rest("Ada nyeri yang jelas atau mengubah gerak. Jangan menjalankan sesi lari; kembali bertahap setelah aktivitas harian dan jalan nyaman bebas nyeri.");
     if (input.illness) return rest("Kondisi sakit mengalahkan rencana latihan. Pulihkan diri terlebih dahulu.");
-    if (phase.name === "race") return { k:"race", status:"train", title:"Hari lomba", duration:"Sesuai jarak lomba", hr:"Mulai terkendali", pace:"Ikuti target realistis", reason:"Hari lomba. Awali konservatif dan jangan mengejar pace pada kilometer awal.", steps:[["Pemanasan","10–15 mnt mudah"],["Lomba","Atur usaha bertahap sesuai jarak"],["Pemulihan","Jalan ringan setelah finis"]], score:readiness, tag:"LOMBA" };
+    if (phase.name === "race") return { k:"race", status:"train", title:"Hari lomba", duration:"Sesuai jarak lomba", hr:"Mulai terkendali", pace:"Ikuti target realistis", reason:"Hari lomba. Awali konservatif dan jangan mengejar pace pada kilometer awal.", adaptation:"Eksekusi performa spesifik lomba", steps:[["Pemanasan","10–15 mnt mudah"],["Lomba","Atur usaha bertahap sesuai jarak"],["Pemulihan","Jalan ringan setelah finis"]], score:readiness, tag:"LOMBA" };
     if (phase.name === "transition") return rest("Fase transisi setelah lomba atau siklus latihan. Pulihkan diri sebelum membangun siklus berikutnya.");
     if (plannedType === "rest") return rest("Hari ini ditetapkan sebagai hari istirahat dalam jadwal mingguan.");
     if (phase.name === "taper" && raceDays < 4) return easy("Easy taper", 15, "Jaga kaki tetap segar. Tidak ada sesi kualitas atau penambahan volume menjelang lomba.", "TAPER");
