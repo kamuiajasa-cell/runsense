@@ -17,7 +17,16 @@
     return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
   };
   function iso(ms){const d=new Date(ms);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
-  function phaseDurations(distance){
+  function phaseDurations(distance, daysUntilRace){
+    // Rencana pendek mengikuti prinsip Build-Peak saat lomba A tinggal kurang dari 12 minggu:
+    // jangan memaksakan Base 1–3 yang tidak lagi muat di kalender.
+    const shortRace = Number.isFinite(daysUntilRace) && daysUntilRace < 84;
+    if(shortRace){
+      const taper = Math.min(7, Math.max(0, daysUntilRace - 1));
+      const peak = Math.min(distance >= 21 ? 14 : 7, Math.max(0, daysUntilRace - taper - 1));
+      const build = Math.max(0, daysUntilRace - taper - peak);
+      return [["prep",0],["build",build],["peak",peak],["taper",taper],["race",0]];
+    }
     if(distance>=42)return [["prep",0],["base1",28],["base2",28],["base3",28],["build",56],["peak",14],["taper",21],["race",0]];
     if(distance>=21)return [["prep",0],["base1",21],["base2",21],["base3",21],["build",42],["peak",14],["taper",14],["race",0]];
     if(distance>=10)return [["prep",0],["base1",21],["base2",21],["base3",21],["build",28],["peak",7],["taper",7],["race",0]];
@@ -27,7 +36,7 @@
     const today=dateOnly(now);
     if(raceDate){const race=new Date(raceDate+"T00:00:00");if(!Number.isNaN(+race)){
       const raceMs=dateOnly(+race),days=Math.round((raceMs-today)/DAY),segments=[];let cursor=raceMs;
-      const rows=phaseDurations(raceDistance);
+      const rows=phaseDurations(raceDistance,days);
       for(let i=rows.length-1;i>=1;i--){const [name,duration]=rows[i],end=cursor,start=end-duration*DAY;
         if(name==="race")segments.unshift({name,label:phaseLabel(name),start:iso(raceMs),end:iso(raceMs),days:1});
         else{const clipped=firstTrainingDate?Math.max(start,dateOnly(firstTrainingDate)):start;if(clipped<end)segments.unshift({name,label:phaseLabel(name),start:iso(clipped),end:iso(end-DAY),days:Math.ceil((end-clipped)/DAY),compressed:clipped>start});}
@@ -268,5 +277,5 @@
     recent.forEach(a=>{const k=dateOnly(a.timestamp),c=classify(a,Number(input.lthr)||0),v=dayMap.get(k)||{stress:false,quality:false};v.stress=v.stress||c.stress;v.quality=v.quality||c.quality;dayMap.set(k,v);});
     return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), weekly:phasePrescription(phase.name), recovery:{cycle:Number(input.recoveryCycle)===2?"2:1":"3:1",week:phase.weekInPhase||phase.week||1,isRecoveryWeek:((phase.weekInPhase||phase.week||1)%(Number(input.recoveryCycle)===2?3:4)===0)}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
   }
-  root.RunSenseFrielEngine = Object.freeze({ version:"1.3.0", recommend, inspect });
+  root.RunSenseFrielEngine = Object.freeze({ version:"1.4.0", recommend, inspect });
 })(typeof window !== "undefined" ? window : this);
