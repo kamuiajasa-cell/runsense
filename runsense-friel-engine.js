@@ -43,7 +43,8 @@
         cursor=start;
       }
       const prepStart=firstTrainingDate?dateOnly(firstTrainingDate):cursor;
-      if(cursor>prepStart)segments.unshift({name:"prep",label:phaseLabel("prep"),start:iso(prepStart),end:iso(cursor-DAY),days:Math.ceil((cursor-prepStart)/DAY)});
+      // Untuk lomba <12 minggu, jangan membuat fase Prep/Base historis sebagai bagian rencana Build-Peak.
+      if(days>=84&&cursor>prepStart)segments.unshift({name:"prep",label:phaseLabel("prep"),start:iso(prepStart),end:iso(cursor-DAY),days:Math.ceil((cursor-prepStart)/DAY)});
       return {raceDate,raceDays:days,distance:Number(raceDistance)||0,phases:segments};
     }}
     const start=firstTrainingDate?dateOnly(firstTrainingDate):today;let cursor=start;
