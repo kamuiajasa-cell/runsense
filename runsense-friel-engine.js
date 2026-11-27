@@ -79,11 +79,19 @@
     const phaseStart=current?Date.parse(current.start+"T00:00:00"):dateOnly(start)+Math.floor(weeks/4)*28*DAY;
     return {name,week:weeks+1,weekInPhase:weeks%4+1,start:iso(phaseStart),end:iso(phaseStart+28*DAY-DAY)};
   }
+  function activeTrainingStart(runs, now) {
+    // Riwayat lama diputus setelah jeda lebih dari 42 hari.
+    const recent = runs.filter(a => a.timestamp <= now && a.timestamp >= now - 42*DAY);
+    return recent.length ? Math.min(...recent.map(a => a.timestamp)) : now;
+  }
+  function typicalRunDuration(runs, now) {
+    return median(runs.filter(a => a.timestamp >= now-42*DAY && a.duration >= 10 && a.duration <= 150).map(a => Number(a.duration)));
+  }
   function weekStart(ms) {
     const d = new Date(ms);
     return dateOnly(ms) - ((d.getDay() + 6) % 7) * DAY;
   }
-  function classify(a, lthr) {
+  function classify(a, lthr, typicalDuration) {
     if (a.kind !== "run") return { quality:false, long:false, stress:false };
     const duration = Number(a.duration) || 0;
     const hr = Number(a.hr) || 0;
@@ -91,7 +99,7 @@
     const z = Array.isArray(a.zoneSeconds) ? a.zoneSeconds : [];
     const hardZone = z.reduce((s, n, i) => s + (i >= 3 ? Number(n || 0) : 0), 0);
     const quality = !!a.quality || rpe >= 7 || (lthr > 0 && hr >= lthr * .95) || (duration > 0 && hardZone / 60 >= 8);
-    const long = duration >= 75;
+    const long = duration >= 75 || (duration >= 60 && typicalDuration > 0 && duration >= typicalDuration * 1.4);
     return { quality, long, stress: quality || long };
   }
   function phaseLabel(name) {
@@ -137,7 +145,8 @@
     const now = Number(input.now) || Date.now();
     const acts = (input.activities || []).filter(a => a && a.timestamp <= now && a.timestamp > 0);
     const runs = acts.filter(a => a.kind === "run" && a.duration > 0 && a.distance > 0);
-    const first = runs.length ? Math.min(...runs.map(a=>a.timestamp)) : now;
+    const first = activeTrainingStart(runs, now);
+    const typicalDuration = typicalRunDuration(runs, now);
     const phase = phaseFor(now, input.raceDate, Number(input.raceDistance) || 0, first);
     const lthr = Number(input.lthr) || 0;
     const today = dateOnly(now), start = weekStart(now);
@@ -145,7 +154,7 @@
     const dayMap = new Map();
     last7.forEach(a => {
       const day = dateOnly(a.timestamp);
-      const c = classify(a, lthr);
+      const c = classify(a, lthr, typicalDuration);
       const old = dayMap.get(day) || { stress:false, quality:false, long:false, duration:0 };
       old.stress = old.stress || c.stress;
       old.quality = old.quality || c.quality;
@@ -169,7 +178,7 @@
     const cycleWeek = phase.name === "build" && Number.isFinite(raceDays) ? Math.max(1, Math.floor((84-raceDays)/7)+1) : trainingWeek;
     const recoveryCycle = Number(input.recoveryCycle) === 2 ? 2 : 3;
     const phaseWeek = Number(phase.weekInPhase || phase.week || cycleWeek);
-    const recoveryWeek = phaseWeek % (recoveryCycle + 1) === 0;
+    const recoveryWeek = trainingWeek % (recoveryCycle + 1) === 0;
     const currentMinutes = last7.filter(a=>a.kind === "run").reduce((sum,a)=>sum+(Number(a.duration)||0),0);
     const priorWeeks = [1,2,3,4].map(w => acts.filter(a=>a.kind === "run" && a.timestamp>=today-(6+w*7)*DAY && a.timestamp<today-(6+(w-1)*7)*DAY).reduce((sum,a)=>sum+(Number(a.duration)||0),0));
     const baselineMinutes = priorWeeks.reduce((sum,v)=>sum+v,0)/4;
@@ -222,12 +231,12 @@
       const longSamples = [...weeklyLongRuns.values()];
       const avgLongRun = longSamples.length
         ? longSamples.reduce((sum, value) => sum + value, 0) / longSamples.length
-        : baseDuration;
-      const phaseCap = Math.max(cap, avgLongRun);
-      const target = Math.min(phaseCap, avgLongRun * 1.05);
-      const mins = Math.round(clamp(target, 25, phaseCap));
+        : (recentDurations.length >= 3 ? baseDuration : Math.min(30, baseDuration));
+      // Batas fase membatasi progresi, bukan memotong kebiasaan mapan secara mendadak.
+      const target = avgLongRun >= cap ? avgLongRun : Math.min(cap, avgLongRun * 1.05);
+      const mins = Math.round(clamp(target, 25, Math.max(cap, avgLongRun)));
       return easy("Long Run mudah", mins,
-        "Durasi mengacu pada rata-rata sesi lari panjang per pekan dalam 6 minggu terakhir, lalu naik maksimal sekitar 5% bila pemulihan mendukung. Intensitas tetap mudah.",
+        longSamples.length ? "Durasi mengacu pada rata-rata sesi panjang per pekan dalam 6 minggu terakhir; progresi maksimal sekitar 5% dan tidak memotong kebiasaan mapan secara mendadak." : "Belum ada riwayat long run yang cukup; sesi ini hanya perpanjangan ringan dari durasi lari biasa, bukan target long run penuh.",
         "LONG");
     };
 
@@ -241,8 +250,7 @@
       return easy("Easy recovery", Math.max(15, Math.round(baseDuration * .65)), recoveryWeek ? "Pekan pemulihan terjadwal: kurangi volume, pertahankan gerak mudah, tanpa sesi kualitas." : "Beri jarak pemulihan setelah beban berat atau kesiapan rendah.", "RECOVERY");
     }
     if (readiness < 55) return easy("Easy terbatas", Math.max(15, Math.round(baseDuration * .7)), "Kesiapan belum mendukung latihan berat. Pertahankan intensitas rendah dan evaluasi respons tubuh.", "EASY");
-    const hasRecentLong = runs.some(a=>a.timestamp>=now-42*DAY && a.duration>=75);
-    const longIsStressful = hasRecentLong || baseDuration >= 70;
+    const longIsStressful = runs.some(a=>a.timestamp>=now-42*DAY && classify(a,lthr,typicalDuration).long);
     if (plannedType !== "easy" && isLongDay && weeklyRuns >= 1 && (stressDays < 2 || !longIsStressful) && !taper) return longRun();
     const phasePlan = phasePrescription(phase.name);
     // Long run yang >=75 menit dihitung sebagai hari stres; jangan menambahkan quality kedua.
@@ -271,12 +279,16 @@
     const now = Number(input.now) || Date.now();
     const acts = input.activities || [];
     const runs = acts.filter(a=>a.kind==="run"&&a.distance>0);
-    const first = runs.length ? Math.min(...runs.map(a=>a.timestamp)) : now;
+    const first = activeTrainingStart(runs, now);
     const phase = phaseFor(now,input.raceDate,Number(input.raceDistance)||0,first);
     const recent = acts.filter(a=>a.timestamp>=now-7*DAY);
+    const typicalDuration = typicalRunDuration(runs, now);
+    const trainingWeek = Math.max(1, Math.floor((dateOnly(now)-dateOnly(first))/(7*DAY))+1);
+    const recoveryCycle = Number(input.recoveryCycle)===2?2:3;
+    const recoveryWeek = trainingWeek % (recoveryCycle+1) === 0;
     const dayMap = new Map();
-    recent.forEach(a=>{const k=dateOnly(a.timestamp),c=classify(a,Number(input.lthr)||0),v=dayMap.get(k)||{stress:false,quality:false};v.stress=v.stress||c.stress;v.quality=v.quality||c.quality;dayMap.set(k,v);});
-    return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), weekly:phasePrescription(phase.name), recovery:{cycle:Number(input.recoveryCycle)===2?"2:1":"3:1",week:phase.weekInPhase||phase.week||1,isRecoveryWeek:((phase.weekInPhase||phase.week||1)%(Number(input.recoveryCycle)===2?3:4)===0)}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
+    recent.forEach(a=>{const k=dateOnly(a.timestamp),c=classify(a,Number(input.lthr)||0,typicalDuration),v=dayMap.get(k)||{stress:false,quality:false};v.stress=v.stress||c.stress;v.quality=v.quality||c.quality;dayMap.set(k,v);});
+    return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), weekly:phasePrescription(phase.name), recovery:{cycle:recoveryCycle+":1",week:trainingWeek,isRecoveryWeek:recoveryWeek}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
   }
-  root.RunSenseFrielEngine = Object.freeze({ version:"1.4.0", recommend, inspect });
+  root.RunSenseFrielEngine = Object.freeze({ version:"1.5.0", recommend, inspect });
 })(typeof window !== "undefined" ? window : this);
