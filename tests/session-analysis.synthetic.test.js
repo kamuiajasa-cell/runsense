@@ -30,7 +30,7 @@ check("Load trend uses only activities before the selected session",()=>{
   acts.push([now+DAY,"run",30,5,140,0,"future","",0,"future",999]);
   const out=loadFn({acts},loadOf,DAY)([now,"run",30,5]);
   assert.match(out,/Beban 7 hari sebelum sesi/);
-  assert.match(out,/4\/4 minggu memiliki beban/);
+  assert.match(out,/Rerata 28 hari sebelumnya/);\n  assert.match(out,/Beban 7 hari sebelum sesi dekat dengan kebiasaan/);
   assert.doesNotMatch(out,/999/);
 });
 check("Progress trend waits for six comparable sessions",()=>{
@@ -55,7 +55,7 @@ check("Coach summary separates positive, caution, and next-step notes",()=>{
   const out=coachFn(rev);
   assert.match(out,/Yang berjalan baik/);
   assert.match(out,/Perlu diperhatikan/);
-  assert.match(out,/Langkah berikutnya/);
+  assert.match(out,/<b>Aksi:<\/b> Besok easy\./);
 });
 const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(x=>x[1]).filter(x=>x.trim());
 for(const script of scripts)new Function(script);
