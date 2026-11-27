@@ -38,8 +38,18 @@
       return {raceDate,raceDays:days,distance:Number(raceDistance)||0,phases:segments};
     }}
     const start=firstTrainingDate?dateOnly(firstTrainingDate):today;let cursor=start;
-    const phases=[["prep",4],["base1",4],["base2",4],["base3",4]].map(([name,weeks])=>{const end=cursor+weeks*7*DAY,x={name,label:phaseLabel(name),start:iso(cursor),end:iso(end-DAY),days:weeks*7};cursor=end;return x;});
-    return {raceDate:null,raceDays:null,distance:0,phases,elapsedWeeks:Math.max(0,Math.floor((today-start)/(7*DAY)))};
+    const elapsedWeeks=Math.max(0,Math.floor((today-start)/(7*DAY)));
+    const phases=[];
+    for(const [name,weeks] of [["prep",4],["base1",4],["base2",4]]){
+      const end=cursor+weeks*7*DAY;phases.push({name,label:phaseLabel(name),start:iso(cursor),end:iso(end-DAY),days:weeks*7});cursor=end;
+    }
+    const currentBase3Block=Math.max(0,Math.floor((elapsedWeeks-12)/4));
+    const finalBlock=currentBase3Block+3;
+    for(let i=0;i<=finalBlock;i++){
+      const blockStart=cursor+i*28*DAY,end=blockStart+28*DAY;
+      phases.push({name:"base3",label:phaseLabel("base3"),cycle:i+1,start:iso(blockStart),end:iso(end-DAY),days:28});
+    }
+    return {raceDate:null,raceDays:null,distance:0,phases,elapsedWeeks};
   }
   function phaseFor(now,raceDate,raceDistance,firstTrainingDate){
     const today=dateOnly(now);
@@ -54,7 +64,10 @@
     }}
     const start=firstTrainingDate||today,weeks=Math.max(0,Math.floor((today-dateOnly(start))/(7*DAY)));
     const name=weeks<4?"prep":weeks<8?"base1":weeks<12?"base2":"base3";
-    return {name,week:weeks+1,weekInPhase:weeks%4+1};
+    const cal=calendarFor(now,"",0,firstTrainingDate);
+    const current=cal.phases.find(p=>p.name===name&&today>=Date.parse(p.start+"T00:00:00")&&today<=Date.parse(p.end+"T00:00:00"));
+    const phaseStart=current?Date.parse(current.start+"T00:00:00"):dateOnly(start)+Math.floor(weeks/4)*28*DAY;
+    return {name,week:weeks+1,weekInPhase:weeks%4+1,start:iso(phaseStart),end:iso(phaseStart+28*DAY-DAY)};
   }
   function weekStart(ms) {
     const d = new Date(ms);
