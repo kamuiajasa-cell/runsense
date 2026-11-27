@@ -41,6 +41,7 @@
     return dateOnly(ms) - ((d.getDay() + 6) % 7) * DAY;
   }
   function classify(a, lthr) {
+    if (a.kind !== "run") return { quality:false, long:false, stress:false };
     const duration = Number(a.duration) || 0;
     const hr = Number(a.hr) || 0;
     const rpe = Number(a.rpe) || 0;
@@ -106,16 +107,16 @@
     const baseDuration = median(recentDurations) || 25;
     const weeklyRuns = runs.filter(a=>a.timestamp >= now-7*DAY).length;
     const trainingWeek = Math.max(1, Math.floor((today - dateOnly(first)) / (7*DAY)) + 1);
+    const raceDays = phase.raceDays;
     const cycleWeek = phase.name === "build" && Number.isFinite(raceDays) ? Math.max(1, Math.floor((84-raceDays)/7)+1) : trainingWeek;
     const recoveryWeek = cycleWeek % (Number(input.recoveryCycle) === 2 ? 3 : 4) === 0;
-    const currentMinutes = last7.reduce((sum,a)=>sum+(Number(a.duration)||0),0);
-    const priorWeeks = [1,2,3,4].map(w => acts.filter(a=>a.timestamp>=today-w*7*DAY && a.timestamp<today-(w-1)*7*DAY).reduce((sum,a)=>sum+(Number(a.duration)||0),0));
+    const currentMinutes = last7.filter(a=>a.kind === "run").reduce((sum,a)=>sum+(Number(a.duration)||0),0);
+    const priorWeeks = [1,2,3,4].map(w => acts.filter(a=>a.kind === "run" && a.timestamp>=today-(6+w*7)*DAY && a.timestamp<today-(6+(w-1)*7)*DAY).reduce((sum,a)=>sum+(Number(a.duration)||0),0));
     const baselineMinutes = priorWeeks.reduce((sum,v)=>sum+v,0)/4;
     const loadRatio = baselineMinutes>0 ? currentMinutes/baselineMinutes : null;
     const plannedType = input.plannedType || "auto";
     const isLongDay = plannedType === "long" || (plannedType === "auto" && (input.preferredLongDay != null ? new Date(now).getDay() === Number(input.preferredLongDay) : new Date(now).getDay() === 6));
     const plannedHardDay = plannedType === "quality" || (plannedType === "auto" && (input.preferredQualityDays ? input.preferredQualityDays.includes(new Date(now).getDay()) : [2,4].includes(new Date(now).getDay())));
-    const raceDays = phase.raceDays;
     const taper = phase.name === "taper" || phase.name === "peak";
     const metrics = aerobicMetrics(acts);
 
@@ -155,7 +156,7 @@
       const longest = recentRuns.length ? Math.max(...recentRuns) : baseDuration;
       const phaseCap = Math.max(cap, longest);
       const target = Math.min(phaseCap, longest * 1.05);
-      const mins = Math.round(clamp(Math.max(baseDuration,target), 25, cap));
+      const mins = Math.round(clamp(Math.max(baseDuration,target), 25, phaseCap));
       return easy("Long Run mudah", mins, "Sasaran daya tahan aerobik. Durasi hanya bertambah bertahap dari lari panjang yang sudah ditoleransi; intensitas tetap mudah.", "LONG");
     };
 
