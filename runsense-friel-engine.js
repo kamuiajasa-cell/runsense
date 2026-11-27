@@ -94,6 +94,21 @@
     if (name === "peak") return "1 sesi ringan opsional; kurangi volume dan jangan mencoba beban baru.";
     return "Hindari strength berat; cukup aktivasi dan mobilitas ringan.";
   }
+  function phasePrescription(name) {
+    const plans = {
+      prep: { quality:1, qualityType:"Strides ringan / teknik", long:"Long run mudah, pendek dan bertahap", easy:"Sesi lain seluruhnya easy Z1–Z2 atau istirahat", strength:2, focus:"Membangun kebiasaan, teknik, dan toleransi beban" },
+      base1: { quality:1, qualityType:"Strides rileks, bukan interval keras", long:"Long run mudah; tambah durasi hanya bila pulih baik", easy:"Easy Z1–Z2; sisipkan hari istirahat", strength:2, focus:"Fondasi aerobik dan kekuatan umum" },
+      base2: { quality:1, qualityType:"Tanjakan terkontrol atau tempo pendek", long:"Long run mudah dengan progresi konservatif", easy:"Easy Z1–Z2; jangan menumpuk sesi berat", strength:2, focus:"Daya tahan aerobik dan kekuatan spesifik awal" },
+      base3: { quality:1, qualityType:"Threshold terukur; sesi kedua hanya bila long run tidak berat dan pulih baik", long:"Long run mudah; hitung sebagai hari stres bila ≥75 menit", easy:"Easy Z1–Z2; minimal satu hari ringan setelah sesi stres", strength:1, focus:"Meningkatkan threshold dan durability" },
+      build: { quality:1, qualityType:"Satu sesi spesifik lomba (threshold atau interval)", long:"Long run terjaga; tidak ditambah keras bersamaan dengan quality", easy:"Easy Z1–Z2; jaga jarak pemulihan antarsesi", strength:1, focus:"Mengubah fondasi menjadi kemampuan spesifik lomba" },
+      peak: { quality:1, qualityType:"Sesi singkat untuk mempertahankan ketajaman", long:"Long run dipangkas; tanpa mengejar jarak baru", easy:"Easy singkat dan segar; prioritaskan pemulihan", strength:0, focus:"Menjaga kesiapan tanpa menambah kelelahan" },
+      taper: { quality:0, qualityType:"Hanya strides/tune-up singkat bila segar", long:"Tidak ada long run yang melelahkan", easy:"Easy singkat, volume turun, tidur dan pemulihan diutamakan", strength:0, focus:"Mengurangi kelelahan sambil mempertahankan rasa bugar" },
+      race: { quality:0, qualityType:"Tidak ada sesi quality tambahan", long:"Lomba menjadi beban utama", easy:"Pemanasan dan pemulihan sesuai kebutuhan", strength:0, focus:"Eksekusi lomba" },
+      transition: { quality:0, qualityType:"Tidak ada sesi quality", long:"Tidak ada long run terstruktur", easy:"Jalan atau lari sangat ringan sesuai kondisi", strength:0, focus:"Pemulihan fisik dan mental" }
+    };
+    const p = plans[name] || plans.base1;
+    return { ...p, maxStressDays:2, distribution:"Maksimal 2 hari stres dalam 7 hari; hari lain easy atau istirahat. Beri jarak pemulihan di antara sesi stres." };
+  }
   function aerobicMetrics(activities) {
     const rows = activities.filter(a => a.kind === "run" && a.ef > 0 && a.timestamp > 0).sort((a,b)=>a.timestamp-b.timestamp);
     const recent = rows.slice(-5);
@@ -208,7 +223,9 @@
     const hasRecentLong = runs.some(a=>a.timestamp>=now-42*DAY && a.duration>=75);
     const longIsStressful = hasRecentLong || baseDuration >= 70;
     if (plannedType !== "easy" && isLongDay && weeklyRuns >= 1 && (stressDays < 2 || !longIsStressful) && !taper) return longRun();
-    const maxQuality = phase.name === "prep" || phase.name === "base1" || phase.name === "base2" || longIsStressful ? 1 : 2;
+    const phasePlan = phasePrescription(phase.name);
+    // Long run yang >=75 menit dihitung sebagai hari stres; jangan menambahkan quality kedua.
+    const maxQuality = longIsStressful ? 1 : phasePlan.quality;
     const qualityAllowed = plannedType !== "easy" && plannedHardDay && qualityDays < maxQuality && stressDays < 2 && readiness >= 65 && !taper && !(loadRatio != null && loadRatio >= 1.1);
     if (qualityAllowed) {
       const type = phase.name === "prep" || phase.name === "base1" ? "strides" : phase.name === "base2" ? "hills" : phase.name === "base3" ? "threshold" : (trainingWeek % 2 ? "threshold" : "vo2");
@@ -238,7 +255,7 @@
     const recent = acts.filter(a=>a.timestamp>=now-7*DAY);
     const dayMap = new Map();
     recent.forEach(a=>{const k=dateOnly(a.timestamp),c=classify(a,Number(input.lthr)||0),v=dayMap.get(k)||{stress:false,quality:false};v.stress=v.stress||c.stress;v.quality=v.quality||c.quality;dayMap.set(k,v);});
-    return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), recovery:{cycle:Number(input.recoveryCycle)===2?"2:1":"3:1",week:phase.weekInPhase||phase.week||1,isRecoveryWeek:((phase.weekInPhase||phase.week||1)%(Number(input.recoveryCycle)===2?3:4)===0)}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
+    return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), weekly:phasePrescription(phase.name), recovery:{cycle:Number(input.recoveryCycle)===2?"2:1":"3:1",week:phase.weekInPhase||phase.week||1,isRecoveryWeek:((phase.weekInPhase||phase.week||1)%(Number(input.recoveryCycle)===2?3:4)===0)}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
   }
-  root.RunSenseFrielEngine = Object.freeze({ version:"1.2.0", recommend, inspect });
+  root.RunSenseFrielEngine = Object.freeze({ version:"1.3.0", recommend, inspect });
 })(typeof window !== "undefined" ? window : this);
