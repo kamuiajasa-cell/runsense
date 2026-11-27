@@ -180,7 +180,11 @@
     const cycleWeek = phase.name === "build" && Number.isFinite(raceDays) ? Math.max(1, Math.floor((84-raceDays)/7)+1) : trainingWeek;
     const recoveryCycle = Number(input.recoveryCycle) === 2 ? 2 : 3;
     const phaseWeek = Number(phase.weekInPhase || phase.week || cycleWeek);
-    const recoveryWeek = trainingWeek % (recoveryCycle + 1) === 0;
+    // Siklus 3:1 dihitung sejak awal blok aktif, tetapi Recovery terjadwal
+    // hanya diterapkan selama Build. Peak memiliki beban yang sudah diturunkan
+    // dan tetap membutuhkan sesi sharpening; Taper mengambil alih pemulihan akhir.
+    const recoveryDue = trainingWeek % (recoveryCycle + 1) === 0;
+    const recoveryWeek = phase.name === "build" && recoveryDue;
     const currentMinutes = last7.filter(a=>a.kind === "run").reduce((sum,a)=>sum+(Number(a.duration)||0),0);
     const priorWeeks = [1,2,3,4].map(w => acts.filter(a=>a.kind === "run" && a.timestamp>=today-(6+w*7)*DAY && a.timestamp<today-(6+(w-1)*7)*DAY).reduce((sum,a)=>sum+(Number(a.duration)||0),0));
     const baselineMinutes = priorWeeks.reduce((sum,v)=>sum+v,0)/4;
@@ -188,7 +192,7 @@
     const plannedType = input.plannedType || "auto";
     const isLongDay = plannedType === "long" || (plannedType === "auto" && (input.preferredLongDay != null ? new Date(now).getDay() === Number(input.preferredLongDay) : new Date(now).getDay() === 6));
     const plannedHardDay = plannedType === "quality" || (plannedType === "auto" && (input.preferredQualityDays ? input.preferredQualityDays.includes(new Date(now).getDay()) : [2,4].includes(new Date(now).getDay())));
-    const taper = phase.name === "taper" || phase.name === "peak";
+    const taper = phase.name === "taper";
     const metrics = aerobicMetrics(acts);
 
     const easy = (title, mins, why, tag) => ({
@@ -204,14 +208,15 @@
       reason:why, adaptation:"Pemulihan", steps:[["Pilihan","Jalan santai 10–20 menit hanya jika terasa nyaman"]], score:readiness, tag:"RECOVERY"
     });
     const quality = (kind) => {
+      const peak = kind === "peak";
       const strides = kind === "strides", hills = kind === "hills", threshold = kind === "threshold";
-      const reps = strides ? 6 : hills ? 6 : threshold ? (phase.name === "base3" ? 3 : 2) : 5;
-      const work = strides ? 20 : hills ? 1 : threshold ? 6 : 2;
+      const reps = peak ? 4 : strides ? 6 : hills ? 6 : threshold ? (phase.name === "base3" ? 3 : 2) : 5;
+      const work = peak ? 1 : strides ? 20 : hills ? 1 : threshold ? 6 : 2;
       const restMin = strides ? 1 : 2;
       const total = strides ? 23 : 15 + reps * (work + restMin);
-      const label = strides ? "Strides dan teknik lari" : hills ? "Tanjakan terkontrol" : threshold ? "Threshold terkendali" : "Interval aerobik cepat";
-      const zone = strides ? "Cepat-rileks · bukan sprint" : hills ? "RPE 6–7 · kuat, teknik terjaga" : threshold ? "Zone 4 · sekitar LTHR" : "Zone 5 · singkat dan terkendali";
-      const main = strides ? reps+"× 20 dtk strides rileks, jeda 1 mnt jalan" : reps+"× "+work+" mnt kerja terkontrol, jeda "+restMin+" mnt jog/jalan";
+      const label = peak ? "Interval singkat menjaga ketajaman" : strides ? "Strides dan teknik lari" : hills ? "Tanjakan terkontrol" : threshold ? "Threshold terkendali" : "Interval aerobik cepat";
+      const zone = peak ? "Usaha 10K terkendali · bukan sprint" : strides ? "Cepat-rileks · bukan sprint" : hills ? "RPE 6–7 · kuat, teknik terjaga" : threshold ? "Zone 4 · sekitar LTHR" : "Zone 5 · singkat dan terkendali";
+      const main = peak ? reps+"× 1 mnt pada usaha 10K terkendali, jeda 2 mnt jog mudah" : strides ? reps+"× 20 dtk strides rileks, jeda 1 mnt jalan" : reps+"× "+work+" mnt kerja terkontrol, jeda "+restMin+" mnt jog/jalan";
       return {
         k:"quality", status:"train", title:label, duration:total+" menit", hr:zone,
         pace:threshold && input.ltPace ? input.ltPace+" /km (panduan, bukan paksaan)" : "Berdasarkan usaha; ulangi dengan teknik rapi",
@@ -253,16 +258,20 @@
     }
     if (readiness < 55) return easy("Easy terbatas", Math.max(15, Math.round(baseDuration * .7)), "Kesiapan belum mendukung latihan berat. Pertahankan intensitas rendah dan evaluasi respons tubuh.", "EASY");
     const longIsStressful = runs.some(a=>a.timestamp>=now-42*DAY && classify(a,lthr,typicalDuration).long);
-    if (plannedType !== "easy" && isLongDay && weeklyRuns >= 1 && (stressDays < 2 || !longIsStressful) && !taper) return longRun();
+    if (plannedType !== "easy" && isLongDay && weeklyRuns >= 1 && (stressDays < 2 || !longIsStressful) && phase.name !== "peak" && !taper) return longRun();
     const phasePlan = phasePrescription(phase.name);
     // Long run yang >=75 menit dihitung sebagai hari stres; jangan menambahkan quality kedua.
     const maxQuality = longIsStressful ? 1 : phasePlan.quality;
     const qualityAllowed = plannedType !== "easy" && plannedHardDay && qualityDays < maxQuality && stressDays < 2 && readiness >= 65 && !taper && !(loadRatio != null && loadRatio >= 1.1);
     if (qualityAllowed) {
-      const type = phase.name === "prep" || phase.name === "base1" ? "strides" : phase.name === "base2" ? "hills" : phase.name === "base3" ? "threshold" : (trainingWeek % 2 ? "threshold" : "vo2");
-      return quality(type);
+      const type = phase.name === "peak" ? "peak" : phase.name === "prep" || phase.name === "base1" ? "strides" : phase.name === "base2" ? "hills" : phase.name === "base3" ? "threshold" : (trainingWeek % 2 ? "threshold" : "vo2");
+      const result = quality(type);
+      result.periodization = { phase:phase.name, phaseWeek:phase.weekInPhase||phase.week||1, phaseStart:phase.start||null, phaseEnd:phase.end||null, recoveryWeek, recoveryDue, recoveryCycle:recoveryCycle+":1" };
+      return result;
     }
-    let easyMins = Math.round(clamp(baseDuration * (taper ? .7 : 1), 15, 65) / 5) * 5;
+    const easyCap = phase.name === "peak" ? 40 : taper ? 35 : 65;
+    const easyFactor = phase.name === "peak" ? .8 : taper ? .7 : 1;
+    let easyMins = Math.round(clamp(baseDuration * easyFactor, 15, easyCap) / 5) * 5;
     if (loadRatio != null && loadRatio >= 1.1) easyMins = Math.max(15, Math.round(easyMins * (loadRatio >= 1.3 ? .8 : .9)));
     const reason = "Fase "+phaseLabel(phase.name)+" · hari mudah. Beban keras minggu ini "+stressDays+"/2 hari; mayoritas latihan dijaga ringan agar adaptasi dan pemulihan berjalan.";
     const r = easy("Easy Run", easyMins, reason, taper ? "TAPER" : "EASY");
@@ -290,7 +299,7 @@
     const recoveryWeek = trainingWeek % (recoveryCycle+1) === 0;
     const dayMap = new Map();
     recent.forEach(a=>{const k=dateOnly(a.timestamp),c=classify(a,Number(input.lthr)||0,typicalDuration),v=dayMap.get(k)||{stress:false,quality:false};v.stress=v.stress||c.stress;v.quality=v.quality||c.quality;dayMap.set(k,v);});
-    return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), weekly:phasePrescription(phase.name), recovery:{cycle:recoveryCycle+":1",week:trainingWeek,isRecoveryWeek:recoveryWeek}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
+    return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), weekly:phasePrescription(phase.name), recovery:{cycle:recoveryCycle+":1",week:trainingWeek,isRecoveryWeek:recoveryWeek,recoveryDue,applies:phase.name==="build"}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
   }
   root.RunSenseFrielEngine = Object.freeze({ version:"1.6.0", recommend, inspect });
 })(typeof window !== "undefined" ? window : this);
