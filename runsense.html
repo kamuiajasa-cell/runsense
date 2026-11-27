@@ -4862,7 +4862,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const fmt = value => value ? new Date(value+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"}) : "—";
     const rows = plan.calendar.phases || [];
     const timeline = rows.map(p => {
-      const current = p.name === phaseName;
+      const current = p.name === phaseName && (!plan.phase.start || p.start === plan.phase.start);
       const duration = p.name === "race" ? "Hari lomba" : (p.days || 0) + " hari";
       return '<div class="prg-row" style="align-items:flex-start;gap:10px"><span style="min-width:0"><b>'+label[p.name]+'</b>'+(current?' <span class="prg-pill up">Fase sekarang</span>':'')+'<small style="display:block;color:var(--muted,#777);margin-top:3px">'+fmt(p.start)+' – '+fmt(p.end)+'</small></span><b style="white-space:nowrap">'+duration+'</b></div>';
     }).join("");
