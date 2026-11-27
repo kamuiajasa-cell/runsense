@@ -75,7 +75,7 @@
     const now = Number(input.now) || Date.now();
     const acts = (input.activities || []).filter(a => a && a.timestamp <= now && a.timestamp > 0);
     const runs = acts.filter(a => a.kind === "run" && a.duration > 0 && a.distance > 0);
-    const first = runs.length ? Math.min(...runs.map(a=>a.timestamp)) : now - 84 * DAY;
+    const first = runs.length ? Math.min(...runs.map(a=>a.timestamp)) : now;
     const phase = phaseFor(now, input.raceDate, Number(input.raceDistance) || 0, first);
     const lthr = Number(input.lthr) || 0;
     const today = dateOnly(now), start = weekStart(now);
@@ -186,7 +186,7 @@
     const now = Number(input.now) || Date.now();
     const acts = input.activities || [];
     const runs = acts.filter(a=>a.kind==="run"&&a.distance>0);
-    const first = runs.length ? Math.min(...runs.map(a=>a.timestamp)) : now-84*DAY;
+    const first = runs.length ? Math.min(...runs.map(a=>a.timestamp)) : now;
     const phase = phaseFor(now,input.raceDate,Number(input.raceDistance)||0,first);
     const recent = acts.filter(a=>a.timestamp>=now-7*DAY);
     const dayMap = new Map();
