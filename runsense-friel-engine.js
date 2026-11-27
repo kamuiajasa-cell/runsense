@@ -183,6 +183,7 @@
     if (loadRatio != null && loadRatio >= 1.1) easyMins = Math.max(15, Math.round(easyMins * (loadRatio >= 1.3 ? .8 : .9)));
     const reason = "Fase "+phaseLabel(phase.name)+" · hari mudah. Beban keras minggu ini "+stressDays+"/2 hari; mayoritas latihan dijaga ringan agar adaptasi dan pemulihan berjalan.";
     const r = easy("Easy Run", easyMins, reason, taper ? "TAPER" : "EASY");
+    r.periodization = { phase:phase.name, phaseWeek:phase.weekInPhase||phase.week||1, phaseStart:phase.start||null, phaseEnd:phase.end||null, recoveryWeek, recoveryCycle:recoveryCycle+":1" };
     if (heat) { r.duration = Math.max(15, Math.round(easyMins*.85))+" menit"; r.reason += " Cuaca panas: kurangi durasi dan utamakan rasa nyaman."; }
     if (rain) r.reason += " Hujan: pilih rute aman atau pindahkan sesi.";
     if (loadRatio != null && loadRatio >= 1.1) r.reason += " Durasi disesuaikan karena total menit 7 hari mendekati atau melampaui baseline 4 minggu.";
