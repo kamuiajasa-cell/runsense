@@ -4561,7 +4561,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     else if (a.stage === 2) tip = "Run-walk membangun fondasi sebelum non-stop. Capek di menit awal itu normal.";
     else if (a.stage === 3 && a.mets) tip = `Easy yang terasa berat sering di atas 70% kapasitas (Max ≈ ${f1(a.mets)}). Pelankan.`;
     else if (!qualityEligible()) tip = "Quality session dikunci sampai kapasitas aerobik naik (tahap ≥ 3).";
-    $("#insightBox").textContent = tip;
+    const insightEl = $("#insightBox");
+    if (insightEl) insightEl.textContent = tip;
 
     renderHistory();
     renderMe(a, g);
