@@ -19,7 +19,7 @@ check("Recovery cycle continues across phase boundaries from active training sta
  const activities=[run(16,30),run(12,30),run(8,30),run(4,30)];
  const p=inspect(activities);
  assert.equal(p.recovery.week,3);assert.equal(p.recovery.isRecoveryWeek,false);
- const fourth=inspect([run(16,30),run(12,30),run(8,30),run(4,30),run(4,30)]);
+ const fourth=inspect([run(21,30),run(17,30),run(13,30),run(9,30),run(5,30)]);
  assert.equal(fourth.recovery.week,4);assert.equal(fourth.recovery.isRecoveryWeek,true);
 });
 check("A long run relative to current habit counts as a stress day",()=>{
