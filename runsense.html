@@ -4309,7 +4309,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       easyPace:state.athlete && state.athlete.easyPace || "",
       readiness:readiness(), pain:flag && flag.lv || 0, feel:todayFeel,
       heat:heatOn(), recoveryCycle:state.recoveryCycle || 3,
-      preferredLongDay:6, preferredQualityDays:[2,5]
+      preferredLongDay:6, preferredQualityDays:[2,4]
     };
     const result = engine.recommend(engineInput);
     const plan = engine.inspect(engineInput);
