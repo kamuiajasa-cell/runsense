@@ -6508,12 +6508,23 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   const FEEL = ld("runsense_feel_v1", {today:{},sessions:{}});
   FEEL.today = FEEL.today || {}; FEEL.sessions = FEEL.sessions || {};
   let strSel = null, strFo = null;
-  const strTarget = () => { const p = racePhase(); return p && (p.k === "peak" || p.k === "taper") ? 1 : 2; };
+  function frielPlanInfo() {
+    const engine = window.RunSenseFrielEngine;
+    if (!engine || typeof engine.inspect !== "function") return null;
+    const activities = (state.acts || []).map(a => ({ timestamp:Number(a[0])||0, kind:a[1], duration:Number(a[2])||0, distance:Number(a[3])||0, hr:Number(a[4])||0 }));
+    return engine.inspect({ now:Date.now(), activities, raceDate:state.race||"", raceDistance:Number(state.raceDist)||0, lthr:lthrNow() });
+  }
+  const strTarget = () => {
+    const p = frielPlanInfo(), phase = p && p.phase && p.phase.name;
+    if (["prep","base1","base2"].includes(phase)) return 2;
+    if (["base3","build","peak"].includes(phase)) return 1;
+    return 0;
+  };
   function strWeekDone() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const s = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); return STR.log.filter((e) => e.s === "done" && e.d >= s).length; }
   /* Menu yang boleh hari ini: sakit/hari lomba tanpa menu; kaki satu sisi tidak sehari sebelum quality/long; drill mulai tahap 3 */
   function strMenus() {
-    const fl = flagInfo(), ph = racePhase(), st = stage().s, tm = planOf((new Date().getDay() + 1) % 7), tq = tm && (tm.t === "quality" || tm.t === "long");
-    if ((fl && fl.lv === 2) || (ph && ph.k === "race")) return [];
+    const fl = flagInfo(), phase = frielPlanInfo()?.phase?.name, st = stage().s, tm = planOf((new Date().getDay() + 1) % 7), tq = tm && (tm.t === "quality" || tm.t === "long");
+    if ((fl && fl.lv === 2) || phase === "race") return [];
     return STR_MENU.filter((m) => !(m.id === "drill" && (st < 3 || fl)) && !(m.id === "leg" && (tq || fl)));
   }
   function strSuggest(ms) {
@@ -6529,8 +6540,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     STR.log = STR.log.filter((e) => e.d !== t); STR.log.push({ d: t, m: m.id, s, lv: m.mv.map((_, i) => STR.lv[m.id + ":" + i] || 0) });
     if (s === "done") {
       STR.sk[m.id] = 0; STR.st[m.id] = (STR.st[m.id] || 0) + 1;
-      const ph = racePhase();
-      if (STR.st[m.id] >= 2 && !flagInfo() && !(ph && ph.k === "taper")) { m.mv.forEach((_, i) => { const k = m.id + ":" + i; STR.lv[k] = Math.min(4, (STR.lv[k] || 0) + 1); }); STR.st[m.id] = 0; STR.up = m.id; }
+      const phase = frielPlanInfo()?.phase?.name;
+      if (STR.st[m.id] >= 2 && !flagInfo() && !["peak","taper","race","transition"].includes(phase)) { m.mv.forEach((_, i) => { const k = m.id + ":" + i; STR.lv[k] = Math.min(4, (STR.lv[k] || 0) + 1); }); STR.st[m.id] = 0; STR.up = m.id; }
     } else { STR.st[m.id] = 0; STR.sk[m.id] = (STR.sk[m.id] || 0) + 1; }
     STR.log = STR.log.slice(-200); sv("runsense_str", STR); strRender();
   }
@@ -6552,11 +6563,11 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (!ms.length || !state.athlete) { el.style.display = "none"; return; }
     el.style.display = "";
     if (!strSel || !ms.find((x) => x.id === strSel)) strSel = strSuggest(ms);
-    const m = ms.find((x) => x.id === strSel), fl = flagInfo(), ph = racePhase(), t = ymd(), today = STR.log.find((e) => e.d === t);
-    const light = !!fl || !!(ph && ph.k === "taper") || (STR.sk[m.id] || 0) >= 3;
+    const m = ms.find((x) => x.id === strSel), fl = flagInfo(), phase = frielPlanInfo()?.phase?.name, t = ymd(), today = STR.log.find((e) => e.d === t);
+    const light = !!fl || ["peak","taper","race","transition"].includes(phase) || (STR.sk[m.id] || 0) >= 3;
     const lvT = (i) => (light ? 0 : Math.min(4, STR.lv[m.id + ":" + i] || 0));
     let note = "";
-    if (light) note = fl ? "Kaki sedang ditandai, jadi versi paling ringan dulu dan level tidak naik." : ph && ph.k === "taper" ? "Menjelang race: versi ringan saja." : "Beberapa kali dilewati, jadi dipendekkan ke versi minimum. Satu kali Sudah mengembalikan levelnya.";
+    if (light) note = fl ? "Kaki sedang ditandai, jadi versi paling ringan dulu dan level tidak naik." : ["peak","taper","race","transition"].includes(phase) ? "Fase lomba atau transisi: cukup aktivasi ringan; jangan mengejar beban." : "Beberapa kali dilewati, jadi dipendekkan ke versi minimum. Satu kali Sudah mengembalikan levelnya.";
     else if (STR.up === m.id) note = "Level naik karena dua sesi terakhir menu ini selesai.";
     else if (STR.log.length && !STR.log.some((e) => e.s === "done" && e.d >= yAgo(14))) note = "Dua minggu tanpa sesi kekuatan. Mulai dari yang paling mudah hari ini.";
     el.innerHTML = `<div class="label">Kekuatan hari ini · ${strWeekDone()}/${strTarget()} minggu ini</div>` +
