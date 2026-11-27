@@ -202,12 +202,23 @@
     };
     const longRun = () => {
       const cap = phase.name === "prep" ? 40 : phase.name === "base1" ? 55 : phase.name === "base2" ? 70 : phase.name === "base3" ? 85 : 120;
-      const recentRuns = runs.filter(a=>a.timestamp>=now-42*DAY).map(a=>a.duration);
-      const longest = recentRuns.length ? Math.max(...recentRuns) : baseDuration;
-      const phaseCap = Math.max(cap, longest);
-      const target = Math.min(phaseCap, longest * 1.05);
-      const mins = Math.round(clamp(Math.max(baseDuration,target), 25, phaseCap));
-      return easy("Long Run mudah", mins, "Sasaran daya tahan aerobik. Durasi hanya bertambah bertahap dari lari panjang yang sudah ditoleransi; intensitas tetap mudah.", "LONG");
+      // Acuan long run = rata-rata sesi panjang per pekan dalam 6 minggu terakhir,
+      // bukan satu aktivitas terpanjang yang bisa menjadi pencilan.
+      const weeklyLongRuns = new Map();
+      runs.filter(a => a.timestamp >= now - 42*DAY && a.duration >= 45).forEach(a => {
+        const wk = weekStart(a.timestamp);
+        weeklyLongRuns.set(wk, Math.max(weeklyLongRuns.get(wk) || 0, Number(a.duration)));
+      });
+      const longSamples = [...weeklyLongRuns.values()];
+      const avgLongRun = longSamples.length
+        ? longSamples.reduce((sum, value) => sum + value, 0) / longSamples.length
+        : baseDuration;
+      const phaseCap = Math.max(cap, avgLongRun);
+      const target = Math.min(phaseCap, avgLongRun * 1.05);
+      const mins = Math.round(clamp(target, 25, phaseCap));
+      return easy("Long Run mudah", mins,
+        "Durasi mengacu pada rata-rata sesi lari panjang per pekan dalam 6 minggu terakhir, lalu naik maksimal sekitar 5% bila pemulihan mendukung. Intensitas tetap mudah.",
+        "LONG");
     };
 
     if (input.pain >= 2 || feel.pain >= 2) return rest("Ada nyeri yang jelas atau mengubah gerak. Jangan menjalankan sesi lari; kembali bertahap setelah aktivitas harian dan jalan nyaman bebas nyeri.");
