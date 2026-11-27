@@ -48,7 +48,7 @@
     const hardZone = z.reduce((s, n, i) => s + (i >= 3 ? Number(n || 0) : 0), 0);
     const quality = !!a.quality || rpe >= 7 || (lthr > 0 && hr >= lthr * .95) || (duration > 0 && hardZone / 60 >= 8);
     const long = duration >= 80 || (Number(a.distance) >= 0.75 && Number(a.distance) >= Number(a.weeklyDistance || 0) * .25);
-    return { quality, long, stress: quality || (long && duration >= 90) };
+    return { quality, long, stress: quality || (long && duration >= 75) };
   }
   function strengthForPhase(name) {
     if (name === "prep" || name === "base1") return "2 sesi/minggu; utamakan teknik, kekuatan umum dan progresi bertahap.";
@@ -110,7 +110,7 @@
     const baselineMinutes = priorWeeks.reduce((sum,v)=>sum+v,0)/4;
     const loadRatio = baselineMinutes>0 ? currentMinutes/baselineMinutes : null;
     const isLongDay = input.preferredLongDay != null ? new Date(now).getDay() === Number(input.preferredLongDay) : new Date(now).getDay() === 6;
-    const plannedHardDay = input.preferredQualityDays ? input.preferredQualityDays.includes(new Date(now).getDay()) : [2,5].includes(new Date(now).getDay());
+    const plannedHardDay = input.preferredQualityDays ? input.preferredQualityDays.includes(new Date(now).getDay()) : [2,4].includes(new Date(now).getDay());
     const raceDays = phase.raceDays;
     const taper = phase.name === "taper" || phase.name === "peak";
     const metrics = aerobicMetrics(acts);
@@ -161,8 +161,10 @@
       return easy("Easy recovery", Math.max(15, Math.round(baseDuration * .65)), recoveryWeek ? "Pekan pemulihan terjadwal: kurangi volume, pertahankan gerak mudah, tanpa sesi kualitas." : "Beri jarak pemulihan setelah beban berat atau kesiapan rendah.", "RECOVERY");
     }
     if (readiness < 55) return easy("Easy terbatas", Math.max(15, Math.round(baseDuration * .7)), "Kesiapan belum mendukung latihan berat. Pertahankan intensitas rendah dan evaluasi respons tubuh.", "EASY");
-    if (isLongDay && weeklyRuns >= 1 && stressDays < 2 && !taper) return longRun();
-    const maxQuality = phase.name === "prep" || phase.name === "base1" || phase.name === "base2" ? 1 : 2;
+    const hasRecentLong = runs.some(a=>a.timestamp>=now-42*DAY && a.duration>=75);
+    const longIsStressful = hasRecentLong || baseDuration >= 70;
+    if (isLongDay && weeklyRuns >= 1 && (stressDays < 2 || !longIsStressful) && !taper) return longRun();
+    const maxQuality = phase.name === "prep" || phase.name === "base1" || phase.name === "base2" || longIsStressful ? 1 : 2;
     const qualityAllowed = plannedHardDay && qualityDays < maxQuality && stressDays < 2 && readiness >= 65 && !taper && !(loadRatio != null && loadRatio >= 1.1);
     if (qualityAllowed) {
       const type = phase.name === "prep" || phase.name === "base1" ? "strides" : phase.name === "base2" ? "hills" : phase.name === "base3" ? "threshold" : (trainingWeek % 2 ? "threshold" : "vo2");
