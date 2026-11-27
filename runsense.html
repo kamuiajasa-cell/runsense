@@ -1682,28 +1682,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     } catch (_) { return false; }
   }
 
-  function wp(k, sc) {
-    sc = clamp(sc || 1, 0.45, 1);
-    if (k === 0) {
-      const r = Math.max(4, Math.round(10 * sc));
-      return { k: "A", tot: 10 + r * 2, steps: [["Pemanasan", "5 mnt jalan"], ["Inti", r + "× (1 mnt lari + 1 mnt jalan)"], ["Pendinginan", "5 mnt jalan"]] };
-    }
-    if (k === 1) {
-      const r = Math.max(3, Math.round(7 * sc));
-      return { k: "B", tot: 9 + r * 3, steps: [["Pemanasan", "5 mnt jalan"], ["Inti", r + "× (2 mnt lari + 1 mnt jalan)"], ["Pendinginan", "4 mnt jalan"]] };
-    }
-    const r1 = Math.max(3, Math.round(6 * sc)), r2 = Math.max(4, Math.round(8 * sc));
-    return {
-      k: "C",
-      tot: Math.round(9 + r1 * 1.5 + r2 * 1.5),
-      steps: [
-        ["Pemanasan", "5 mnt jalan"],
-        ["Inti 1", r1 + "× (1 mnt lari + 30 dtk jalan)"],
-        ["Inti 2", r2 + "× (30 dtk lari + 1 mnt jalan)"],
-        ["Pendinginan", "4 mnt jalan"]
-      ]
-    };
-  }
+
 
   function loadOf(a) {
     if (!a || !(a[2] > 0)) return 0;
@@ -2374,37 +2353,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     };
   }
 
-  function reviewHeadline(rev) {
-    // accept either structured review or legacy notes array
-    if (!rev) return null;
-    if (Array.isArray(rev)) {
-      if (rev.some((n) => n.k === "r")) return { k: "r", text: "Sesi ini berat. Prioritaskan pemulihan." };
-      if (rev.filter((n) => n.k === "y").length >= 2) return { k: "y", text: "Ada sinyal untuk waspada. Besok santai dulu." };
-      return { k: "g", text: "Sesi terkendali." };
-    }
-    return rev.headline ? { k: rev.tone || "g", text: rev.headline } : null;
-  }
 
-  function renderReviewHTML(rev, startMs) {
-    if (!rev || !rev.sections || !rev.sections.length) return "";
-    let html = "";
-    if (rev.headline) {
-      html += `<div class="review-note ${rev.tone}" style="font-weight:700">${rev.headline}</div>`;
-    }
-    if (rev.summary) {
-      html += `<p class="hint" style="margin:8px 0 4px;font-family:var(--mono)">${rev.summary}</p>`;
-    }
-    rev.sections.forEach((sec) => {
-      html += `<div class="section-label" style="margin-top:14px">${sec.title}</div>`;
-      sec.notes.forEach((n) => {
-        html += `<div class="review-note ${n.k}">${n.text}</div>`;
-      });
-    });
-    if (startMs) {
-      html += `<button class="btn btn-outline sm" style="margin-top:12px" type="button" onclick="openAct(${startMs})">Detail aktivitas</button>`;
-    }
-    return html;
-  }
+
+
 
   /* ---------- UI helpers ---------- */
 
@@ -3616,20 +3567,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     return PLAN_DAYS.reduce((s, d) => s + ((state.plan[d[0]] && Number(state.plan[d[0]].km)) || 0), 0);
   }
   /* Long: 3 minggu terakhir semuanya ada lari panjang dan tidak ada yang turun → saran cutback */
-  function cutbackDue() {
-    const wkStart = today() - ((new Date().getDay() + 6) % 7) * 864e5;
-    const L = [];
-    for (let w = 1; w <= 3; w++) {
-      const a0 = wkStart - w * 7 * 864e5, a1 = a0 + 7 * 864e5;
-      let mx = 0;
-      (state.acts || []).forEach((x) => {
-        const dd = d0(x[0]);
-        if (x[1] === "run" && dd >= a0 && dd < a1 && (x[3] >= 10 || detectType(x).type === "long")) mx = Math.max(mx, x[3]);
-      });
-      L.push(mx);
-    }
-    return L.every((v) => v > 0) && Math.min(...L) >= 0.85 * Math.max(...L);
-  }
+
   const rwOn = () => !!(state.rw && state.rw.on);
   const rwT = (n) => Math.floor(n / 60) + ":" + String(n % 60).padStart(2, "0");
   /* Pace lari murni dari pace rata-rata run-walk (jalan dianggap ~11 mnt/km). */
@@ -3637,12 +3575,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const f = state.rw.run / (state.rw.run + state.rw.walk), inv = (1 / avg - (1 - f) / 11) / f;
     return inv > 0 ? Math.max(1 / inv, 4.5) : avg;
   }
-  function goalPace() {
-    const g = (state.raceGoal || "").split(":").map(Number);
-    if (g.length < 2 || g.some(isNaN)) return 0;
-    const sec = g.length === 3 ? g[0] * 3600 + g[1] * 60 + g[2] : g[0] * 60 + g[1], km = +state.raceDist || 0;
-    return km > 0 && sec > 0 ? sec / 60 / km : 0;
-  }
+
   function setRaceX() {
     state.raceDist = +$("#raceDist").value || 0;
     state.raceGoal = ($("#raceGoal").value || "").trim();
@@ -3862,13 +3795,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     return { lo: lo * k, hi: hi * k, src, base: b, meta: b && easyMeta ? easyMeta : null };
   }
   /* Hills dipakai hanya kalau medan latihanmu memang berbukit: median >= 8 m/km di 28 hari terakhir. */
-  function hillsRelevant() {
-    const cut = Date.now() - 28 * 864e5;
-    const L = (state.acts || []).filter((a) => a[1] === "run" && a[0] >= cut && a[3] >= 3 && a[5] >= 0).map((a) => a[5] / a[3]);
-    if (L.length < 4) return false;
-    L.sort((x, y) => x - y);
-    return L[Math.floor(L.length / 2)] >= 8;
-  }
+
 
   /* ---------- Training tolerance: kebiasaan yang berhasil ditanggung ---------- */
   function trainingTolerance() {
@@ -3988,21 +3915,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
   /* Proyeksi target rolling: riwayat aktual tertua→terbaru, lalu target tiap minggu
      masuk sebagai minggu terbaru. Saat minggu selesai, baseline berikutnya memakai aktualnya. */
-  function rollingMileageForecast(baseline, count) {
-    count = Math.max(0, Math.min(16, Number(count) || 5));
-    if (!baseline || !(baseline.total > 0)) return [];
-    let history = (baseline.weeks || []).slice().reverse().map((km) => Math.max(0, Number(km) || 0));
-    if (history.length !== 4) history = Array(4).fill(Math.max(0, Number(baseline.average) || 0));
-    const canProgress = baseline.confidence === "high";
-    const targets = [];
-    for (let i = 0; i < count; i++) {
-      const average = history.slice(-4).reduce((sum, km) => sum + km, 0) / 4;
-      const target = Math.round((canProgress ? average * 1.10 : Number(baseline.average) || 0) * 10) / 10;
-      targets.push(target);
-      history.push(target);
-    }
-    return targets;
-  }
+
 
   /* Beban 7 hari dibanding rerata 4 minggu kalender sebelumnya; guardrail, bukan diagnosis cedera. */
   function weeklyCtx() {
@@ -4025,25 +3938,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   }
 
   /* Kurangi menit kerja quality secara nyata agar durasi, langkah, dan workout jam tetap sinkron. */
-  function trimQualityWork(q, targetMins) {
-    if (!q || !Array.isArray(q.wl) || !(targetMins > 0) || !(q.dur > targetMins)) return q;
-    const workLine = q.wl[4] || "";
-    const match = /([0-9]+)(m|s)( |$)/.exec(workLine);
-    if (!match) return q;
-    const oldValue = Number(match[1]), unit = match[2];
-    const repsMatch = String(q.wl[3] || "1x").match(/([0-9]+)/);
-    const reps = repsMatch ? Math.max(1, Number(repsMatch[1])) : 1;
-    const minimum = unit === "m" ? 1 : 30;
-    const factor = Math.max(.5, Math.min(1, targetMins / q.dur));
-    const nextValue = Math.max(minimum, Math.min(oldValue - 1, Math.floor(oldValue * factor)));
-    if (!(nextValue < oldValue)) return q;
-    q.wl[4] = workLine.replace(match[0], nextValue + unit + match[3]);
-    const corePattern = new RegExp("(^|[^0-9])" + oldValue + " (mnt|menit|dtk|detik)");
-    q.core = String(q.core || "").replace(corePattern, "$1" + nextValue + " $2");
-    const minutesPerRep = (oldValue - nextValue) * (unit === "m" ? 1 : 1 / 60);
-    q.dur = Math.max(15, Math.round(q.dur - minutesPerRep * reps));
-    return q;
-  }
+
 
 
   // Feel-first coaching: subjective inputs are independent of imported activity metrics.
@@ -4130,24 +4025,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if(strengthCaution){volumeFactor=Math.min(volumeFactor,rv("strengthFactor",.9));notes.push("dosis strength kaki menengah–tinggi dalam 48 jam");}
     return {acute,prevWeekly,ratio,hard7:hard.length,hardRpe,heavyLegs,avgRpe,qualityCaution,qualityProgressionLevel,successfulQuality,volumeFactor,strengthLoad48h:strength.legLoad,strengthCaution,qualityLock:hard.length>=2||hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||strengthCaution||(ratio!=null&&ratio>1.5),recoveryBias:hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||(avgRpe!=null&&avgRpe>=7&&recentFeel.length>=2),notes};
   }
-  function applyFeelDecision(r){
-    if(!r||r.status==='done'||r.status==='rest')return r;
-    const draft=feelToday(), f=draft&&draft.savedDate===ymd()?draft:{}, pain=+f.pain||0, weak=f.energy===1, tired=f.fatigue===3||f.legs===3;
-    if(pain>=2)return {k:'bad',status:'rest',title:'Istirahat — ada nyeri',duration:'—',hr:'—',pace:'—',tag:'RECOVERY',score:r.score,steps:[['Prioritas','Jangan berlari jika nyeri jelas atau mengubah cara berjalan/berlari.'],['Berikutnya','Evaluasi gejala; bila menetap atau memburuk, minta penilaian tenaga kesehatan.']],reason:'Check-in melaporkan nyeri yang jelas. Ini mengalahkan target latihan dan metrik kesiapan.'};
-    if(pain===1)return {k:'wn',status:'train',title:'Jalan atau recovery ringan',duration:'15–20 menit',hr:'Nyaman',pace:'Tanpa target',tag:'RECOVERY',score:r.score,steps:[['Pilihan','Jalan hanya jika tidak menambah nyeri.'],['Batas','Nyeri meningkat atau mengubah gerak = berhenti.']],reason:'Ada nyeri ringan. Hari ini bukan waktu mengejar target lari.'};
-    if(weak&&(tired||f.fatigue===2))return {k:'bad',status:'rest',title:'Istirahat dan pulihkan diri',duration:'—',hr:'—',pace:'—',tag:'RECOVERY',score:r.score,steps:[['Saran','Tidur, makan, dan hidrasi cukup; evaluasi kembali besok.']],reason:'Energi rendah disertai kelelahan. Respons tubuh lebih penting daripada jadwal.'};
-    if(weak||tired||feelLearning().recentHard){
-      if(r.tag==='QUALITY'||r.tag==='LONG'){
-        const base=parseInt(String(r.duration||'').match(/\d+/)?.[0]||25,10),mins=Math.max(15,Math.min(25,Math.round(base*.75)));
-        return {k:'wn',status:'train',title:'Easy diperingan',duration:mins+' menit',hr:'Ikuti napas',pace:'Sangat nyaman',tag:'RECOVERY',score:r.score,steps:[['Inti',mins+' menit mudah; boleh diselingi jalan'],['Batas','Akhiri saat usaha meningkat atau kaki tidak nyaman.']],reason:'Kondisi tubuh atau pola respons sesi terakhir menunjukkan perlu mengurangi tuntutan. Quality/lari panjang ditunda.'};
-      }
-      if(r.status==='train'&&r.duration&&/\d+/.test(r.duration)){
-        const mins=Math.max(15,Math.min(25,Math.round(parseInt(r.duration,10)*.8)));
-        r.duration=mins+' menit';r.tag='RECOVERY';r.reason=(r.reason||'')+' Check-in menunjukkan energi/otot belum optimal; durasi dipangkas dan intensitas mengikuti rasa nyaman.';
-      }
-    }
-    return r;
-  }
+
   function feelSessionHTML(a){
     if(!a||a[1]!=='run')return '';
     const v=FEEL.sessions[a[0]]||{};
@@ -4194,18 +4072,14 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       return item;
     });
     const todayFeel = FEEL && FEEL.today ? (FEEL.today[ymd()] || {}) : {};
-    const flag = flagInfo(), dow = new Date(now).getDay(), customPlan = hasPlan(), todayPlan = planOf(dow);
-    const qualityDays = customPlan ? PLAN_DAYS.filter(d => { const p=planOf(d[0]); return p && p.t==="quality"; }).map(d=>d[0]) : [2,4];
-    const longDays = customPlan ? PLAN_DAYS.filter(d => { const p=planOf(d[0]); return p && p.t==="long"; }).map(d=>d[0]) : [6];
+    const flag = flagInfo();
     const engineInput = {
       now, activities, raceDate:state.race || "", raceDistance:Number(state.raceDist) || 0,
       goal:state.goal || "5K", lthr:L, ltPace:state.athlete && state.athlete.ltPace || "",
       easyPace:state.athlete && state.athlete.easyPace || "",
       readiness:readiness(), pain:flag && flag.lv || 0, feel:todayFeel,
       heat:heatOn(), recoveryCycle:state.recoveryCycle || 3,
-      plannedType:todayPlan && todayPlan.t || "auto",
-      preferredLongDay:longDays.length ? longDays[0] : (customPlan ? -1 : 6),
-      preferredQualityDays:qualityDays
+      plannedType:"auto", preferredLongDay:6, preferredQualityDays:[2,4]
     };
     const result = engine.recommend(engineInput);
     const plan = engine.inspect(engineInput);
@@ -6471,11 +6345,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         : `<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-primary sm" type="button" onclick="strMark('done')">Sudah</button><button class="btn btn-outline sm" type="button" onclick="strMark('skip')">Skip</button></div>`) +
       strFormHTML() + pqHTML();
   }
-  function strRow() {
-    if (!STR.log.length) return "";
-    const d = STR.log.filter((e) => e.s === "done" && e.d >= yAgo(28)).length, s = STR.log.filter((e) => e.s === "skip" && e.d >= yAgo(28)).length;
-    return '<div class="prg-row"><span>Kekuatan, 4 minggu</span><b>' + d + " sudah · " + s + " skip</b></div>";
-  }
+
   // Catatan strength kalender: tanggal dihitung relatif ke minggu Senin–Minggu yang sedang ditampilkan.
   function strMenuName(id) { const m = STR_MENU.find(x => x.id === id); return m ? m.n : "Strength"; }
   function strDayEntry(dow) {
@@ -6576,23 +6446,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (!(t.pl || t.cl || t.cr || t.sl || t.sr)) return;
     TS.push(t); sv("runsense_tests", TS.slice(-24)); renderProgress();
   }
-  function fmCard() {
-    const now = Date.now(), pr = (l, v) => '<div class="prg-row"><span>' + l + "</span><b>" + v + "</b></div>";
-    const runs = (state.acts || []).filter((a) => a[1] === "run" && a[0] >= now - 56 * 864e5 && cadOf(a) > 0 && detectType(a).type === "easy");
-    let h = "", ins = [];
-    if (runs.length >= 3) { const sl = runs.map(strideOf).filter((v) => v > 0); h += pr("Kadens easy, median 8 minggu", Math.round(mdn(runs.map(cadOf))) + " langkah/menit") + (sl.length ? pr("Panjang langkah easy", m2(mdn(sl))) : ""); }
-    else h += '<p class="prg-note">Kadens muncul setelah minimal 3 lari ringan dengan data kadens (sinkron ulang bila baru).</p>';
-    const t = TS[TS.length - 1];
-    if (t) {
-      const f = (l, a, b, u) => (a || b ? pr(l, (a || "—") + " / " + (b || "—") + " " + u) : "");
-      h += pr("Tes mini terakhir", t.d) + (t.pl ? pr("Plank", t.pl + " dtk") : "") + f("Angkat tumit 1 kaki, kiri / kanan", t.cl, t.cr, "rep") + f("Side plank, kiri / kanan", t.sl, t.sr, "dtk");
-      [["angkat tumit", t.cl, t.cr], ["side plank", t.sl, t.sr]].forEach(([n, a, b]) => { if (a && b && Math.abs(a - b) / Math.max(a, b) > 0.2) ins.push("Selisih kiri-kanan di " + n + " lebih dari 20%. Beri sisi yang lemah porsi ekstra di menu kekuatan."); });
-    }
-    if (!t || t.d < yAgo(28)) h += '<div class="label" style="margin-top:12px">Tes mini bulanan, tanpa alat (maksimal, sampai gagal)</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><input id="tPl" type="number" inputmode="numeric" placeholder="Plank dtk" style="' + inpS + '"><input id="tCl" type="number" inputmode="numeric" placeholder="Tumit kiri" style="' + inpS + '"><input id="tCr" type="number" inputmode="numeric" placeholder="Tumit kanan" style="' + inpS + '"><input id="tSl" type="number" inputmode="numeric" placeholder="Side plank kiri dtk" style="' + inpS + '"><input id="tSr" type="number" inputmode="numeric" placeholder="Side plank kanan dtk" style="' + inpS + '"></div><button class="btn btn-outline sm" type="button" style="margin-top:10px" onclick="saveTest()">Simpan tes</button>';
-    const e1 = estMax(), e0 = estMax((state.acts || []).filter((a) => a[0] <= now - 56 * 864e5), now - 56 * 864e5);
-    if (e1.m && e0.m && e1.conf !== "rendah" && e0.conf !== "rendah" && Math.abs(e1.m - e0.m) < 0.3) ins.push("Kapasitas aerobik (VO₂max) mendatar 8 minggu. Itu wajar: VO₂max punya batas. Ekonomi lari masih bisa naik lewat kekuatan, drill, dan durability.");
-    return '<section class="prg-card"><h4>Kekuatan & form</h4><div class="sub">Kadens, langkah, kekuatan di rumah. Dinilai terpisah dari pace.</div>' + h + ins.map((x) => '<div class="prg-insight">' + x + "</div>").join("") + "</section>";
-  }
+
   const PQQ = ["Dokter pernah bilang kamu punya masalah jantung atau tekanan darah tinggi?", "Dada terasa nyeri saat berolahraga?", "Dalam sebulan terakhir, dada nyeri saat tidak berolahraga?", "Kamu pernah pusing, kehilangan keseimbangan, atau pingsan?", "Ada masalah tulang, sendi, atau otot yang bisa memburuk karena olahraga?", "Sedang diresepkan obat untuk tekanan darah atau jantung?", "Ada alasan lain kamu sebaiknya tidak berolahraga?"];
   let PQ = ld("runsense_parq", null), pqA = null;
   function pqStart() { pqA = []; strRender(); }
