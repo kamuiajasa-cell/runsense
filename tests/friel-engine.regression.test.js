@@ -47,6 +47,17 @@ check("10K race 33 days away remains Build-Peak-Taper-Race",()=>{
  assert.deepEqual(Array.from(result.calendar.phases,p=>p.name),["build","peak","taper","race"]);
  assert.deepEqual(Array.from(result.calendar.phases,p=>p.days),[19,7,7,1]);
 });
+check("Races 15–33 days away use remaining Build, seven-day Peak, and seven-day Taper",()=>{
+ for(let days=15;days<=33;days++){
+  const race=new Date(now+days*DAY).toISOString().slice(0,10);
+  const state=inspect([run(1,35)],{raceDate:race,raceDistance:10});
+  const phases=Array.from(state.calendar.phases,p=>({name:p.name,days:p.days}));
+  assert.equal(phases.find(p=>p.name==="build")?.days,days-14,days+" days out Build duration");
+  assert.equal(phases.find(p=>p.name==="peak")?.days,7,days+" days out Peak duration");
+  assert.equal(phases.find(p=>p.name==="taper")?.days,7,days+" days out Taper duration");
+  assert.equal(state.phase.name,"build",days+" days out should still be Build");
+ }
+});
 check("Races 8–14 days away use Peak then seven-day Taper, with no leftover Build day",()=>{
  for(let days=8;days<=14;days++){
   const race=new Date(now+days*DAY).toISOString().slice(0,10);
