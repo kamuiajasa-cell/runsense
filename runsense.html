@@ -4321,6 +4321,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       result.strengthGuidance = plan.strengthGuidance;
       if (result.status === "train" && result.tag !== "LOMBA") result.reason += " Strength fase ini: " + plan.strengthGuidance;
     }
+    if (result) {
+      result.trainingPhase = plan.phase.name;
+      if (result.adaptation) result.reason += " Fokus adaptasi: " + result.adaptation + ".";
+    }
     return decorate(result);
   }
   function decorate(r) {
