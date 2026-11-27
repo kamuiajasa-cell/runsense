@@ -15,12 +15,44 @@ check("No-race phase ignores stale history after a >42-day break",()=>{
  const p=inspect([run(730,35),run(2,25)]).phase;
  assert.equal(p.name,"prep");assert.equal(p.weekInPhase,1);
 });
-check("Recovery cycle continues across phase boundaries from active training start",()=>{
- const activities=[run(16,30),run(12,30),run(8,30),run(4,30)];
- const p=inspect(activities);
- assert.equal(p.recovery.week,3);assert.equal(p.recovery.isRecoveryWeek,false);
- const fourth=inspect([run(21,30),run(17,30),run(13,30),run(9,30),run(5,30)]);
- assert.equal(fourth.recovery.week,4);assert.equal(fourth.recovery.isRecoveryWeek,true);
+check("3:1 recovery is counted from active training start and applied on Build week 4",()=>{
+ const activities=[run(21,30),run(17,30),run(13,30),run(9,30),run(5,30)];
+ const fourth=inspect(activities);
+ assert.equal(fourth.recovery.week,4);
+ assert.equal(fourth.recovery.recoveryDue,true);
+ assert.equal(fourth.recovery.isRecoveryWeek,true);
+ assert.equal(fourth.recovery.applies,true);
+});
+check("Scheduled 3:1 recovery does not override Peak; Peak keeps its sharpening session",()=>{
+ const peakNow=Date.UTC(2026,11,19,12);
+ const start=peakNow-21*DAY;
+ const activities=[{timestamp:start,kind:"run",duration:30,distance:5,hr:140,rpe:3}];
+ const state=engine.inspect({now:peakNow,activities,raceDate:"2026-12-31",raceDistance:10});
+ assert.equal(state.phase.name,"peak");
+ assert.equal(state.recovery.week,4);
+ assert.equal(state.recovery.recoveryDue,true);
+ assert.equal(state.recovery.isRecoveryWeek,false);
+ const workout=engine.recommend({now:peakNow,activities,raceDate:"2026-12-31",raceDistance:10,readiness:90,plannedType:"quality",preferredQualityDays:[6]});
+ assert.equal(workout.tag,"QUALITY");
+ assert.match(workout.title,/ketajaman/i);
+ assert.match(workout.steps[1][1],/4× 1 mnt/);
+});
+check("Peak long-day request is shortened to easy running, not a long run",()=>{
+ const peakNow=Date.UTC(2026,11,19,12), start=peakNow-21*DAY;
+ const activities=[{timestamp:start,kind:"run",duration:30,distance:5,hr:140,rpe:3}];
+ const workout=engine.recommend({now:peakNow,activities,raceDate:"2026-12-31",raceDistance:10,readiness:90,plannedType:"long"});
+ assert.notEqual(workout.tag,"LONG");
+ assert.ok(parseInt(workout.duration,10)<=40);
+});
+check("Taper suppresses scheduled 3:1 recovery and quality sessions",()=>{
+ const taperNow=Date.UTC(2026,11,26,12), start=taperNow-28*DAY;
+ const activities=[{timestamp:start,kind:"run",duration:30,distance:5,hr:140,rpe:3}];
+ const state=engine.inspect({now:taperNow,activities,raceDate:"2026-12-31",raceDistance:10});
+ assert.equal(state.phase.name,"taper");
+ assert.equal(state.recovery.recoveryDue,true);
+ assert.equal(state.recovery.isRecoveryWeek,false);
+ const workout=engine.recommend({now:taperNow,activities,raceDate:"2026-12-31",raceDistance:10,readiness:90,plannedType:"quality",preferredQualityDays:[6]});
+ assert.notEqual(workout.tag,"QUALITY");
 });
 check("A long run relative to current habit counts as a stress day",()=>{
  const activities=[run(1,86),run(4,35),run(7,35)];
