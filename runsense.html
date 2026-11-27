@@ -4337,12 +4337,17 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const a = state.athlete || {}, L = lthrNow(), fl = flagInfo();
     const zoneEdges = L > 0 ? lthrZoneEdges() : [];
     if (L && typeof r.hr === "string") {
-      if (/LTHR/.test(r.hr)) r.hr = "Jangan lewat " + L + " bpm di awal" + ((+state.raceDist || 0) >= 42 ? " · usaha ≈ Z3" : (+state.raceDist || 0) >= 21 ? " · usaha ≈ Z4" : (+state.raceDist || 0) >= 5 ? " · sampai Z5 di akhir" : "");
-      else r.hr = r.hr.replace(/Zone (\d)(?:–(\d))?/, (m, x, y) => {
-        const first = Math.max(1, Math.min(7, +x)), last = Math.max(first, Math.min(7, +(y || x)));
+      // Jangan mengubah zona sesi easy/long run menjadi target lomba hanya karena raceDist 5K/10K.
+      // Target HR harus mengikuti jenis sesi; zona Z1–Z2 tetap mudah pada semua jarak lomba.
+      const zm = r.hr.match(/Zone (\d)(?:–(\d))?/);
+      if (zm) {
+        const first = Math.max(1, Math.min(7, +zm[1])), last = Math.max(first, Math.min(7, +(zm[2] || zm[1])));
         const lo = first === 1 ? 0 : zoneEdges[first - 2], hi = zoneEdges[last - 1] - 1;
-        return m + " · " + (lo ? lo + "–" + hi : "<" + hi) + " bpm (LTHR " + L + ")";
-      });
+        const bpm = first === 1 && last <= 2 ? "maks. " + hi : (lo ? lo + "–" + hi : "<" + hi);
+        r.hr = "Zone " + first + (last > first ? "–" + last : "") + " · " + bpm + " bpm (LTHR " + L + ")";
+      } else if (/LTHR/.test(r.hr) && r.title === "Hari lomba") {
+        r.hr = "Awal lomba terkendali; naikkan usaha bertahap sesuai kemampuan, bukan mengejar zona tinggi.";
+      }
     }
     if (a.ltPace && r.pace === "Mendekati LTPace") r.pace = a.ltPace + " /km (LTPace)";
     const bc = bodyLoadContext();
