@@ -4,13 +4,25 @@ const source=fs.readFileSync(path.join(__dirname,"..","runsense-friel-engine.js"
 const context={window:{},Date,Map,Math,Number,Object,Array,String};
 vm.runInNewContext(source,context);
 const engine=context.window.RunSenseFrielEngine;
-assert.equal(engine.version,"1.6.0");
+assert.equal(engine.version,"1.6.1");
 const DAY=864e5, now=Date.UTC(2026,10,28,12);
 const run=(daysAgo,minutes,extra={})=>({timestamp:now-daysAgo*DAY,kind:"run",duration:minutes,distance:5,hr:140,rpe:3,...extra});
 function inspect(activities=[],extra={}){return engine.inspect({now,activities,...extra});}
 function recommend(activities=[],extra={}){return engine.recommend({now,activities,readiness:80,...extra});}
 const results=[];
 function check(name,fn){try{fn();results.push({name,result:"PASS"});}catch(e){results.push({name,result:"FAIL",error:e.message});}}
+check("A completed run today closes the day's running recommendation",()=>{
+ const workout=recommend([run(0,32,{distance:4.6})]);
+ assert.equal(workout.status,"done");
+ assert.equal(workout.tag,"DONE");
+ assert.match(workout.title,/Sudah lari hari ini/);
+ assert.match(workout.reason,/Tidak perlu menambah sesi lari/);
+ assert.equal(workout.duration,"32 menit");
+});
+check("A non-running activity today does not falsely mark the run as completed",()=>{
+ const workout=recommend([{timestamp:now,kind:"jump_rope",duration:20,distance:0}]);
+ assert.notEqual(workout.status,"done");
+});
 check("No-race phase ignores stale history after a >42-day break",()=>{
  const p=inspect([run(730,35),run(2,25)]).phase;
  assert.equal(p.name,"prep");assert.equal(p.weekInPhase,1);
