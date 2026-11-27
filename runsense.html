@@ -1357,7 +1357,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
             <div class="sg-t">Referensi intensitas</div>
             <div class="sgroup">
               <div class="sblock"><div id="refList" class="zone-list"></div></div>
-              <div class="sactions"><button type="button" class="btn btn-outline sm" onclick="runBacktest()">Uji estimator Max METs</button></div>
+              
             </div>
           </div>
         </div>
@@ -2453,67 +2453,6 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       html += `<button class="btn btn-outline sm" style="margin-top:12px" type="button" onclick="openAct(${startMs})">Detail aktivitas</button>`;
     }
     return html;
-  }
-
-    /* ---------- Uji estimator Max METs (backtest) ---------- */
-  // Tiap lari dinilai dengan estimasi yang HANYA memakai lari sebelumnya.
-  // Pembanding: METs yang tersirat dari lari itu (metsOf(pace) / pctAt(durasi)),
-  // yaitu batas bawah kapasitas bila lari itu dianggap usaha maksimal untuk durasinya.
-  function runBacktest() {
-    const med = (a) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : null; };
-    const runs = (state.acts || []).filter((x) => x[1] === "run" && x[3] >= 2 && x[2] >= 10).sort((a, b) => a[0] - b[0]);
-    const res = [];
-    runs.forEach((r) => {
-      const e = estMax((state.acts || []).filter((x) => x[0] < r[0]), r[0]);
-      if (e.m == null) return;
-      res.push({ t: r[0], est: e.m, run: metsOf(r[2] / r[3]) / pctAt(r[2]), conf: e.conf, km: r[3],
-        st: e.m < 7.9 ? 1 : e.m < 9.2 ? 2 : e.m < 12 ? 3 : 4 });
-    });
-    let flips = 0;
-    res.forEach((x, i) => { if (i && x.st !== res[i - 1].st) flips++; });
-    const n = res.length;
-    // Backtest retrospektif guardrail durasi easy: hanya memakai aktivitas sebelum tanggal sesi.
-    const durationSim = [];
-    runs.forEach((r, i) => {
-      const prior = runs.slice(0, i).filter(x => r[0] - x[0] <= 42 * 864e5);
-      const older = runs.slice(0, i);
-      const typical = med(prior.map(x => x[2]));
-      const last = older.length ? older[older.length - 1] : null;
-      const gap = last ? (r[0] - last[0]) / 864e5 : 999;
-      let cap = typical ? clamp(typical, 20, 35) : 25;
-      if (gap > 14) cap *= gap <= 28 ? .9 : gap <= 42 ? .8 : gap <= 60 ? .7 : .6;
-      cap = Math.max(15, Math.round(cap));
-      durationSim.push({ t:r[0], actual:r[2], cap, above:r[2] > cap + 2, gap, n:prior.length });
-    });
-    const testedDuration = durationSim.filter(x => x.n >= 2);
-    const overDuration = testedDuration.filter(x => x.above);
-    $("#mTitle").textContent = "Audit kemampuan & durasi planner";
-    $("#mSub").textContent = n + " lari bisa diuji dari " + runs.length + " lari valid";
-    let body;
-    if (n < 10) {
-      body = '<div class="insight">Belum cukup untuk menilai: butuh minimal 10 lari yang punya estimasi dari data sebelumnya (sekarang ' + n + '). Sinkron riwayat lebih panjang atau tunggu lari bertambah.</div>';
-    } else {
-      const diff = res.map((x) => x.est - x.run);
-      const under = Math.round((100 * res.filter((x) => x.est < x.run * 0.95).length) / n);
-      body = '<div class="steps">' +
-        '<div><b>Selisih tengah (estimasi − lari)</b><span>' + f1(med(diff)) + ' METs</span></div>' +
-        '<div><b>Rata-rata selisih mutlak</b><span>' + f1(diff.reduce((a, d) => a + Math.abs(d), 0) / n) + ' METs</span></div>' +
-        '<div><b>Estimasi di bawah lari nyata</b><span>' + under + '% lari</span></div>' +
-        '<div><b>Perpindahan tahap</b><span>' + flips + '× dalam ' + n + ' lari</span></div></div>' +
-        '<div class="insight">Estimasi seharusnya ≥ METs tersirat lari (lari biasanya di bawah maksimal), jadi selisih positif wajar. Persentase "di bawah" yang tinggi berarti tabel pace→METs atau durasi→% kapasitas meremehkan kamu. Perpindahan tahap yang sering berarti tahap belum stabil. Belum ada ambang lulus/gagal; ini bahan kalibrasi.</div>' +
-        '<div class="section-label" style="margin-top:14px">8 uji terakhir</div><div class="steps">' +
-        res.slice(-8).reverse().map((x) => '<div><b>' + new Date(x.t).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + ' · ' + f1(x.km) + ' km</b><span>est ' + f1(x.est) + ' · lari ' + f1(x.run) + ' · T' + x.st + '</span></div>').join("") + '</div>';
-    }
-    const durPct = testedDuration.length ? Math.round(100 * overDuration.length / testedDuration.length) : null;
-    body += '<div class="section-label" style="margin-top:16px">Simulasi batas durasi Easy</div>' +
-      (durPct == null
-        ? '<div class="insight">Belum cukup aktivitas berurutan untuk menguji batas durasi (butuh minimal 2 lari sebelumnya untuk tiap sampel).</div>'
-        : '<div class="steps"><div><b>Sampel berurutan</b><span>' + testedDuration.length + ' sesi</span></div><div><b>Sesi aktual di atas plafon Easy simulasi</b><span>' + overDuration.length + ' (' + durPct + '%)</span></div><div><b>Median plafon Easy simulasi</b><span>' + f1(med(testedDuration.map(x => x.cap))) + ' menit</span></div></div>' +
-          '<div class="insight">Simulasi ini hanya menguji guardrail durasi Easy dengan data sebelum setiap sesi (tanpa melihat masa depan). Ini bukan rekonstruksi rekomendasi lengkap: label sesi historis, nyeri, dan kesiapan harian tidak selalu tersedia. Sesi quality/lari panjang yang melewati plafon Easy bukan otomatis salah.</div>') +
-      '<div class="section-label" style="margin-top:12px">Contoh terakhir · aktual vs plafon Easy</div><div class="steps">' +
-      durationSim.slice(-6).reverse().map(x => '<div><b>' + new Date(x.t).toLocaleDateString("id-ID",{day:"numeric",month:"short"}) + ' · aktual ' + Math.round(x.actual) + ' mnt</b><span>plafon Easy simulasi ' + x.cap + ' mnt' + (x.gap > 14 ? ' · jeda ' + Math.round(x.gap) + ' hari' : '') + '</span></div>').join("") + '</div>';
-    $("#mBody").innerHTML = body;
-    $("#actModal").classList.add("show");
   }
 
   /* ---------- UI helpers ---------- */
@@ -7714,7 +7653,6 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   window.setRw = setRw;
   window.closeSettings = closeSettings;
   window.pickStyle = pickStyle;
-  window.runBacktest = runBacktest;
   window.setTheme = setTheme;
   window.setFlag = setFlag;
   window.toggleHeat = toggleHeat;
