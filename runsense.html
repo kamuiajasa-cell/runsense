@@ -4867,8 +4867,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       return '<div class="prg-row" style="align-items:flex-start;gap:10px"><span style="min-width:0"><b>'+label[p.name]+'</b>'+(current?' <span class="prg-pill up">Fase sekarang</span>':'')+'<small style="display:block;color:var(--muted,#777);margin-top:3px">'+fmt(p.start)+' – '+fmt(p.end)+'</small></span><b style="white-space:nowrap">'+duration+'</b></div>';
     }).join("");
     const noRace = !state.race;
-    const recovery = plan.recovery || {};
-    el.innerHTML = '<section class="prg-card" style="margin-bottom:14px"><h4>Kalender periodisasi</h4><div class="prg-insight">'+(noRace?'Belum ada tanggal lomba. Fase dasar mengikuti riwayat latihan.':'Menuju lomba '+fmt(state.race)+' · '+Math.max(0,plan.phase.raceDays||0)+' hari lagi')+'</div>'+timeline+'<div class="prg-insight">Siklus pemulihan '+(recovery.cycle||'3:1')+' · pekan fase '+(recovery.week||1)+(recovery.isRecoveryWeek?' · pekan pemulihan':'')+'</div>'+(rows.some(p=>p.compressed)?'<div class="prg-insight">Sebagian fase awal dipadatkan karena tanggal mulai latihan lebih dekat daripada jadwal ideal. Jangan mengejar volume yang terlewat.</div>':'')+'</section>';
+    const recovery = plan.recovery || {}, weekly = plan.weekly || {};
+    const strengthText = weekly.strength === 2 ? "2 sesi/minggu" : weekly.strength === 1 ? "1 sesi/minggu (pemeliharaan)" : "Tidak ada strength berat; mobilitas/aktivasi ringan";
+    const weeklyHtml = '<div class="prg-insight" style="margin-top:12px"><b>Isi latihan fase ini</b><div style="margin-top:7px">• Quality: '+weekly.quality+' sesi/minggu — '+weekly.qualityType+'<br>• Long run: '+weekly.long+'<br>• Hari lain: '+weekly.easy+'<br>• Strength: '+strengthText+'<br>• Fokus: '+weekly.focus+'</div><div style="margin-top:8px">'+weekly.distribution+'</div></div>';
+    el.innerHTML = '<section class="prg-card" style="margin-bottom:14px"><h4>Kalender periodisasi</h4><div class="prg-insight">'+(noRace?'Belum ada tanggal lomba. Fase dasar mengikuti riwayat latihan.':'Menuju lomba '+fmt(state.race)+' · '+Math.max(0,plan.phase.raceDays||0)+' hari lagi')+'</div>'+timeline+weeklyHtml+'<div class="prg-insight">Siklus pemulihan '+(recovery.cycle||'3:1')+' · pekan fase '+(recovery.week||1)+(recovery.isRecoveryWeek?' · pekan pemulihan':'')+'</div>'+(rows.some(p=>p.compressed)?'<div class="prg-insight">Sebagian fase awal dipadatkan karena tanggal mulai latihan lebih dekat daripada jadwal ideal. Jangan mengejar volume yang terlewat.</div>':'')+'</section>';
   }
 
   function renderProgress() {
