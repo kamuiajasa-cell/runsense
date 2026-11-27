@@ -103,7 +103,8 @@
     const baseDuration = median(recentDurations) || 25;
     const weeklyRuns = runs.filter(a=>a.timestamp >= now-7*DAY).length;
     const trainingWeek = Math.max(1, Math.floor((today - dateOnly(first)) / (7*DAY)) + 1);
-    const recoveryWeek = trainingWeek % (Number(input.recoveryCycle) === 2 ? 3 : 4) === 0;
+    const cycleWeek = phase.name === "build" && Number.isFinite(raceDays) ? Math.max(1, Math.floor((84-raceDays)/7)+1) : trainingWeek;
+    const recoveryWeek = cycleWeek % (Number(input.recoveryCycle) === 2 ? 3 : 4) === 0;
     const currentMinutes = last7.reduce((sum,a)=>sum+(Number(a.duration)||0),0);
     const priorWeeks = [1,2,3,4].map(w => acts.filter(a=>a.timestamp>=today-w*7*DAY && a.timestamp<today-(w-1)*7*DAY).reduce((sum,a)=>sum+(Number(a.duration)||0),0));
     const baselineMinutes = priorWeeks.reduce((sum,v)=>sum+v,0)/4;
@@ -130,7 +131,7 @@
       const reps = strides ? 6 : hills ? 6 : threshold ? (phase.name === "base3" ? 3 : 2) : 5;
       const work = strides ? 20 : hills ? 1 : threshold ? 6 : 2;
       const restMin = strides ? 1 : 2;
-      const total = strides ? 30 : 15 + reps * (work + restMin);
+      const total = strides ? 23 : 15 + reps * (work + restMin);
       const label = strides ? "Strides dan teknik lari" : hills ? "Tanjakan terkontrol" : threshold ? "Threshold terkendali" : "Interval aerobik cepat";
       const zone = strides ? "Cepat-rileks · bukan sprint" : hills ? "RPE 6–7 · kuat, teknik terjaga" : threshold ? "Zone 4 · sekitar LTHR" : "Zone 5 · singkat dan terkendali";
       const main = strides ? reps+"× 20 dtk strides rileks, jeda 1 mnt jalan" : reps+"× "+work+" mnt kerja terkontrol, jeda "+restMin+" mnt jog/jalan";
@@ -143,9 +144,12 @@
       };
     };
     const longRun = () => {
-      const cap = phase.name === "prep" ? 40 : phase.name === "base1" ? 55 : phase.name === "base2" ? 70 : 85;
-      const mins = Math.round(clamp(Math.max(baseDuration, cap), 30, phase.name === "build" ? 120 : 100) / 5) * 5;
-      return easy("Long Run mudah", mins, "Sasaran daya tahan aerobik. Intensitas tetap mudah; durasi tidak dinaikkan jika beban mingguan atau pemulihan belum mendukung.", "LONG");
+      const cap = phase.name === "prep" ? 40 : phase.name === "base1" ? 55 : phase.name === "base2" ? 70 : phase.name === "base3" ? 85 : 120;
+      const recentLong = runs.filter(a=>a.timestamp>=now-42*DAY && a.duration>=Math.max(50,baseDuration*1.3)).map(a=>a.duration);
+      const longest = recentLong.length ? Math.max(...recentLong) : baseDuration;
+      const target = Math.min(cap, longest * 1.05);
+      const mins = Math.round(clamp(Math.max(baseDuration,target), 25, cap) / 5) * 5;
+      return easy("Long Run mudah", mins, "Sasaran daya tahan aerobik. Durasi hanya bertambah bertahap dari lari panjang yang sudah ditoleransi; intensitas tetap mudah.", "LONG");
     };
 
     if (input.pain >= 2 || feel.pain >= 2) return rest("Ada nyeri yang jelas atau mengubah gerak. Jangan menjalankan sesi lari; kembali bertahap setelah aktivitas harian dan jalan nyaman bebas nyeri.");
@@ -172,6 +176,7 @@
     if (rain) r.reason += " Hujan: pilih rute aman atau pindahkan sesi.";
     if (loadRatio != null && loadRatio >= 1.1) r.reason += " Durasi disesuaikan karena total menit 7 hari mendekati atau melampaui baseline 4 minggu.";
     if (metrics.efficiencyChangePct != null) r.reason += " Efisiensi aerobik terbaru "+(metrics.efficiencyChangePct>0?"+":"")+metrics.efficiencyChangePct+"% dibanding kelompok sesi sebelumnya (indikator tren, bukan diagnosis).";
+    if (metrics.medianDecouplingPct != null) r.reason += " Drift aerobik median "+metrics.medianDecouplingPct+"% pada sesi dengan stream lengkap; pantau trennya, bukan satu sesi saja.";
     const strength = strengthForPhase(phase.name);
     r.strengthGuidance = strength;
     r.reason += " Strength fase ini: " + strength;
