@@ -297,7 +297,9 @@
     const typicalDuration = typicalRunDuration(runs, now);
     const trainingWeek = Math.max(1, Math.floor((dateOnly(now)-dateOnly(first))/(7*DAY))+1);
     const recoveryCycle = Number(input.recoveryCycle)===2?2:3;
-    const recoveryWeek = trainingWeek % (recoveryCycle+1) === 0;
+    const recoveryDue = trainingWeek % (recoveryCycle+1) === 0;
+    const recoveryApplies = ["prep","base1","base2","base3","build"].includes(phase.name);
+    const recoveryWeek = recoveryApplies && recoveryDue;
     const dayMap = new Map();
     recent.forEach(a=>{const k=dateOnly(a.timestamp),c=classify(a,Number(input.lthr)||0,typicalDuration),v=dayMap.get(k)||{stress:false,quality:false};v.stress=v.stress||c.stress;v.quality=v.quality||c.quality;dayMap.set(k,v);});
     return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), weekly:phasePrescription(phase.name), recovery:{cycle:recoveryCycle+":1",week:trainingWeek,isRecoveryWeek:recoveryWeek,recoveryDue,applies:recoveryApplies}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
