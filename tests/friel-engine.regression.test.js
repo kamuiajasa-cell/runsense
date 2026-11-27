@@ -47,6 +47,18 @@ check("10K race 33 days away remains Build-Peak-Taper-Race",()=>{
  assert.deepEqual(Array.from(result.calendar.phases,p=>p.name),["build","peak","taper","race"]);
  assert.deepEqual(Array.from(result.calendar.phases,p=>p.days),[19,7,7,1]);
 });
+check("Races 2–7 days away are entirely in taper with no quality recommendation",()=>{
+ for(let days=2;days<=7;days++){
+  const race=new Date(now+days*DAY).toISOString().slice(0,10);
+  const input={raceDate:race,raceDistance:10};
+  const state=inspect([run(1,35)],input);
+  assert.equal(state.phase.name,"taper",days+" days out must be taper");
+  assert.equal(state.calendar.phases.some(p=>p.name==="build"||p.name==="peak"),false,days+" days out must not retain Build/Peak");
+  const workout=recommend([run(1,35)],{...input,plannedType:"quality",readiness:90});
+  assert.notEqual(workout.tag,"QUALITY",days+" days out must not prescribe quality");
+  if(days<4) assert.equal(workout.duration,"15 menit");
+ }
+});
 check("Maximum two stress days blocks an additional quality workout",()=>{
  const activities=[run(1,40,{quality:true}),run(3,40,{quality:true})];
  const result=recommend(activities,{plannedType:"quality",preferredQualityDays:[6]});
