@@ -703,7 +703,6 @@ input,select,textarea{width:100%;min-height:48px;padding:13px!important;border-r
 .strength-week-list{display:flex;flex-wrap:wrap;gap:6px 12px}
 .strength-week-item{display:flex;gap:5px;align-items:center;font-size:12px;color:var(--grey)}
 .strength-week-item b{font-weight:600;color:var(--tx)}
-#screen-me #advBox .card{padding:16px}
 #screen-me .logout{padding-bottom:8px}
 @media(max-width:370px){#screen-me .page-title{font-size:33px}#screen-me .profile-layout>.card{padding:15px}#screen-me .field input{flex-basis:104px;width:104px;max-width:104px}}
 
@@ -1026,12 +1025,6 @@ input[type=password],input[type=text]{margin:0}
 .srow-body{padding:var(--s4) 0}
 .srow-body p{font-size:13.5px;line-height:1.6;color:var(--light-grey);margin:0}
 #screen-me .btn.btn-danger{background:transparent!important;color:var(--red)!important;border:1px solid color-mix(in srgb,var(--red) 38%,transparent)!important}
-#advBox .sgroup .insight{margin:0 0 var(--s3)}
-#advBox .sgroup .lowconf{margin:0 0 var(--s3)}
-#advBox .sgroup>.sblock{padding:var(--s4) 0}
-#advBox .zone-list{margin:0}
-#advBox .zone-row{margin:0;padding:var(--s2) 0;gap:var(--s3)}
-#advBox .zone-row span:last-child{text-align:right}
 
 @media(max-width:370px){
   .content{padding-left:var(--s4);padding-right:var(--s4)}
@@ -1074,10 +1067,6 @@ input[type=password],input[type=text]{margin:0}
 .sa-metrics{margin:0!important}
 
 
-/* Simplifikasi antarmuka: sembunyikan panel diagnostik/edukasi yang bukan alur harian. */
-.profile-layout > .sg:has(#advBtn),
-.profile-layout > .sg:has(#inCooper),
-.profile-layout > .sg:has(#refList) { display:none !important; }
 /* Ringkas hierarki halaman agar fokus ke keputusan latihan. */
 .home-hero .page-title { line-height:1.02; }
 .progress-hero [data-hero-sub] { max-width:34rem; }
@@ -1322,46 +1311,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         <div class="sg-t">Cara kerja coach</div>
         <div class="sgroup">
           <div class="srow-body"><p>Coach membaca lari, detak, dan beban latihanmu dari Intervals.icu, lalu memilih sesi hari ini: lari, run-walk, jalan, atau istirahat. Semua hitungan tetap jalan di belakang layar.</p></div>
-          <button type="button" class="srow-btn" id="advBtn" onclick="toggleAdv()">Mode lanjutan: mati</button>
         </div>
       </div>
 
-      <div id="advBox" style="display:none">
-        <div class="content-stack" style="display:flex;flex-direction:column;gap:12px">
-          <div class="sg">
-            <div class="sg-t">Mode lanjutan</div>
-            <div class="sgroup">
-              <div class="sblock rows" style="padding:4px 0">
-                <div class="row"><span>Kecukupan data RAI</span><b id="raiConf">—</b></div>
-                <div class="row"><span>Profil tubuh · BMI</span><b id="bodyContext">—</b></div>
-                <div class="row"><span>Tren berat 28 hari</span><b id="bodyTrend">—</b></div>
-                <div class="row"><span>Kategori</span><b id="afBand">—</b></div>
-                <div class="row"><span>Tahap</span><b id="afStage">—</b></div>
-              </div>
-              <div class="sblock">
-                <div class="insight" id="afTip">—</div>
-                <div class="lowconf" id="lowConf" style="display:none"></div>
-                <div class="insight" id="insightBox" style="margin-bottom:0">—</div>
-              </div>
-            </div>
-          </div>
-          <div class="sg">
-            <div class="sg-t">Tes lapangan 12 menit (Cooper)</div>
-            <div class="sgroup">
-              <div class="sblock"><div class="hint" style="margin:0">Lari sekuat mampu 12 menit di lintasan datar, lalu isi jarak totalnya. Hasilnya pembanding untuk estimasi di atas.</div></div>
-              <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l4-4 3 3 5-6 4 4"/></svg></span><span class="srow-t">Jarak<span class="srow-s">meter</span></span><input type="number" inputmode="numeric" id="inCooper" placeholder="2200" oninput="cooperCalc()"></div>
-              <div class="srow"><span class="sic n"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></span><span class="srow-t">Estimasi Max METs</span><b class="srow-v" id="cooperOut">—</b></div>
-            </div>
-          </div>
-          <div class="sg">
-            <div class="sg-t">Referensi intensitas</div>
-            <div class="sgroup">
-              <div class="sblock"><div id="refList" class="zone-list"></div></div>
-              
-            </div>
-          </div>
-        </div>
-      </div>
+      
 
       <button type="button" class="btn btn-outline btn-danger" onclick="if(confirm('Hapus data lokal dan keluar?'))logout()">Reset data &amp; logout</button>
     </div>
@@ -5262,42 +5215,13 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (hP) hP.textContent = "Saran auto: " + (a && a.ltPaceAuto ? a.ltPaceAuto + " /km" : "belum cukup data") + (state.ltpC ? " · dipakai: " + mp(state.ltpC / 60) + " /km (custom)" : "");
     const src = state.apiKey === "demo" ? "Mode demo" : state.icuLast ? "Sinkron " + hhmm(state.icuLast) : "Belum sinkron";
     $("#meSync").textContent = src;
-    const adv = localStorage.getItem("runsense_adv") === "1";
-    $("#advBox").style.display = adv ? "block" : "none";
-    $("#advBtn").textContent = "Mode lanjutan: " + (adv ? "nyala" : "mati");
     if (!a) return;
-    const rai = runningAbilityIndex(), body = bodyLoadContext();
+    const rai = runningAbilityIndex();
     $("#raiValue").textContent = rai.score == null ? "Datanya belum cukup" : rai.score + " / 100";
-    $("#raiConf").textContent = rai.score == null ? "—" : rai.conf + " · " + rai.n + " lari";
-    $("#bodyContext").textContent = body.bmi == null ? "Belum diisi" : "BMI " + body.bmi + (body.weight ? " · " + body.weight + " kg" : "");
-    const bt = $("#bodyTrend");
-    if (bt) bt.textContent = body.trend ? (body.trend.kg > 0 ? "+" : "") + body.trend.kg + " kg · " + body.trend.days + " hari" : (body.historyCount >= 2 ? "Belum ada rentang 7 hari" : "Butuh catatan berkala");
     $("#afMets").textContent = a.mets ? f1(a.mets) + " (≈ VO₂max " + Math.round(a.mets * 3.5) + ")" : "—";
-    $("#afBand").textContent = a.mets ? band(a.mets) : "—";
-    $("#afStage").textContent = a.stageName || "—";
     $("#advLoad").textContent = [a.ctl, a.atl, a.tsb].map((v) => (v != null ? v.toFixed(1) : "—")).join(" / ");
     $("#advLt").textContent = (a.lthr ? a.lthr + " bpm" : "—") + " · " + (a.ltPace ? a.ltPace + " /km" : "—");
     renderZoneTbl(); renderBest();
-    const tips = {
-      1: "Jalan cepat 20–35 mnt (akhir pekan lebih lama). Naik ke run-walk bila estimasi ≥ 7,9 METs.",
-      2: "Run-walk White Plan fase I (~30 mnt). Naik ke tahap 3 bila estimasi ≥ 9,2 METs.",
-      3: "Easy dibatasi ~70% kapasitas. Planner penuh bila Max lebih tinggi atau pace easy melambat.",
-      4: "Planner terstruktur normal. Pace 6:00 terasa santai (~65%) butuh Max ≈ 14–15,5 METs."
-    };
-    $("#afTip").innerHTML = a.stage
-      ? `<b>T${a.stage}.</b> ${tips[a.stage] || ""}` + (a.est && a.est.src ? `<br><span style="font-size:12px">Sumber: ${a.est.src} (Kecukupan data: ${a.est.conf}).</span>` : "")
-      : "Datanya belum cukup untuk membaca kapasitas.";
-    const lc = $("#lowConf");
-    const low = !a.mets || (a.est && a.est.conf === "rendah");
-    lc.style.display = low ? "" : "none";
-    lc.textContent = low ? "Keyakinan rendah: estimasi dari data tipis. Isi tanggal lahir dan data detak, atau lakukan tes 12 menit di bawah." : "";
-    const refs = [["Jalan cepat 10:40", 4.8], ["Run-walk", 6.0], ["Pace 8:15–8:30", 7.8], ["Pace 7:15–7:30", 8.5], ["Pace 6:00", 9.3]];
-    $("#refList").innerHTML = a.mets
-      ? refs.map(([n, m]) => {
-          const p = m / a.mets, col = p <= 0.68 ? "var(--primary)" : p <= 0.85 ? "var(--yellow)" : "var(--red)";
-          return `<div class="zone-row"><span>${n}</span><span style="color:${col}">${f1(m)} METs · ${Math.round(p * 100)}% · ${durText(p)}</span></div>`;
-        }).join("")
-      : '<p style="color:var(--grey);font-size:13px">Butuh estimasi Max METs dulu.</p>';
     const pg = $("#planGrid");
     if (pg && !pg.contains(document.activeElement)) renderPlanUI();
     syncSettingsUI();
@@ -5311,7 +5235,6 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     renderAll();
   }
   function setHist(k) { histF = k; renderHistory(); }
-  function toggleAdv() { localStorage.setItem("runsense_adv", localStorage.getItem("runsense_adv") === "1" ? "0" : "1"); if (state.athlete) renderMe(state.athlete); }
   function saveProfile() {
     const bd = $("#inBirthDate") ? $("#inBirthDate").value : "";
     state.birthDate = bd && ageFromBirthDate(bd) ? bd : "";
@@ -5333,13 +5256,6 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     clearTimeout(profT);
     profT = setTimeout(() => { if (state.athlete) processData(); }, 700);
   }
-  function cooperCalc() {
-    const d = +$("#inCooper").value, out = $("#cooperOut");
-    if (!(d >= 800 && d <= 4500)) { out.textContent = "—"; return; }
-    const vo2 = (d - 504.9) / 44.73;
-    out.textContent = f1(vo2 / 3.5) + " (≈ VO₂max " + Math.round(vo2) + ")";
-  }
-
   /* ---------- Analisis sesi: visual hanya dari data nyata, tiap visual punya narasi konteks ---------- */
   const SA = { sess: null };
   const saKm = (k) => (Math.round(k * 10) / 10).toString().replace(".", ",");
@@ -7672,9 +7588,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   window.setWalk = setWalk;
   window.markRest = markRest;
   window.setHist = setHist;
-  window.toggleAdv = toggleAdv;
   window.saveProfile = saveProfile;
-  window.cooperCalc = cooperCalc;
 })();
 </script>
 <script>
