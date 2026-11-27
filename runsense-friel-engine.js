@@ -50,6 +50,13 @@
     const long = duration >= 80 || (Number(a.distance) >= 0.75 && Number(a.distance) >= Number(a.weeklyDistance || 0) * .25);
     return { quality, long, stress: quality || (long && duration >= 90) };
   }
+  function strengthForPhase(name) {
+    if (name === "prep" || name === "base1") return "2 sesi/minggu; utamakan teknik, kekuatan umum dan progresi bertahap.";
+    if (name === "base2") return "2 sesi/minggu; mulai beban lebih menantang dengan repetisi rendah-menengah dan teknik terjaga.";
+    if (name === "base3" || name === "build") return "1 sesi/minggu pemeliharaan; sekitar 2 set per gerakan, hindari kelelahan yang mengganggu sesi lari kunci.";
+    if (name === "peak") return "1 sesi ringan opsional; kurangi volume dan jangan mencoba beban baru.";
+    return "Hindari strength berat; cukup aktivasi dan mobilitas ringan.";
+  }
   function aerobicMetrics(activities) {
     const rows = activities.filter(a => a.kind === "run" && a.ef > 0 && a.timestamp > 0).sort((a,b)=>a.timestamp-b.timestamp);
     const recent = rows.slice(-5);
@@ -165,15 +172,7 @@
     if (rain) r.reason += " Hujan: pilih rute aman atau pindahkan sesi.";
     if (loadRatio != null && loadRatio >= 1.1) r.reason += " Durasi disesuaikan karena total menit 7 hari mendekati atau melampaui baseline 4 minggu.";
     if (metrics.efficiencyChangePct != null) r.reason += " Efisiensi aerobik terbaru "+(metrics.efficiencyChangePct>0?"+":"")+metrics.efficiencyChangePct+"% dibanding kelompok sesi sebelumnya (indikator tren, bukan diagnosis).";
-    const strength = phase.name === "prep" || phase.name === "base1"
-      ? "2 sesi/minggu; utamakan teknik, kekuatan umum dan progresi bertahap."
-      : phase.name === "base2"
-      ? "2 sesi/minggu; mulai beban lebih menantang dengan repetisi rendah-menengah dan teknik terjaga."
-      : phase.name === "base3" || phase.name === "build"
-      ? "1 sesi/minggu pemeliharaan; sekitar 2 set per gerakan, hindari kelelahan yang mengganggu sesi lari kunci."
-      : phase.name === "peak"
-      ? "1 sesi ringan opsional; kurangi volume dan jangan mencoba beban baru."
-      : "Hindari strength berat; cukup aktivasi dan mobilitas ringan.";
+    const strength = strengthForPhase(phase.name);
     r.strengthGuidance = strength;
     r.reason += " Strength fase ini: " + strength;
     return r;
@@ -187,7 +186,7 @@
     const recent = acts.filter(a=>a.timestamp>=now-7*DAY);
     const dayMap = new Map();
     recent.forEach(a=>{const k=dateOnly(a.timestamp),c=classify(a,Number(input.lthr)||0),v=dayMap.get(k)||{stress:false,quality:false};v.stress=v.stress||c.stress;v.quality=v.quality||c.quality;dayMap.set(k,v);});
-    return { phase, stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
+    return { phase, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
   }
   root.RunSenseFrielEngine = Object.freeze({ version:"1.0.0", recommend, inspect });
 })(typeof window !== "undefined" ? window : this);
