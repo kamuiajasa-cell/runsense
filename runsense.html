@@ -4303,14 +4303,20 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     });
     const todayFeel = FEEL && FEEL.today ? (FEEL.today[ymd()] || {}) : {};
     const flag = flagInfo();
-    const result = engine.recommend({
+    const engineInput = {
       now, activities, raceDate:state.race || "", raceDistance:Number(state.raceDist) || 0,
       goal:state.goal || "5K", lthr:L, ltPace:state.athlete && state.athlete.ltPace || "",
       easyPace:state.athlete && state.athlete.easyPace || "",
       readiness:readiness(), pain:flag && flag.lv || 0, feel:todayFeel,
       heat:heatOn(), recoveryCycle:state.recoveryCycle || 3,
       preferredLongDay:6, preferredQualityDays:[2,5]
-    });
+    };
+    const result = engine.recommend(engineInput);
+    const plan = engine.inspect(engineInput);
+    if (result && !result.strengthGuidance) {
+      result.strengthGuidance = plan.strengthGuidance;
+      if (result.status === "train" && result.tag !== "LOMBA") result.reason += " Strength fase ini: " + plan.strengthGuidance;
+    }
     return decorate(result);
   }
   function decorate(r) {
