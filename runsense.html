@@ -4324,6 +4324,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     }
     if (result) {
       result.trainingPhase = plan.phase.name;
+      result.periodization = plan.calendar;
+      result.phaseWeek = plan.phase.weekInPhase || plan.phase.week || 1;
+      result.recoveryWeek = !!(plan.recovery && plan.recovery.isRecoveryWeek);
       if (result.adaptation) result.reason += " Fokus adaptasi: " + result.adaptation + ".";
     }
     return decorate(result);
@@ -6521,7 +6524,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const engine = window.RunSenseFrielEngine;
     if (!engine || typeof engine.inspect !== "function") return null;
     const activities = (state.acts || []).map(a => ({ timestamp:Number(a[0])||0, kind:a[1], duration:Number(a[2])||0, distance:Number(a[3])||0, hr:Number(a[4])||0 }));
-    return engine.inspect({ now:Date.now(), activities, raceDate:state.race||"", raceDistance:Number(state.raceDist)||0, lthr:lthrNow() });
+    return engine.inspect({ now:Date.now(), activities, raceDate:state.race||"", raceDistance:Number(state.raceDist)||0, lthr:lthrNow(), recoveryCycle:state.recoveryCycle||3 });
   }
   const strTarget = () => {
     const p = frielPlanInfo(), phase = p && p.phase && p.phase.name;
