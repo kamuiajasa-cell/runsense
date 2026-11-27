@@ -112,8 +112,8 @@
     const priorWeeks = [1,2,3,4].map(w => acts.filter(a=>a.timestamp>=today-w*7*DAY && a.timestamp<today-(w-1)*7*DAY).reduce((sum,a)=>sum+(Number(a.duration)||0),0));
     const baselineMinutes = priorWeeks.reduce((sum,v)=>sum+v,0)/4;
     const loadRatio = baselineMinutes>0 ? currentMinutes/baselineMinutes : null;
-    const isLongDay = plannedType === "long" || (plannedType === "auto" && (input.preferredLongDay != null ? new Date(now).getDay() === Number(input.preferredLongDay) : new Date(now).getDay() === 6));
     const plannedType = input.plannedType || "auto";
+    const isLongDay = plannedType === "long" || (plannedType === "auto" && (input.preferredLongDay != null ? new Date(now).getDay() === Number(input.preferredLongDay) : new Date(now).getDay() === 6));
     const plannedHardDay = plannedType === "quality" || (plannedType === "auto" && (input.preferredQualityDays ? input.preferredQualityDays.includes(new Date(now).getDay()) : [2,4].includes(new Date(now).getDay())));
     const raceDays = phase.raceDays;
     const taper = phase.name === "taper" || phase.name === "peak";
