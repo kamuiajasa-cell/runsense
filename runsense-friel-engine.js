@@ -16,25 +16,45 @@
     const d = new Date(ms);
     return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
   };
-  function phaseFor(now, raceDate, raceDistance, firstTrainingDate) {
-    if (raceDate) {
-      const race = new Date(raceDate + "T00:00:00");
-      if (!Number.isNaN(+race)) {
-        const days = Math.round((dateOnly(+race) - dateOnly(now)) / DAY);
-        const taperDays = raceDistance >= 42 ? 21 : raceDistance >= 21 ? 14 : 7;
-        if (days < 0) return { name: "transition", days, raceDays: days };
-        if (days === 0) return { name: "race", days, raceDays: 0 };
-        if (days <= taperDays) return { name: "taper", days, raceDays: days };
-        if (days <= taperDays + 14) return { name: "peak", days, raceDays: days };
-        if (days <= 84) return { name: "build", days, raceDays: days };
+  function iso(ms){const d=new Date(ms);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+  function phaseDurations(distance){
+    if(distance>=42)return [["prep",0],["base1",28],["base2",28],["base3",28],["build",56],["peak",14],["taper",21],["race",0]];
+    if(distance>=21)return [["prep",0],["base1",21],["base2",21],["base3",21],["build",42],["peak",14],["taper",14],["race",0]];
+    if(distance>=10)return [["prep",0],["base1",21],["base2",21],["base3",21],["build",28],["peak",7],["taper",7],["race",0]];
+    return [["prep",0],["base1",21],["base2",21],["base3",21],["build",21],["peak",7],["taper",7],["race",0]];
+  }
+  function calendarFor(now,raceDate,raceDistance,firstTrainingDate){
+    const today=dateOnly(now);
+    if(raceDate){const race=new Date(raceDate+"T00:00:00");if(!Number.isNaN(+race)){
+      const raceMs=dateOnly(+race),days=Math.round((raceMs-today)/DAY),segments=[];let cursor=raceMs;
+      const rows=phaseDurations(raceDistance);
+      for(let i=rows.length-1;i>=1;i--){const [name,duration]=rows[i],end=cursor,start=end-duration*DAY;
+        if(name==="race")segments.unshift({name,label:phaseLabel(name),start:iso(raceMs),end:iso(raceMs),days:1});
+        else{const clipped=firstTrainingDate?Math.max(start,dateOnly(firstTrainingDate)):start;if(clipped<end)segments.unshift({name,label:phaseLabel(name),start:iso(clipped),end:iso(end-DAY),days:Math.ceil((end-clipped)/DAY),compressed:clipped>start});}
+        cursor=start;
       }
-    }
-    const start = firstTrainingDate || (now - 84 * DAY);
-    const weeks = Math.max(0, Math.floor((dateOnly(now) - dateOnly(start)) / (7 * DAY)));
-    if (weeks < 4) return { name: "prep", week: weeks + 1 };
-    if (weeks < 8) return { name: "base1", week: weeks + 1 };
-    if (weeks < 12) return { name: "base2", week: weeks + 1 };
-    return { name: "base3", week: weeks + 1 };
+      const prepStart=firstTrainingDate?dateOnly(firstTrainingDate):cursor;
+      if(cursor>prepStart)segments.unshift({name:"prep",label:phaseLabel("prep"),start:iso(prepStart),end:iso(cursor-DAY),days:Math.ceil((cursor-prepStart)/DAY)});
+      return {raceDate,raceDays:days,distance:Number(raceDistance)||0,phases:segments};
+    }}
+    const start=firstTrainingDate?dateOnly(firstTrainingDate):today;let cursor=start;
+    const phases=[["prep",4],["base1",4],["base2",4],["base3",4]].map(([name,weeks])=>{const end=cursor+weeks*7*DAY,x={name,label:phaseLabel(name),start:iso(cursor),end:iso(end-DAY),days:weeks*7};cursor=end;return x;});
+    return {raceDate:null,raceDays:null,distance:0,phases,elapsedWeeks:Math.max(0,Math.floor((today-start)/(7*DAY)))};
+  }
+  function phaseFor(now,raceDate,raceDistance,firstTrainingDate){
+    const today=dateOnly(now);
+    if(raceDate){const cal=calendarFor(now,raceDate,raceDistance,firstTrainingDate);if(cal.raceDays!=null){
+      if(cal.raceDays<0)return {name:"transition",days:cal.raceDays,raceDays:cal.raceDays,week:1,weekInPhase:1};
+      if(cal.raceDays===0)return {name:"race",days:0,raceDays:0,week:1,weekInPhase:1};
+      const current=cal.phases.find(p=>p.name!=="prep"&&today>=Date.parse(p.start+"T00:00:00")&&today<=Date.parse(p.end+"T00:00:00"));
+      if(current){const st=Date.parse(current.start+"T00:00:00"),week=Math.floor((today-st)/(7*DAY))+1;return {name:current.name,days:cal.raceDays,raceDays:cal.raceDays,week,weekInPhase:week,start:current.start,end:current.end,compressed:!!current.compressed};}
+      const prep=cal.phases.find(p=>p.name==="prep");
+      if(prep&&today>=Date.parse(prep.start+"T00:00:00")){const st=Date.parse(prep.start+"T00:00:00"),week=Math.floor((today-st)/(7*DAY))+1;return {name:"prep",days:cal.raceDays,raceDays:cal.raceDays,week,weekInPhase:week,start:prep.start,end:prep.end};}
+      return {name:"prep",days:cal.raceDays,raceDays:cal.raceDays,week:1,weekInPhase:1};
+    }}
+    const start=firstTrainingDate||today,weeks=Math.max(0,Math.floor((today-dateOnly(start))/(7*DAY)));
+    const name=weeks<4?"prep":weeks<8?"base1":weeks<12?"base2":"base3";
+    return {name,week:weeks+1,weekInPhase:weeks%4+1};
   }
   function weekStart(ms) {
     const d = new Date(ms);
@@ -109,7 +129,9 @@
     const trainingWeek = Math.max(1, Math.floor((today - dateOnly(first)) / (7*DAY)) + 1);
     const raceDays = phase.raceDays;
     const cycleWeek = phase.name === "build" && Number.isFinite(raceDays) ? Math.max(1, Math.floor((84-raceDays)/7)+1) : trainingWeek;
-    const recoveryWeek = cycleWeek % (Number(input.recoveryCycle) === 2 ? 3 : 4) === 0;
+    const recoveryCycle = Number(input.recoveryCycle) === 2 ? 2 : 3;
+    const phaseWeek = Number(phase.weekInPhase || phase.week || cycleWeek);
+    const recoveryWeek = phaseWeek % (recoveryCycle + 1) === 0;
     const currentMinutes = last7.filter(a=>a.kind === "run").reduce((sum,a)=>sum+(Number(a.duration)||0),0);
     const priorWeeks = [1,2,3,4].map(w => acts.filter(a=>a.kind === "run" && a.timestamp>=today-(6+w*7)*DAY && a.timestamp<today-(6+(w-1)*7)*DAY).reduce((sum,a)=>sum+(Number(a.duration)||0),0));
     const baselineMinutes = priorWeeks.reduce((sum,v)=>sum+v,0)/4;
@@ -203,7 +225,7 @@
     const recent = acts.filter(a=>a.timestamp>=now-7*DAY);
     const dayMap = new Map();
     recent.forEach(a=>{const k=dateOnly(a.timestamp),c=classify(a,Number(input.lthr)||0),v=dayMap.get(k)||{stress:false,quality:false};v.stress=v.stress||c.stress;v.quality=v.quality||c.quality;dayMap.set(k,v);});
-    return { phase, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
+    return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), recovery:{cycle:Number(input.recoveryCycle)===2?"2:1":"3:1",week:phase.weekInPhase||phase.week||1,isRecoveryWeek:((phase.weekInPhase||phase.week||1)%(Number(input.recoveryCycle)===2?3:4)===0)}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
   }
-  root.RunSenseFrielEngine = Object.freeze({ version:"1.0.0", recommend, inspect });
+  root.RunSenseFrielEngine = Object.freeze({ version:"1.2.0", recommend, inspect });
 })(typeof window !== "undefined" ? window : this);
