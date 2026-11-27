@@ -6524,8 +6524,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   /* Menu yang boleh hari ini: sakit/hari lomba tanpa menu; kaki satu sisi tidak sehari sebelum quality/long; drill mulai tahap 3 */
   function strMenus() {
     const fl = flagInfo(), phase = frielPlanInfo()?.phase?.name, st = stage().s, tm = planOf((new Date().getDay() + 1) % 7), tq = tm && (tm.t === "quality" || tm.t === "long");
+    const tomorrowHard = [2,4,6].includes((new Date().getDay() + 1) % 7) || tq;
     if ((fl && fl.lv === 2) || phase === "race") return [];
-    return STR_MENU.filter((m) => !(m.id === "drill" && (st < 3 || fl)) && !(m.id === "leg" && (tq || fl)));
+    return STR_MENU.filter((m) => !(m.id === "drill" && (st < 3 || fl)) && !(m.id === "leg" && (tomorrowHard || fl)));
   }
   function strSuggest(ms) {
     const f = STR.fc && STR.fc.d >= yAgo(28) ? STR.fc : null, want = f && f.hd ? "hip" : f && f.ov ? "drill" : null, lg = STR.log[STR.log.length - 1];
