@@ -4302,14 +4302,18 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       return item;
     });
     const todayFeel = FEEL && FEEL.today ? (FEEL.today[ymd()] || {}) : {};
-    const flag = flagInfo();
+    const flag = flagInfo(), dow = new Date(now).getDay(), customPlan = hasPlan(), todayPlan = planOf(dow);
+    const qualityDays = customPlan ? PLAN_DAYS.filter(d => { const p=planOf(d[0]); return p && p.t==="quality"; }).map(d=>d[0]) : [2,4];
+    const longDays = customPlan ? PLAN_DAYS.filter(d => { const p=planOf(d[0]); return p && p.t==="long"; }).map(d=>d[0]) : [6];
     const engineInput = {
       now, activities, raceDate:state.race || "", raceDistance:Number(state.raceDist) || 0,
       goal:state.goal || "5K", lthr:L, ltPace:state.athlete && state.athlete.ltPace || "",
       easyPace:state.athlete && state.athlete.easyPace || "",
       readiness:readiness(), pain:flag && flag.lv || 0, feel:todayFeel,
       heat:heatOn(), recoveryCycle:state.recoveryCycle || 3,
-      preferredLongDay:6, preferredQualityDays:[2,4]
+      plannedType:todayPlan && todayPlan.t || "auto",
+      preferredLongDay:longDays.length ? longDays[0] : (customPlan ? -1 : 6),
+      preferredQualityDays:qualityDays
     };
     const result = engine.recommend(engineInput);
     const plan = engine.inspect(engineInput);
@@ -6523,8 +6527,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   function strWeekDone() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const s = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); return STR.log.filter((e) => e.s === "done" && e.d >= s).length; }
   /* Menu yang boleh hari ini: sakit/hari lomba tanpa menu; kaki satu sisi tidak sehari sebelum quality/long; drill mulai tahap 3 */
   function strMenus() {
-    const fl = flagInfo(), phase = frielPlanInfo()?.phase?.name, st = stage().s, tm = planOf((new Date().getDay() + 1) % 7), tq = tm && (tm.t === "quality" || tm.t === "long");
-    const tomorrowHard = [2,4,6].includes((new Date().getDay() + 1) % 7) || tq;
+    const fl = flagInfo(), phase = frielPlanInfo()?.phase?.name, st = stage().s, tomorrow = (new Date().getDay() + 1) % 7, tm = planOf(tomorrow), tq = tm && (tm.t === "quality" || tm.t === "long");
+    const tomorrowHard = hasPlan() ? !!tq : [2,4,6].includes(tomorrow);
     if ((fl && fl.lv === 2) || phase === "race") return [];
     return STR_MENU.filter((m) => !(m.id === "drill" && (st < 3 || fl)) && !(m.id === "leg" && (tomorrowHard || fl)));
   }
