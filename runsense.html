@@ -1469,6 +1469,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   window.__runsenseMainScriptRequested = true;
 })();
 </script>
+<script src="./runsense-friel-engine.js"></script>
 <script>
 (function () {
   "use strict";
@@ -4270,14 +4271,47 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   }
 
   function designToday() {
-    let r = designTodayCore();
-    r = applyFeelDecision(r);
-    const ph = racePhase();
-    if (r && ph && ph.k !== "race") {
-      r.reason += ` (${{ taper: "Taper", peak: "Peak", build: "Build" }[ph.k]} · H-${ph.days})`;
+    const engine = window.RunSenseFrielEngine;
+    if (!engine || typeof engine.recommend !== "function") {
+      throw new Error("Friel Training Engine tidak termuat; rekomendasi lama tidak dijalankan sebagai fallback.");
     }
-    if (r && ph && ph.k === "race" && r.status === "done") r.reason += " Race hari ini sudah dilari. Pulihkan diri.";
-    return decorate(r);
+    const now = Date.now(), L = lthrNow(), edges = L > 0 ? lthrZoneEdges() : [];
+    const activities = (state.acts || []).map((a) => {
+      const duration = Number(a[2]) || 0, distance = Number(a[3]) || 0;
+      const item = { timestamp:Number(a[0]) || 0, kind:a[1] === "run" ? "run" : a[1], duration, distance, hr:Number(a[4]) || 0 };
+      try { item.quality = ["thr","vo2","race"].includes(detectType(a).type); } catch (_) {}
+      try {
+        const sx = state.sx && state.sx[String(a[9])], chart = sx && Array.isArray(sx.chart) ? sx.chart : null;
+        if (chart && chart.length >= 20) {
+          const zones = [0,0,0,0,0,0,0], valid = [];
+          for (let i=1;i<chart.length;i++) {
+            const q=chart[i], prev=chart[i-1], dt=Number(q[3])-Number(prev[3]), hr=Number(q[2]), pace=Number(q[1]);
+            if (!(dt>0) || !(hr>40)) continue;
+            if (edges.length) { const zi=edges.findIndex(x=>hr<x); zones[zi<0?6:zi]+=dt; }
+            if (pace>0 && pace<20) valid.push({t:Number(q[3]),pace,hr});
+          }
+          item.zoneSeconds=zones;
+          if (valid.length>=20) {
+            const mid=valid[Math.floor(valid.length/2)].t;
+            const halves=[valid.filter(x=>x.t<=mid),valid.filter(x=>x.t>mid)];
+            const ef=halves.map(h=>h.length?h.reduce((sum,x)=>sum+(60/x.pace)/x.hr,0)/h.length:0);
+            if (ef[0]>0 && ef[1]>0) { item.ef=Math.round(ef[0]*100000)/100000; item.decoupling=Math.round((ef[0]-ef[1])/ef[0]*1000)/10; }
+          }
+        }
+      } catch (_) {}
+      return item;
+    });
+    const todayFeel = FEEL && FEEL.today ? (FEEL.today[ymd()] || {}) : {};
+    const flag = flagInfo();
+    const result = engine.recommend({
+      now, activities, raceDate:state.race || "", raceDistance:Number(state.raceDist) || 0,
+      goal:state.goal || "5K", lthr:L, ltPace:state.athlete && state.athlete.ltPace || "",
+      easyPace:state.athlete && state.athlete.easyPace || "",
+      readiness:readiness(), pain:flag && flag.lv || 0, feel:todayFeel,
+      heat:heatOn(), recoveryCycle:state.recoveryCycle || 3,
+      preferredLongDay:6, preferredQualityDays:[2,5]
+    });
+    return decorate(result);
   }
   function decorate(r) {
     if (!r) return r;
