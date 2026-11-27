@@ -39,13 +39,16 @@ check("Scheduled 3:1 recovery does not override Peak; Peak keeps its sharpening 
 });
 check("Peak long-day request is shortened to easy running, not a long run",()=>{
  const peakNow=Date.UTC(2026,11,19,12), start=peakNow-21*DAY;
- const activities=[{timestamp:start,kind:"run",duration:30,distance:5,hr:140,rpe:3}];
+ const activities=[
+  {timestamp:start,kind:"run",duration:30,distance:5,hr:140,rpe:3},
+  {timestamp:peakNow-2*DAY,kind:"run",duration:30,distance:5,hr:140,rpe:3}
+ ];
  const workout=engine.recommend({now:peakNow,activities,raceDate:"2026-12-31",raceDistance:10,readiness:90,plannedType:"long"});
  assert.notEqual(workout.tag,"LONG");
  assert.ok(parseInt(workout.duration,10)<=40);
 });
 check("Taper suppresses scheduled 3:1 recovery and quality sessions",()=>{
- const taperNow=Date.UTC(2026,11,26,12), start=taperNow-28*DAY;
+ const taperNow=Date.UTC(2026,11,26,12), start=taperNow-21*DAY;
  const activities=[{timestamp:start,kind:"run",duration:30,distance:5,hr:140,rpe:3}];
  const state=engine.inspect({now:taperNow,activities,raceDate:"2026-12-31",raceDistance:10});
  assert.equal(state.phase.name,"taper");
