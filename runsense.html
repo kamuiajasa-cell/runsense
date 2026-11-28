@@ -3997,9 +3997,10 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const heavyLegs=recentFeel.filter(x=>x.legs>=2).length;
     // Session-RPE load = durasi menit × RPE; bandingkan minggu ini dengan rerata mingguan 3 minggu sebelumnya.
     const ratedRuns=acts.map(a=>({a,fb:(FEEL.sessions||{})[a[0]]||{}})).filter(x=>Number(x.fb.rpe)>0);
-    const rpeLoad7d=ratedRuns.filter(x=>now-x.a[0]<=7*D).reduce((n,x)=>n+rpeLoadForRun(x.a,x.fb),0);
+    const ratedLoad=x=>Math.max(0,Number(x.a[2])||0)*Number(x.fb.rpe);
+    const rpeLoad7d=ratedRuns.filter(x=>now-x.a[0]<=7*D).reduce((n,x)=>n+ratedLoad(x),0);
     const priorRated=ratedRuns.filter(x=>now-x.a[0]>7*D&&now-x.a[0]<=28*D);
-    const rpeLoadPrior21d=priorRated.reduce((n,x)=>n+rpeLoadForRun(x.a,x.fb),0);
+    const rpeLoadPrior21d=priorRated.reduce((n,x)=>n+ratedLoad(x),0);
     const rated7=ratedRuns.filter(x=>now-x.a[0]<=7*D).length;
     const rpeLoadBaseline=priorRated.length>=2?rpeLoadPrior21d/3:null;
     const rpeLoadRatio=rpeLoadBaseline>0?rpeLoad7d/rpeLoadBaseline:null;
