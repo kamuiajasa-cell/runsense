@@ -342,5 +342,5 @@
     recent.forEach(a=>{const k=dateOnly(a.timestamp),c=classify(a,Number(input.lthr)||0,typicalDuration),v=dayMap.get(k)||{stress:false,quality:false};v.stress=v.stress||c.stress;v.quality=v.quality||c.quality;dayMap.set(k,v);});
     return { phase, calendar:calendarFor(now,input.raceDate,Number(input.raceDistance)||0,first), weekly:phasePrescription(phase.name), recovery:{cycle:recoveryCycle+":1",week:trainingWeek,isRecoveryWeek:recoveryWeek,recoveryDue,applies:recoveryApplies}, strengthGuidance:strengthForPhase(phase.name), stressDays:[...dayMap.values()].filter(v=>v.stress).length, qualityDays:[...dayMap.values()].filter(v=>v.quality).length, aerobic:aerobicMetrics(acts) };
   }
-  root.RunSenseFrielEngine = Object.freeze({ version:"1.6.1", recommend, inspect });
+  root.RunSenseFrielEngine = Object.freeze({ version:"1.7.0", recommend, inspect });
 })(typeof window !== "undefined" ? window : this);
