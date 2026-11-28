@@ -14,7 +14,8 @@ function extract(name){
 const results=[];
 function check(name,fn){try{fn();results.push({scenario:name,result:"PASS"});}catch(e){results.push({scenario:name,result:"FAIL",error:e.message});}}
 const state={lthrC:166,athlete:{lthr:172},max:185,rest:63};
-const lthrNow=new Function("state","maxHr","restHr",extract("lthrNow")+";return lthrNow;")(state,()=>state.max,()=>state.rest);
+const icuSet=()=>({lthr:state.athlete && Number(state.athlete.lthr)||0});
+const lthrNow=new Function("state","maxHr","restHr","icuSet",extract("lthrNow")+";return lthrNow;")(state,()=>state.max,()=>state.rest,icuSet);
 const lthrZoneEdges=new Function("lthrNow",extract("lthrZoneEdges")+";return lthrZoneEdges;")(lthrNow);
 const lthrZoneHrBounds=new Function("lthrZoneEdges",extract("lthrZoneHrBounds")+";return lthrZoneHrBounds;")(lthrZoneEdges);
 check("Manual LTHR takes precedence over profile and HRR estimate",()=>assert.equal(lthrNow(),166));
