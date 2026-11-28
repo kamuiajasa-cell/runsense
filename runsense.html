@@ -3995,6 +3995,15 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const fl=feelLearning(),recentFeel=fl.sessions.filter(x=>now-x.ms<=14*D),hardRpe=recentFeel.filter(x=>x.rpe>=7).length;
     const avgRpe=recentFeel.length?recentFeel.reduce((s,x)=>s+x.rpe,0)/recentFeel.length:null;
     const heavyLegs=recentFeel.filter(x=>x.legs>=2).length;
+    // Session-RPE load = durasi menit × RPE; bandingkan minggu ini dengan rerata mingguan 3 minggu sebelumnya.
+    const ratedRuns=acts.map(a=>({a,fb:(FEEL.sessions||{})[a[0]]||{}})).filter(x=>Number(x.fb.rpe)>0);
+    const rpeLoad7d=ratedRuns.filter(x=>now-x.a[0]<=7*D).reduce((n,x)=>n+rpeLoadForRun(x.a,x.fb),0);
+    const priorRated=ratedRuns.filter(x=>now-x.a[0]>7*D&&now-x.a[0]<=28*D);
+    const rpeLoadPrior21d=priorRated.reduce((n,x)=>n+rpeLoadForRun(x.a,x.fb),0);
+    const rated7=ratedRuns.filter(x=>now-x.a[0]<=7*D).length;
+    const rpeLoadBaseline=priorRated.length>=2?rpeLoadPrior21d/3:null;
+    const rpeLoadRatio=rpeLoadBaseline>0?rpeLoad7d/rpeLoadBaseline:null;
+    const rpeLoadCaution=rated7>=2&&priorRated.length>=2&&rpeLoadRatio>1.3;
     const todayFeel=FEEL&&FEEL.today?FEEL.today[ymd()]:null;
     const todayLegsHeavy=!!(todayFeel&&todayFeel.savedDate===ymd()&&todayFeel.legs>=2);
     // Guard typeof keeps isolated synthetic tests of adaptiveContext() independent of the UI strength module.
@@ -4023,16 +4032,23 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if(heavyLegs>=rv("heavyLegsCount",2)||todayLegsHeavy){volumeFactor=Math.min(volumeFactor,rv("legsFactor",.85));notes.push("otot/kaki melaporkan beban berat");}
     if(qualityCaution){volumeFactor=Math.min(volumeFactor,rv("qualityFactor",.85));notes.push("respons sesi quality terakhir berat; dosis berikutnya diturunkan");}
     if(strengthCaution){volumeFactor=Math.min(volumeFactor,rv("strengthFactor",.9));notes.push("dosis strength kaki menengah–tinggi dalam 48 jam");}
-    return {acute,prevWeekly,ratio,hard7:hard.length,hardRpe,heavyLegs,avgRpe,qualityCaution,qualityProgressionLevel,successfulQuality,volumeFactor,strengthLoad48h:strength.legLoad,strengthCaution,qualityLock:hard.length>=2||hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||strengthCaution||(ratio!=null&&ratio>1.5),recoveryBias:hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||(avgRpe!=null&&avgRpe>=7&&recentFeel.length>=2),notes};
+    if(rpeLoadCaution){volumeFactor=Math.min(volumeFactor,.9);notes.push("beban subjektif 7 hari meningkat >30% dari baseline 3 minggu");}
+    return {acute,prevWeekly,ratio,hard7:hard.length,hardRpe,heavyLegs,avgRpe,rpeLoad7d,rpeLoadBaseline,rpeLoadRatio,rpeLoadCaution,qualityCaution,qualityProgressionLevel,successfulQuality,volumeFactor,strengthLoad48h:strength.legLoad,strengthCaution,qualityLock:hard.length>=2||hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||strengthCaution||rpeLoadCaution||(ratio!=null&&ratio>1.5),recoveryBias:hardRpe>=2||heavyLegs>=2||todayLegsHeavy||qualityCaution||rpeLoadCaution||(avgRpe!=null&&avgRpe>=7&&recentFeel.length>=2),notes};
   }
 
+  function rpeLoadForRun(a, fb) {
+    const r = Number(fb && fb.rpe), mins = Number(a && a[2]);
+    return r > 0 && mins > 0 ? Math.round(r * mins) : null;
+  }
   function feelSessionHTML(a){
     if(!a||a[1]!=='run')return '';
-    const v=FEEL.sessions[a[0]]||{};
-    const opts=[[1,'1–2 sangat ringan'],[3,'3–4 ringan'],[5,'5–6 sedang'],[7,'7–8 berat'],[9,'9–10 maksimal']];
-    const rpe=opts.map(x=>'<button type="button" class="ty-chip'+(v.rpe===x[0]?' on':'')+'" onclick="feelSessionSet('+a[0]+','+"'rpe'"+','+x[0]+')">'+x[1]+'</button>').join('');
+    const v=FEEL.sessions[a[0]]||{}, det=detectType(a), load=rpeLoadForRun(a,v);
+    const opts=Array.from({length:10},(_,i)=>i+1);
+    const rpe='<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px">'+opts.map(n=>'<button type="button" class="ty-chip'+(v.rpe===n?' on':'')+'" style="min-width:0;padding:9px 4px;text-align:center" aria-label="RPE '+n+'" onclick="feelSessionSet('+a[0]+','+"'rpe'"+','+n+')">'+n+'</button>').join('')+'</div><div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--grey);margin-top:5px"><span>Sangat ringan</span><span>Maksimal</span></div>';
     const legs=[[0,'Segar'],[1,'Normal'],[2,'Berat'],[3,'Sangat lelah']].map(x=>'<button type="button" class="ty-chip'+(v.legs===x[0]?' on':'')+'" onclick="feelSessionSet('+a[0]+','+"'legs'"+','+x[0]+')">'+x[1]+'</button>').join('');
-    return '<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Rasa setelah berlari</span></div><div class="sa-note">Seberapa berat lari tadi? (RPE 0–10)</div><div class="ty-chips">'+rpe+'</div><div class="sa-note" style="margin-top:12px">Kondisi kaki dan otot</div><div class="ty-chips">'+legs+'</div><div class="sa-sub" style="margin-top:9px">Tes bicara tetap dicatat di bagian terpisah. Catatan ini mengajari coach memahami respons tubuhmu.</div></div></div>';
+    const target=feelTarget({title:({easy:'Easy Run',long:'Long Run',recovery:'Recovery Run',thr:'Tempo / Threshold',vo2:'Interval VO₂max',race:'Race'}[det.type]||det.type),tag:det.type==='thr'?'QUALITY':det.type==='vo2'?'QUALITY':det.type==='long'?'LONG':''});
+    const loadLine=load!==null?'<div class="review-note g" style="margin-top:12px">Beban sesi subjektif: <b>'+load+' AU</b> ('+Math.round(Number(a[2]))+' menit × RPE '+v.rpe+').</div>':'<div class="sa-sub" style="margin-top:8px">Beban sesi dihitung setelah RPE diisi: durasi × RPE.</div>';
+    return '<div class="sa-flow"><div class="sa-card"><div class="sa-head"><span class="sa-title">Rasa setelah berlari</span></div><div class="sa-note">Seberapa berat seluruh sesi tadi? Pilih angka 1–10.</div>'+rpe+ (target?'<div class="sa-sub" style="margin-top:9px">Panduan sesi sejenis: '+target+'.</div>':'') +'<div class="sa-note" style="margin-top:14px">Kondisi kaki dan otot</div><div class="ty-chips">'+legs+'</div>'+loadLine+'<div class="sa-sub" style="margin-top:9px">Nilai ini membantu coach menilai beban yang benar-benar kamu rasakan, bersama HR, pace, dan kondisi kaki.</div></div></div>';
   }
   function feelSessionSet(ms,k,v){
     const x=Object.assign({},FEEL.sessions[ms]||{});x[k]=+v;x.updated=Date.now();FEEL.sessions[ms]=x;feelSave();
@@ -4289,14 +4305,16 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
   function feelTarget(r) {
     if (!r || r.rested || r.status === "rest") return "";
-    const t = String(r.tag || ""), ti = String(r.title || "");
+    const t = String(r.tag || ""), ti = String(r.title || ""), q = (ti + " " + t).toLowerCase();
     if (r.walk) return "RPE 2–3 · napas nyaman";
-    if (/sharpen/i.test(ti)) return "RPE 6–7 · kalimat pendek saja";
-    if (t === "RECOVERY" || /shakeout|easy|santai/i.test(ti)) return "RPE 2–3 · ngobrol lancar";
-    if (/threshold|tempo/i.test(ti + t)) return "RPE 6–7 · kalimat pendek";
-    if (/vo2|interval|repetition|hills/i.test(ti + t)) return "RPE 7–8 · terkendali";
-    if (/long/i.test(ti + t)) return "RPE 3–4 · stabil";
-    return "RPE 3–4 · ngobrol";
+    if (/race|lomba/.test(q)) return "RPE 6–8 · mulai terkendali, naik bertahap";
+    if (/vo2|interval|repetition|hill|tanjakan/.test(q)) return "RPE 8–9 · berat tetapi tetap terkontrol";
+    if (/threshold|tempo|sharpen/.test(q)) return "RPE 6–7 · bicara dalam frasa pendek";
+    if (/steady/.test(q)) return "RPE 5 · napas mulai terasa, masih terkendali";
+    if (t === "RECOVERY" || /recovery|shakeout/.test(q)) return "RPE 2–3 · sangat nyaman";
+    if (/long/.test(q)) return "RPE 3–4 · stabil, bisa bicara";
+    if (/easy|santai/.test(q) || t === "LONG" || t === "TAPER") return "RPE 3–4 · ngobrol dalam kalimat";
+    return "RPE 3–4 · ngobrol dalam kalimat";
   }
   function coachLine(r, a) {
     if (r.rested) return "Istirahat juga bagian dari latihan. Sampai besok.";
