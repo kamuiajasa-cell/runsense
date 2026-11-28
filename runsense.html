@@ -4056,6 +4056,20 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if(state.athlete)processData();openAct(ms);
   }
 
+  function applyFeelDecision(r){
+    if(!r)return r;
+    const f=feelToday();
+    if(f.savedDate!==ymd())return r;
+    if(Number(f.pain)>=2){
+      return {k:"rest",status:"rest",title:"Istirahat karena nyeri",duration:"—",hr:"—",pace:"—",tag:"RECOVERY",score:r.score,steps:[["Pilihan","Jalan santai hanya jika bebas nyeri"]],reason:"Check-in tersimpan mencatat nyeri yang jelas atau mengubah gerak. Jangan memaksakan sesi lari."};
+    }
+    const severeFatigue=Number(f.energy)===1&&Number(f.fatigue)===3&&Number(f.legs)===3;
+    if(severeFatigue&&r.status==="train"&&r.tag==="QUALITY"){
+      return {k:"rest",status:"rest",title:"Istirahat / pemulihan",duration:"—",hr:"—",pace:"—",tag:"RECOVERY",score:r.score,steps:[["Pilihan","Istirahat penuh; aktivitas ringan hanya jika terasa nyaman"]],reason:"Energi sangat rendah disertai kelelahan umum dan kaki yang sangat berat. Sesi kualitas dibatalkan agar pemulihan didahulukan."};
+    }
+    return r;
+  }
+
   function designToday() {
     const engine = window.RunSenseFrielEngine;
     if (!engine || typeof engine.recommend !== "function") {
@@ -4111,7 +4125,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       result.recoveryWeek = !!(plan.recovery && plan.recovery.isRecoveryWeek);
       if (result.adaptation) result.reason += " Fokus adaptasi: " + result.adaptation + ".";
     }
-    return decorate(result);
+    return decorate(applyFeelDecision(result));
   }
   function decorate(r) {
     if (!r) return r;
