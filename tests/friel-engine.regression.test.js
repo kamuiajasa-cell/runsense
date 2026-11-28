@@ -4,7 +4,7 @@ const source=fs.readFileSync(path.join(__dirname,"..","runsense-friel-engine.js"
 const context={window:{},Date,Map,Math,Number,Object,Array,String};
 vm.runInNewContext(source,context);
 const engine=context.window.RunSenseFrielEngine;
-assert.equal(engine.version,"1.6.1");
+assert.equal(engine.version,"1.7.0");
 const DAY=864e5, now=Date.UTC(2026,10,28,12);
 const run=(daysAgo,minutes,extra={})=>({timestamp:now-daysAgo*DAY,kind:"run",duration:minutes,distance:5,hr:140,rpe:3,...extra});
 function inspect(activities=[],extra={}){return engine.inspect({now,activities,...extra});}
@@ -140,5 +140,30 @@ check("Maximum two stress days blocks an additional quality workout",()=>{
  const result=recommend(activities,{plannedType:"quality",preferredQualityDays:[6]});
  assert.notEqual(result.tag,"QUALITY");
 });
+
+check("Coaching styles change dose without exceeding two stress days",()=>{
+ const input={plannedType:"quality",preferredQualityDays:[6],readiness:80};
+ const moderate=recommend([run(2,30)],{...input,style:"moderate"});
+ const conservative=recommend([run(2,30)],{...input,style:"conservative"});
+ const aggressive=recommend([run(2,30)],{...input,style:"aggressive"});
+ assert.equal(moderate.tag,"QUALITY");
+ assert.equal(conservative.tag,"QUALITY");
+ assert.equal(aggressive.tag,"QUALITY");
+ assert.ok(conservative.steps[1][1].match(/4×|2×/));
+ assert.ok(aggressive.steps[1][1].match(/6×|7×/));
+ assert.notEqual(conservative.steps[1][1],moderate.steps[1][1]);
+ assert.notEqual(aggressive.steps[1][1],moderate.steps[1][1]);
+});
+check("Conservative coaching raises the readiness threshold for quality",()=>{
+ const workout=recommend([run(2,30)],{plannedType:"quality",preferredQualityDays:[6],readiness:70,style:"conservative"});
+ assert.notEqual(workout.tag,"QUALITY");
+});
+check("Race target time becomes an average target pace on race day",()=>{
+ const workout=recommend([run(1,30)],{raceDate:"2026-11-28",raceDistance:10,raceTargetSeconds:3600,raceTargetLabel:"1:00:00"});
+ assert.equal(workout.tag,"LOMBA");
+ assert.match(workout.pace,/6:00/);
+ assert.match(workout.reason,/1:00:00/);
+});
+
 console.log(JSON.stringify({version:engine.version,passed:results.filter(x=>x.result==="PASS").length,failed:results.filter(x=>x.result==="FAIL").length,results},null,2));
 if(results.some(x=>x.result==="FAIL"))process.exitCode=1;
