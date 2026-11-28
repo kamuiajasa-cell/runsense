@@ -23,6 +23,13 @@ check("A non-running activity today does not falsely mark the run as completed",
  const workout=recommend([{timestamp:now,kind:"jump_rope",duration:20,distance:0}]);
  assert.notEqual(workout.status,"done");
 });
+check("An explicitly selected Sunday rest day overrides the automatic running schedule",()=>{
+ const sunday=Date.UTC(2026,10,29,12);
+ const workout=engine.recommend({now:sunday,activities:[run(2,30)],readiness:90,plannedType:"rest",preferredLongDay:6,preferredQualityDays:[2,4]});
+ assert.equal(workout.status,"rest");
+ assert.equal(workout.tag,"RECOVERY");
+ assert.match(workout.reason,/ditetapkan sebagai hari istirahat/i);
+});
 check("No-race phase ignores stale history after a >42-day break",()=>{
  const p=inspect([run(730,35),run(2,25)]).phase;
  assert.equal(p.name,"prep");assert.equal(p.weekInPhase,1);
