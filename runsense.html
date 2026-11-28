@@ -1402,6 +1402,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 }
 
 </style>
+<style>.race-layout .sg{margin:0}.race-note,.race-strategy-empty{font-size:12.5px;line-height:1.55;color:var(--grey);margin-top:10px}.race-segment{display:grid;grid-template-columns:56px 1fr;gap:10px;padding:12px 0;border-top:1px solid var(--card-border)}.race-segment b{font-size:13px}.race-segment span{display:block;color:var(--grey);font-size:12px;margin-top:3px}.race-eval-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--card-border);font-size:13px}.race-eval-row span{color:var(--grey)}.race-status{font-size:13px;line-height:1.5;margin:8px 0}.race-status.good{color:var(--primary)}.race-status.warn{color:var(--yellow)}</style>
 </head>
 <body>
 <div class="app">
@@ -6630,7 +6631,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   function sendRaceStrategy(){
     const st=state.raceStrategy;if(!st||st.date!==state.race||st.targetSeconds!==parseRaceTime(state.raceGoal)){showError("Buat ulang strategi karena target lomba berubah.");return;}
     if(!state.apiKey||state.apiKey==="demo"){showError("Hubungkan Intervals.icu terlebih dahulu.");return;}
-    const lines=["Strategi Lomba "+st.distance+" km",""];st.segments.forEach((x,i)=>{lines.push("- "+x.name+" "+raceDistanceToken(x.distance)+" "+raceClock(x.pace-5)+"-"+raceClock(x.pace+5)+"/km Pace");lines.push("# "+x.cue);if(i<2)lines.push("");});
+    const lines=["Strategi Lomba "+st.distance+" km",""];st.segments.forEach((x,i)=>{lines.push(x.name);lines.push("- "+raceDistanceToken(x.distance)+" "+raceClock(x.pace-5)+"-"+raceClock(x.pace+5)+"/km Pace");lines.push("# "+x.cue);if(i<2)lines.push("");});
     const r={title:"Strategi Lomba "+st.distance+"K",duration:"Target "+st.goalLabel,pace:raceClock(st.targetPace)+"/km rata-rata",hr:"Atur usaha sesuai kondisi",wl:lines,steps:st.segments.map(x=>[x.name,raceDistanceToken(x.distance)]),tag:"LOMBA"};
     const built=buildWorkout(r);if(!built.structured){showError("Struktur workout strategi tidak valid.");return;}
     st.workoutText=built.text;persist();openWatch(r,st.date);$("#watchTitle").textContent="Strategi lomba";$("#watchSub").textContent="Dijadwalkan pada tanggal lomba. Periksa segmen dan target pace sebelum mengirim.";$("#watchText").value=built.text;$("#btnWatchSend").textContent="Kirim strategi lomba";$("#btnWatchSend").disabled=false;
