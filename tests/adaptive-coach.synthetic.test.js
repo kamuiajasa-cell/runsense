@@ -105,6 +105,17 @@ check("Heavy leg feedback prioritizes recovery and reduces dose", () => {
   assert.ok(c.volumeFactor < 1);
 });
 
+check("Session-RPE load rising above baseline applies a conservative guardrail", () => {
+  const c = evaluate(
+    [[1, "easy", 20], [3, "easy", 20], [10, "easy", 10], [17, "easy", 10], [24, "easy", 10]],
+    [[1, 6, 1], [3, 6, 1], [10, 6, 1], [17, 6, 1], [24, 6, 1]]
+  );
+  assert.ok(c.rpeLoadRatio > 1.3);
+  assert.equal(c.rpeLoadCaution, true);
+  assert.equal(c.qualityLock, true);
+  assert.equal(c.volumeFactor, 0.9);
+});
+
 
 function extractDecisionFunction(source) {
   const start = source.indexOf("function applyFeelDecision(r){");
