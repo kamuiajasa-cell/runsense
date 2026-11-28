@@ -3871,7 +3871,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     state.raceDist = +$("#raceDist").value || 0;
     state.raceGoal = ($("#raceGoal").value || "").trim();
     const sec = parseRaceTime(state.raceGoal), hint = $("#raceGoalHint");
-    if (hint) hint.textContent = !state.raceGoal ? "Opsional. Format mm:ss atau jj:mm:ss." : sec ? "Pace rata-rata sasaran: " + mp(sec / state.raceDist) + " /km. Bukan jaminan prediksi." : "Format atau target tidak valid untuk jarak ini. Contoh 55:00 atau 1:05:00.";
+    if (hint) hint.textContent = !state.raceGoal ? "Opsional. Format mm:ss atau jj:mm:ss." : sec ? "Pace rata-rata sasaran: " + mp(sec / state.raceDist / 60) + " /km. Bukan jaminan prediksi." : "Format atau target tidak valid untuk jarak ini. Contoh 55:00 atau 1:05:00.";
     try { localStorage.setItem("runsense_racex", JSON.stringify({ d: state.raceDist, g: state.raceGoal })); } catch (_) {}
     applyLater();
   }
@@ -3905,7 +3905,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (sd) sd.value = state.raceDist ? String(state.raceDist) : "";
     if (sg) sg.value = state.raceGoal || "";
     const rgh = $("#raceGoalHint"), rsec = parseRaceTime(state.raceGoal);
-    if (rgh) rgh.textContent = !state.raceGoal ? "Opsional. Format mm:ss atau jj:mm:ss." : rsec ? "Pace rata-rata sasaran: " + mp(rsec / state.raceDist) + " /km. Bukan jaminan prediksi." : "Format atau target tidak valid untuk jarak ini. Contoh 55:00 atau 1:05:00.";
+    if (rgh) rgh.textContent = !state.raceGoal ? "Opsional. Format mm:ss atau jj:mm:ss." : rsec ? "Pace rata-rata sasaran: " + mp(rsec / state.raceDist / 60) + " /km. Bukan jaminan prediksi." : "Format atau target tidak valid untuk jarak ini. Contoh 55:00 atau 1:05:00.";
     if (ro) { ro.checked = rwOn(); rr.value = rwT((state.rw || {}).run || 225); rw2.value = rwT((state.rw || {}).walk || 30); }
     const tot = planWeekKm();
     const lk = Math.max(0, ...PLAN_DAYS.filter((d) => (state.plan[d[0]] || {}).t === "long").map((d) => Number(state.plan[d[0]].km) || 0));
