@@ -4104,13 +4104,20 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     });
     const todayFeel = FEEL && FEEL.today ? (FEEL.today[ymd()] || {}) : {};
     const flag = flagInfo();
+    // Terapkan pilihan jadwal mingguan yang disimpan pengguna ke engine, bukan hanya ke UI.
+    const localDow = new Date(now).getDay();
+    const todayPlan = planOf(localDow);
+    const explicitLongDays = PLAN_DAYS.filter(([d]) => planOf(d)?.t === "long").map(([d]) => d);
+    const explicitQualityDays = PLAN_DAYS.filter(([d]) => planOf(d)?.t === "quality").map(([d]) => d);
     const engineInput = {
       now, activities, raceDate:state.race || "", raceDistance:Number(state.raceDist) || 0,
       goal:state.goal || "5K", lthr:L, ltPace:state.athlete && state.athlete.ltPace || "",
       easyPace:state.athlete && state.athlete.easyPace || "",
       readiness:readiness(), pain:flag && flag.lv || 0, feel:todayFeel,
       heat:heatOn(), recoveryCycle:state.recoveryCycle || 3,
-      plannedType:"auto", preferredLongDay:6, preferredQualityDays:[2,4]
+      plannedType:todayPlan ? todayPlan.t : "auto",
+      preferredLongDay:explicitLongDays.length ? explicitLongDays[0] : 6,
+      preferredQualityDays:explicitQualityDays.length ? explicitQualityDays : [2,4]
     };
     const result = engine.recommend(engineInput);
     const plan = engine.inspect(engineInput);
