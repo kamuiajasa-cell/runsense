@@ -1473,6 +1473,13 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       <header class="page-hero progress-hero" data-hero="progress"><span class="eyebrow">PERKEMBANGAN LARIMU</span><div class="page-title">Perkembangan<br><em>larimu.</em></div><p data-hero-sub>Ringkasan perkembangan lari berdasarkan data yang tersedia.</p></header>
       <div class="filter-dock"><span>PERIODE</span><div class="fchips" id="prgChips"></div></div>
       <div id="periodizationBody"></div>
+      <div id="raceProgramBody">
+        <section class="sg"><div class="sg-t">Strategi lomba</div><div class="sgroup">
+          <div class="row"><span>Jarak</span><b id="raceMenuDistance">—</b></div><div class="row"><span>Tanggal</span><b id="raceMenuDate">—</b></div><div class="row"><span>Target</span><b id="raceMenuGoal">—</b></div><div class="row"><span>Pace rata-rata</span><b id="raceMenuPace">—</b></div><p class="race-note" id="raceMenuReadiness"></p>
+          <div id="raceStrategyBody">Strategi belum dibuat.</div><button class="btn btn-primary" type="button" onclick="generateRaceStrategy()">Buat strategi lomba</button><button class="btn btn-outline" id="btnRaceSend" type="button" style="margin-top:8px" onclick="sendRaceStrategy()" disabled>Kirim strategi ke jam</button>
+        </div></section>
+        <section class="sg"><div class="sg-t">Evaluasi pascalomba</div><div class="sgroup"><div id="raceEvaluation"><p class="race-note">Evaluasi muncul setelah aktivitas lomba tersinkron.</p></div><button class="btn btn-outline" type="button" onclick="refreshRaceEvaluation()">Periksa aktivitas lomba</button></div></section>
+      </div>
       <div id="progressBody"></div>
       <section class="progress-extras" aria-label="Metrik tambahan">
         <div class="sg" id="prgCap"><div class="sg-t">Kapasitas &amp; beban</div><div class="sgroup"><div class="sblock rows" style="padding:4px 0"><div class="row"><span>RAI · kemampuan lari</span><b id="raiValue">—</b></div><div class="row"><span>Max METs</span><b id="afMets">—</b></div><div class="row"><span>CTL / ATL / TSB</span><b id="advLoad">—</b></div><div class="row"><span>LTHR · LTPace</span><b id="advLt">—</b></div></div></div></div>
@@ -1616,12 +1623,6 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     </div>
   </div>
 
-  <div id="screen-race" class="screen"><div class="content race-layout">
-<header class="page-hero"><span class="eyebrow">RACE STRATEGY</span><div class="page-title">Hari<br><em>lomba.</em></div><p>Strategi pacing, pengiriman workout, dan evaluasi setelah finis.</p></header>
-<section class="sg"><div class="sg-t">Target lomba</div><div class="sgroup"><div class="row"><span>Jarak</span><b id="raceMenuDistance">—</b></div><div class="row"><span>Tanggal</span><b id="raceMenuDate">—</b></div><div class="row"><span>Target</span><b id="raceMenuGoal">—</b></div><div class="row"><span>Pace rata-rata</span><b id="raceMenuPace">—</b></div><p class="race-note" id="raceMenuReadiness"></p></div></section>
-<section class="sg"><div class="sg-t">Strategi pacing</div><div class="sgroup"><div id="raceStrategyBody">Strategi belum dibuat.</div><button class="btn btn-primary" type="button" onclick="generateRaceStrategy()">Buat strategi lomba</button><button class="btn btn-outline" id="btnRaceSend" type="button" style="margin-top:8px" onclick="sendRaceStrategy()" disabled>Kirim strategi ke jam</button><p class="race-note">Workout menggunakan blok jarak dan rentang pace. Periksa hasil sinkronisasi di jam sebelum start.</p></div></section>
-<section class="sg"><div class="sg-t">Evaluasi pascalomba</div><div class="sgroup"><div id="raceEvaluation"><p class="race-note">Evaluasi muncul setelah aktivitas lomba tersinkron.</p></div><button class="btn btn-outline" type="button" onclick="refreshRaceEvaluation()">Periksa aktivitas lomba</button></div></section>
-</div></div>
   <nav class="bottom-nav" id="bottomNav" style="display:none">
     <button class="nav-item active" data-screen="home" onclick="showScreen('home')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
@@ -1635,7 +1636,6 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17l6-6 4 4 8-8v4h2V4h-7v2h4l-7 7-4-4-8 8z"/></svg>
       Progres
     </button>
-    <button class="nav-item" data-screen="race" onclick="showScreen('race')">⚑<span>Lomba</span></button>
     <button class="nav-item" data-screen="me" onclick="showScreen('me')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.33 0-8 1.67-8 5v1h16v-1c0-3.33-4.67-5-8-5z"/></svg>
       Saya
@@ -2780,7 +2780,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     rotateHero(name);
     requestAnimationFrame(() => window.scrollTo(0, rsScrollPositions[target.id] || 0));
     if (name === "progress" && window.renderProgress) renderProgress();
-    if (name === "race") renderRaceMenu();
+    if (name === "progress") { renderRaceMenu(); renderPeriodization(); }
   }
   window.addEventListener("popstate", (event) => {
     const modal = document.querySelector(".modal-bg.show");
@@ -4971,6 +4971,34 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   let prgR = 8;
   function setPrg(n) { prgR = n; renderProgress(); }
   window.setPrg = setPrg;
+  function renderTrainingCalendar(){
+    const host=$("#periodizationBody"); if(!host) return;
+    const info=frielPlanInfo(), phase=info&&info.phase?info.phase.name:"base1";
+    const labels={prep:"Persiapan",base1:"Base 1",base2:"Base 2",base3:"Base 3",build:"Build",peak:"Peak",taper:"Taper",race:"Lomba",transition:"Transisi"};
+    const phaseFocus={prep:"Fondasi dan adaptasi",base1:"Aerobik dan teknik",base2:"Aerobik dan kekuatan",base3:"Threshold terukur",build:"Latihan spesifik lomba",peak:"Ketajaman dengan volume turun",taper:"Pemulihan dan kesiapan",race:"Eksekusi lomba",transition:"Pemulihan"};
+    const dayNames=["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
+    const today0=new Date();today0.setHours(0,0,0,0);
+    const activities=state.acts||[], plan=state.plan||{};
+    const dateKey=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    const selected=d=>plan[d]&&plan[d].t&&plan[d].t!=="auto"?plan[d]:null;
+    const defaults={0:"rest",1:"easy",2:"quality",3:"easy",4:"rest",5:"easy",6:"long"};
+    const title={rest:"Istirahat",easy:"Easy Z1–Z2",quality:phase==="taper"||phase==="peak"?"Tune-up ringan":"Sesi kualitas",long:"Long run mudah"};
+    const dates=[];
+    for(let i=0;i<35;i++){
+      const d=new Date(today0.getTime()+i*86400000),key=dateKey(d),dow=d.getDay();
+      let item=selected(dow),kind=item?item.t:(defaults[dow]||"easy");
+      if(phase==="race"||phase==="transition")kind="rest";
+      if(phase==="taper"&&kind==="quality")kind="easy";
+      const done=activities.find(a=>a[1]==="run"&&dateKey(new Date(a[0]))===key);
+      const km=item&&+item.km>0?+item.km:0;
+      const session=done?"Selesai · "+(+done[3]||0).toFixed(2)+" km":title[kind]||"Easy / adaptif";
+      const detail=done?"Aktivitas tercatat":kind==="quality"?phaseFocus[phase]+" · intensitas mengikuti kesiapan":kind==="long"?"Durasi mengikuti rata-rata long run yang sudah ditoleransi":kind==="easy"?"Usaha ringan, percakapan tetap nyaman":kind==="rest"?"Tidak ada sesi lari terjadwal":"Sesi mengikuti fase program";
+      dates.push({key,dow,kind,session,detail,km,done:!!done});
+    }
+    const weeks=[];for(let i=0;i<dates.length;i+=7){const rows=dates.slice(i,i+7).map(x=>'<div class="prg-row"><span><b>'+dayNames[x.dow]+' · '+new Date(x.key+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"short"})+'</b><small style="display:block;color:var(--muted);margin-top:3px">'+esc(x.detail)+'</small></span><b style="text-align:right">'+esc(x.done?x.session:x.session)+(x.km?' · '+x.km+' km':'')+'</b></div>').join("");weeks.push('<div class="prg-insight" style="margin-top:9px"><b>Pekan '+(weeks.length+1)+'</b>'+rows+'</div>');}
+    const old=$("#trainingCalendar"); if(old)old.remove();
+    host.insertAdjacentHTML("beforeend",'<section class="prg-card" id="trainingCalendar" style="margin-bottom:14px"><h4>Kalender rencana latihan · 5 minggu</h4><div class="prg-insight">Fase '+esc(labels[phase]||phase)+' · '+esc(phaseFocus[phase]||"Adaptif")+'. Sesi harian tetap disesuaikan berdasarkan aktivitas dan kesiapan; hari Rest yang dipilih tetap dihormati.</div>'+weeks.join("")+'</section>');
+  }
   function renderPeriodization() {
     const el = $("#periodizationBody"); if (!el) return;
     const plan = frielPlanInfo();
@@ -4989,6 +5017,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const strengthText = weekly.strength === 2 ? "2 sesi/minggu" : weekly.strength === 1 ? "1 sesi/minggu (pemeliharaan)" : "Tidak ada strength berat; mobilitas/aktivasi ringan";
     const weeklyHtml = '<div class="prg-insight" style="margin-top:12px"><b>Isi latihan fase ini</b><div style="margin-top:7px">• Quality: '+weekly.quality+' sesi/minggu — '+weekly.qualityType+'<br>• Long run: '+weekly.long+'<br>• Hari lain: '+weekly.easy+'<br>• Strength: '+strengthText+'<br>• Penempatan strength: '+(weekly.strengthPlacement||"Setelah sesi mudah; hindari sebelum sesi kunci.")+'<br>• Fokus: '+weekly.focus+'</div><div style="margin-top:8px">'+weekly.distribution+'</div></div>';
     el.innerHTML = '<section class="prg-card" style="margin-bottom:14px"><h4>Kalender periodisasi</h4><div class="prg-insight">'+(noRace?'Belum ada tanggal lomba. Fase dasar mengikuti riwayat latihan.':'Menuju lomba '+fmt(state.race)+' · '+Math.max(0,plan.phase.raceDays||0)+' hari lagi')+'</div>'+timeline+weeklyHtml+'<div class="prg-insight">Siklus pemulihan '+(recovery.cycle||'3:1')+' · pekan fase '+(recovery.week||1)+(recovery.isRecoveryWeek?' · pekan pemulihan':'')+'</div>'+(rows.some(p=>p.compressed)?'<div class="prg-insight">Sebagian fase awal dipadatkan karena tanggal mulai latihan lebih dekat daripada jadwal ideal. Jangan mengejar volume yang terlewat.</div>':'')+'</section>';
+    renderTrainingCalendar();
   }
 
   function renderProgress() {
