@@ -199,7 +199,7 @@
     const rpeLoadRatio = ratedLast7.length>=2&&rpeLoadBaseline>0 ? rpeLoad7d/rpeLoadBaseline : null;
     const plannedType = input.plannedType || "auto";
     const style = ["moderate","conservative","aggressive"].includes(input.style) ? input.style : "moderate";
-    const styleConfig = style === "conservative" ? {qualityReadiness:75,easyFactor:.9,longProgress:1.02,repFactor:.8,label:"Konservatif"} : style === "aggressive" ? {qualityReadiness:70,easyFactor:1,longProgress:1.05,repFactor:1,label:"Agresif-terkendali"} : {qualityReadiness:65,easyFactor:1,longProgress:1.05,repFactor:1,label:"Moderat"};
+    const styleConfig = style === "conservative" ? {qualityReadiness:75,easyFactor:.9,longProgress:1.02,repFactor:.8,label:"Konservatif"} : style === "aggressive" ? {qualityReadiness:70,easyFactor:1,longProgress:1.05,repFactor:1.15,label:"Agresif-terkendali"} : {qualityReadiness:65,easyFactor:1,longProgress:1.05,repFactor:1,label:"Moderat"};
     const isLongDay = plannedType === "long" || (plannedType === "auto" && (input.preferredLongDay != null ? new Date(now).getDay() === Number(input.preferredLongDay) : new Date(now).getDay() === 6));
     const plannedHardDay = plannedType === "quality" || (plannedType === "auto" && (input.preferredQualityDays ? input.preferredQualityDays.includes(new Date(now).getDay()) : [2,4].includes(new Date(now).getDay())));
     const taper = phase.name === "taper";
@@ -221,7 +221,7 @@
       const peak = kind === "peak";
       const strides = kind === "strides", hills = kind === "hills", threshold = kind === "threshold";
       const baseReps = peak ? 4 : strides ? 6 : hills ? 6 : threshold ? (phase.name === "base3" ? 3 : 2) : 5;
-      const reps = style === "conservative" ? Math.max(strides ? 4 : 2, Math.floor(baseReps * styleConfig.repFactor)) : baseReps;
+      const reps = style === "conservative" ? Math.max(strides ? 4 : 2, Math.floor(baseReps * styleConfig.repFactor)) : style === "aggressive" ? Math.min(7, Math.ceil(baseReps * styleConfig.repFactor)) : baseReps;
       const work = peak ? 1 : strides ? 20 : hills ? 1 : threshold ? 6 : 2;
       const restMin = strides ? 1 : 2;
       const total = strides ? 23 : 15 + reps * (work + restMin);
