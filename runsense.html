@@ -4984,20 +4984,25 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const defaults={0:"rest",1:"easy",2:"quality",3:"easy",4:"rest",5:"easy",6:"long"};
     const title={rest:"Istirahat",easy:"Easy Z1–Z2",quality:phase==="taper"||phase==="peak"?"Tune-up ringan":"Sesi kualitas",long:"Long run mudah"};
     const dates=[];
-    for(let i=0;i<35;i++){
+    const raceMs=state.race?new Date(state.race+"T00:00:00").getTime():NaN;
+    const horizon=Number.isFinite(raceMs)&&raceMs>=today0.getTime()?Math.min(84,Math.floor((raceMs-today0.getTime())/86400000)+1):35;
+    const phaseRows=info&&info.calendar&&info.calendar.phases||[];
+    for(let i=0;i<horizon;i++){
       const d=new Date(today0.getTime()+i*86400000),key=dateKey(d),dow=d.getDay();
+      const dayPhase=phaseRows.find(p=>key>=p.start&&key<=p.end);
+      const currentPhase=dayPhase?dayPhase.name:phase;
       let item=selected(dow),kind=item?item.t:(defaults[dow]||"easy");
-      if(phase==="race"||phase==="transition")kind="rest";
-      if(phase==="taper"&&kind==="quality")kind="easy";
+      if(currentPhase==="race"||currentPhase==="transition")kind="rest";
+      if(currentPhase==="taper"&&kind==="quality")kind="easy";
       const done=activities.find(a=>a[1]==="run"&&dateKey(new Date(a[0]))===key);
       const km=item&&+item.km>0?+item.km:0;
       const session=done?"Selesai · "+(+done[3]||0).toFixed(2)+" km":title[kind]||"Easy / adaptif";
-      const detail=done?"Aktivitas tercatat":kind==="quality"?phaseFocus[phase]+" · intensitas mengikuti kesiapan":kind==="long"?"Durasi mengikuti rata-rata long run yang sudah ditoleransi":kind==="easy"?"Usaha ringan, percakapan tetap nyaman":kind==="rest"?"Tidak ada sesi lari terjadwal":"Sesi mengikuti fase program";
-      dates.push({key,dow,kind,session,detail,km,done:!!done});
+      const detail=done?"Aktivitas tercatat":kind==="quality"?(phaseFocus[currentPhase]||"Sesi kualitas")+" · intensitas mengikuti kesiapan":kind==="long"?"Durasi mengikuti rata-rata long run yang sudah ditoleransi":kind==="easy"?"Usaha ringan, percakapan tetap nyaman":kind==="rest"?"Tidak ada sesi lari terjadwal":"Sesi mengikuti fase program";
+      dates.push({key,dow,kind,session,detail,km,done:!!done,phase:currentPhase});
     }
     const weeks=[];for(let i=0;i<dates.length;i+=7){const rows=dates.slice(i,i+7).map(x=>'<div class="prg-row"><span><b>'+dayNames[x.dow]+' · '+new Date(x.key+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"short"})+'</b><small style="display:block;color:var(--muted);margin-top:3px">'+esc(x.detail)+'</small></span><b style="text-align:right">'+esc(x.done?x.session:x.session)+(x.km?' · '+x.km+' km':'')+'</b></div>').join("");weeks.push('<div class="prg-insight" style="margin-top:9px"><b>Pekan '+(weeks.length+1)+'</b>'+rows+'</div>');}
     const old=$("#trainingCalendar"); if(old)old.remove();
-    host.insertAdjacentHTML("beforeend",'<section class="prg-card" id="trainingCalendar" style="margin-bottom:14px"><h4>Kalender rencana latihan · 5 minggu</h4><div class="prg-insight">Fase '+esc(labels[phase]||phase)+' · '+esc(phaseFocus[phase]||"Adaptif")+'. Sesi harian tetap disesuaikan berdasarkan aktivitas dan kesiapan; hari Rest yang dipilih tetap dihormati.</div>'+weeks.join("")+'</section>');
+    host.insertAdjacentHTML("beforeend",'<section class="prg-card" id="trainingCalendar" style="margin-bottom:14px"><h4>Kalender rencana latihan · '+Math.ceil(dates.length/7)+' pekan</h4><div class="prg-insight">Program sampai '+(state.race?new Date(state.race+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"}):"5 pekan ke depan")+'. Fase tiap tanggal mengikuti kalender periodisasi. Sesi harian tetap disesuaikan berdasarkan aktivitas dan kesiapan; hari Rest yang dipilih tetap dihormati.</div>'+weeks.join("")+'</section>');
   }
   function renderPeriodization() {
     const el = $("#periodizationBody"); if (!el) return;
