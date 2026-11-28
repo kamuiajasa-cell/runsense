@@ -1615,6 +1615,12 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     </div>
   </div>
 
+  <div id="screen-race" class="screen"><div class="content race-layout">
+<header class="page-hero"><span class="eyebrow">RACE STRATEGY</span><div class="page-title">Hari<br><em>lomba.</em></div><p>Strategi pacing, pengiriman workout, dan evaluasi setelah finis.</p></header>
+<section class="sg"><div class="sg-t">Target lomba</div><div class="sgroup"><div class="row"><span>Jarak</span><b id="raceMenuDistance">—</b></div><div class="row"><span>Tanggal</span><b id="raceMenuDate">—</b></div><div class="row"><span>Target</span><b id="raceMenuGoal">—</b></div><div class="row"><span>Pace rata-rata</span><b id="raceMenuPace">—</b></div><p class="race-note" id="raceMenuReadiness"></p></div></section>
+<section class="sg"><div class="sg-t">Strategi pacing</div><div class="sgroup"><div id="raceStrategyBody">Strategi belum dibuat.</div><button class="btn btn-primary" type="button" onclick="generateRaceStrategy()">Buat strategi lomba</button><button class="btn btn-outline" id="btnRaceSend" type="button" style="margin-top:8px" onclick="sendRaceStrategy()" disabled>Kirim strategi ke jam</button><p class="race-note">Workout menggunakan blok jarak dan rentang pace. Periksa hasil sinkronisasi di jam sebelum start.</p></div></section>
+<section class="sg"><div class="sg-t">Evaluasi pascalomba</div><div class="sgroup"><div id="raceEvaluation"><p class="race-note">Evaluasi muncul setelah aktivitas lomba tersinkron.</p></div><button class="btn btn-outline" type="button" onclick="refreshRaceEvaluation()">Periksa aktivitas lomba</button></div></section>
+</div></div>
   <nav class="bottom-nav" id="bottomNav" style="display:none">
     <button class="nav-item active" data-screen="home" onclick="showScreen('home')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
@@ -1628,6 +1634,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17l6-6 4 4 8-8v4h2V4h-7v2h4l-7 7-4-4-8 8z"/></svg>
       Progres
     </button>
+    <button class="nav-item" data-screen="race" onclick="showScreen('race')">⚑<span>Lomba</span></button>
     <button class="nav-item" data-screen="me" onclick="showScreen('me')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.33 0-8 1.67-8 5v1h16v-1c0-3.33-4.67-5-8-5z"/></svg>
       Saya
@@ -2772,6 +2779,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     rotateHero(name);
     requestAnimationFrame(() => window.scrollTo(0, rsScrollPositions[target.id] || 0));
     if (name === "progress" && window.renderProgress) renderProgress();
+    if (name === "race") renderRaceMenu();
   }
   window.addEventListener("popstate", (event) => {
     const modal = document.querySelector(".modal-bg.show");
@@ -2871,6 +2879,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
   /* ---------- Workout compiler: rekomendasi coach -> workout terstruktur Intervals.icu ---------- */
   let watchR = null;
+  let watchDateOverride = null;
   function buildWorkout(r) {
     const title = String(r && r.title || "Sesi lari");
     const duration = String(r && r.duration || "");
@@ -2978,8 +2987,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     el.textContent = msg || "";
     el.style.color = bad ? "var(--accent)" : "var(--muted)";
   }
-  function openWatch(r) {
+  function openWatch(r, dayOverride) {
     watchR = r;
+    watchDateOverride = dayOverride || null;
     const w = buildWorkout(r);
     $("#watchTitle").textContent = "Kerjakan di jam";
     $("#watchSub").textContent = w.structured
@@ -3008,7 +3018,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     setWatchStatus("Mengirim…");
     try {
       const d = new Date();
-      const day = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      const day = watchDateOverride || (d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"));
       const built = buildWorkout(watchR);
       if (!built.structured) throw new Error("Workout belum memiliki tahapan terstruktur yang valid.");
       const created = await icuPost("athlete/0/events", buildIntervalsWorkoutEvent(watchR, day, $("#watchText").value));
@@ -3031,6 +3041,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         text:built.text,segments:built.segments||[],steps:doc.steps||[],
         eventId:verified.id||created.id||null,savedAt:Date.now()
       };
+      if (watchDateOverride && state.raceStrategy && state.raceStrategy.date === workoutDay) { state.raceStrategy.eventId=verified.id||created.id||null; state.raceStrategy.sentAt=Date.now(); state.raceStrategy.workoutText=built.text; try{localStorage.setItem("runsense_race_strategy",JSON.stringify(state.raceStrategy));}catch(_){} }
       // Simpan rencana lokal terlebih dahulu agar analisis nanti tidak bergantung pada kalender.
       persist();
       setWatchStatus("Terverifikasi & rencana segmen disimpan di perangkat · " + doc.steps.length + " blok. Berikutnya sinkronkan Intervals.icu ke Huawei Health lalu jam.");
@@ -5989,7 +6000,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
           hwLast: state.hwLast,
           sx: state.sx,
           hx: state.hx,
-          workouts: state.workouts
+          workouts: state.workouts,
+          raceStrategy: state.raceStrategy || null
         })
       );
     } catch (_) {}
@@ -6592,6 +6604,50 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   window.nativeWatchState = function (v) {
     if (v && typeof v === "object") { jam.st = v; if (jam.open) renderJam(); }
   };
+
+
+  function raceClock(s){s=Math.max(0,Math.round(+s||0));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0");}
+  function raceDistanceToken(k){return (Math.round(k*100)/100).toString().replace(/\.0+$/,"")+"km";}
+  function renderRaceMenu(){
+    const d=+state.raceDist||0,t=parseRaceTime(state.raceGoal),st=state.raceStrategy;
+    const put=(id,v)=>{const e=$("#"+id);if(e)e.textContent=v;};
+    put("raceMenuDistance",d?d+" km":"Belum diatur");put("raceMenuDate",state.race||"Belum diatur");put("raceMenuGoal",state.raceGoal||"Belum diatur");put("raceMenuPace",t&&d?raceClock(t/d)+"/km":"—");
+    put("raceMenuReadiness",state.race&&d&&t?"Target waktu adalah sasaran yang kamu masukkan, bukan prediksi atau jaminan.":"Lengkapi tanggal, jarak, dan target di Pengaturan.");
+    const valid=st&&st.date===state.race&&st.targetSeconds===t&&Math.abs(st.distance-d)<.001;
+    const body=$("#raceStrategyBody"),send=$("#btnRaceSend");
+    if(body)body.innerHTML=!valid?"Strategi belum dibuat untuk target lomba saat ini.":'<p class="race-status good">Strategi tersimpan · '+st.date+'</p>'+st.segments.map(x=>'<div class="race-segment"><b>'+raceDistanceToken(x.distance)+'</b><div><b>'+esc(x.name)+'</b><span>'+raceClock(x.pace-5)+'–'+raceClock(x.pace+5)+'/km · '+esc(x.cue)+'</span></div></div>').join("");
+    if(send)send.disabled=!valid||!state.apiKey||state.apiKey==="demo";
+    refreshRaceEvaluation(false);
+  }
+  function generateRaceStrategy(){
+    const d=+state.raceDist||0,t=parseRaceTime(state.raceGoal),date=state.race||"";
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!d||!t){showError("Lengkapi tanggal, jarak, dan target waktu di Pengaturan.");return;}
+    const p=t/d,parts=[["Awal · kendalikan",.2,10,"Jangan terpancing start cepat; napas tetap terkendali."],["Tengah · stabil",.6,0,"Jaga ritme sasaran dan evaluasi kondisi berkala."],["Akhir · progresif",.2,-10,"Naikkan usaha hanya jika form dan napas masih terjaga."]];
+    let rem=d;const segments=parts.map((x,i)=>{const km=i===2?rem:Math.round(d*x[1]*100)/100;rem=Math.round((rem-km)*100)/100;return{name:x[0],distance:km,pace:p+x[2],cue:x[3]};});
+    state.raceStrategy={version:1,date,distance:d,goalLabel:state.raceGoal,targetSeconds:t,targetPace:p,segments,createdAt:Date.now(),eventId:null,sentAt:null};
+    try{localStorage.setItem("runsense_race_strategy",JSON.stringify(state.raceStrategy));}catch(_){}persist();renderRaceMenu();
+  }
+  function sendRaceStrategy(){
+    const st=state.raceStrategy;if(!st||st.date!==state.race||st.targetSeconds!==parseRaceTime(state.raceGoal)){showError("Buat ulang strategi karena target lomba berubah.");return;}
+    if(!state.apiKey||state.apiKey==="demo"){showError("Hubungkan Intervals.icu terlebih dahulu.");return;}
+    const lines=["Strategi Lomba "+st.distance+" km",""];st.segments.forEach((x,i)=>{lines.push("- "+x.name+" "+raceDistanceToken(x.distance)+" "+raceClock(x.pace-5)+"-"+raceClock(x.pace+5)+"/km Pace");lines.push("# "+x.cue);if(i<2)lines.push("");});
+    const r={title:"Strategi Lomba "+st.distance+"K",duration:"Target "+st.goalLabel,pace:raceClock(st.targetPace)+"/km rata-rata",hr:"Atur usaha sesuai kondisi",wl:lines,steps:st.segments.map(x=>[x.name,raceDistanceToken(x.distance)]),tag:"LOMBA"};
+    const built=buildWorkout(r);if(!built.structured){showError("Struktur workout strategi tidak valid.");return;}
+    st.workoutText=built.text;persist();openWatch(r,st.date);$("#watchTitle").textContent="Strategi lomba";$("#watchSub").textContent="Dijadwalkan pada tanggal lomba. Periksa segmen dan target pace sebelum mengirim.";$("#watchText").value=built.text;$("#btnWatchSend").textContent="Kirim strategi lomba";$("#btnWatchSend").disabled=false;
+  }
+  function refreshRaceEvaluation(showMsg){
+    const el=$("#raceEvaluation"),st=state.raceStrategy;if(!el)return;
+    if(!st||!st.eventId){el.innerHTML='<p class="race-note">Kirim strategi lomba terlebih dahulu. Evaluasi menggunakan snapshot strategi yang tersimpan.</p>';return;}
+    const runs=(state.acts||[]).filter(a=>{if(a[1]!=="run"||!a[0]||!(a[3]>0))return false;const d=new Date(a[0]);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")===st.date;});
+    if(!runs.length){el.innerHTML='<p class="race-note">Aktivitas pada '+st.date+' belum ditemukan. Sinkronkan Intervals.icu setelah lomba.</p>';return;}
+    const a=runs.slice().sort((x,y)=>Math.abs(x[3]-st.distance)-Math.abs(y[3]-st.distance))[0],sx=a[9]&&state.sx?state.sx[String(a[9])]:null,dist=+a[3],secs=(+a[2]||0)*60,pace=dist?secs/dist:0,delta=secs-st.targetSeconds,splits=sx&&Array.isArray(sx.splits)?sx.splits:[],rows=[];
+    if(splits.length){let cur=0;st.segments.forEach(seg=>{const end=cur+seg.distance,ss=splits.filter(q=>+q.km>cur&&+q.km<=end+.001).map(q=>+q.paceMinPerKm*60).filter(Number.isFinite);rows.push({seg,actual:ss.length?ss.reduce((x,y)=>x+y,0)/ss.length:null});cur=end;});}
+    let h='<div class="race-status '+(delta<=0?"good":"warn")+'">'+(delta<=0?"Target waktu tercapai":"Target waktu belum tercapai")+' · '+raceClock(secs)+' vs '+raceClock(st.targetSeconds)+'</div><div class="race-eval-row"><span>Jarak aktual</span><b>'+dist.toFixed(2)+' km</b></div><div class="race-eval-row"><span>Pace rata-rata</span><b>'+raceClock(pace)+'/km</b></div><div class="race-eval-row"><span>Selisih waktu</span><b>'+(delta>0?"+":"−")+raceClock(Math.abs(delta))+'</b></div>';
+    if(rows.length){h+='<p class="race-note">Pace segmen aktual dibanding strategi</p>';rows.forEach(x=>{h+='<div class="race-eval-row"><span>'+esc(x.seg.name)+'</span><b>'+(x.actual==null?"Split tidak lengkap":raceClock(x.actual)+"/km · "+(Math.abs(x.actual-x.seg.pace)<=5?"sesuai":x.actual>x.seg.pace?"lebih lambat":"lebih cepat"))+'</b></div>';});}
+    else h+='<p class="race-note">Split per km belum tersedia. Kepatuhan tiap segmen belum bisa dipastikan; evaluasi sementara hanya memakai waktu dan pace rata-rata.</p>';
+    h+='<p class="race-note">Dibandingkan dengan snapshot strategi tersimpan pada '+new Date(st.createdAt).toLocaleString("id-ID")+'.</p>';el.innerHTML=h;if(showMsg)showError("Evaluasi aktivitas lomba diperbarui.");
+  }
+  window.generateRaceStrategy=generateRaceStrategy;window.sendRaceStrategy=sendRaceStrategy;window.refreshRaceEvaluation=()=>refreshRaceEvaluation(true);
 
   /* ---------- init ---------- */
   /* ---------- Kekuatan di rumah, tes bicara, fueling ---------- */
