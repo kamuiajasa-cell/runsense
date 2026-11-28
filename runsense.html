@@ -21,6 +21,35 @@
 })();
 </script>
 <style>html.rs-boot #screen-setup{display:none!important}
+
+/* ===== Konsistensi jarak lintas tab · audit 2026-11 =====
+   Satu ritme antarkartu: 12px. Jarak khusus hanya untuk isi internal. */
+:root{--card-gap:12px}
+.content{gap:var(--card-gap)}
+.content>*{margin-top:0!important;margin-bottom:0!important}
+/* Jangan menambahkan ruang header di atas gap milik .content */
+.page-hero,.home-hero{padding-top:4px;padding-bottom:0}
+.page-hero + .section-kicker,.home-hero + .section-kicker{padding-top:0}
+.section-kicker{padding-top:0;margin:0!important}
+/* Semua tumpukan kartu menggunakan gap yang sama */
+#mainCard,#historyList,#progressBody,
+.session-analysis,.session-analysis .sa-flow,.sa-flow,
+.profile-layout>.sg,.sg{gap:var(--card-gap)}
+#mainCard,#historyList,#progressBody{display:flex;flex-direction:column}
+#mainCard>*,#historyList>*,#progressBody>*{margin:0!important}
+#historyList>.hist-grp{padding-top:0;margin:0!important}
+#historyList>.hist-grp:first-child{padding-top:0}
+.card,.prg-card,.hero,.hcard,.hist-card,.activity-item{margin:0!important}
+.card,.prg-card,.hero{scroll-margin-top:16px}
+/* Kelompok profil dan pengaturan: jarak antarkelompok setara kartu */
+#screen-me .profile-layout>.sg{margin:0!important}
+.sg{display:flex;flex-direction:column}
+.sa-flow{display:flex;flex-direction:column}
+.session-analysis{display:grid}
+@media(max-width:370px){
+  .content{gap:var(--card-gap)}
+}
+
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
