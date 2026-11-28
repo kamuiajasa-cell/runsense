@@ -3904,6 +3904,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const sd = $("#raceDist"), sg = $("#raceGoal"), ro = $("#rwOn"), rr = $("#rwRun"), rw2 = $("#rwWalk");
     if (sd) sd.value = state.raceDist ? String(state.raceDist) : "";
     if (sg) sg.value = state.raceGoal || "";
+    const rgh = $("#raceGoalHint"), rsec = parseRaceTime(state.raceGoal);
+    if (rgh) rgh.textContent = !state.raceGoal ? "Opsional. Format mm:ss atau jj:mm:ss." : rsec ? "Pace rata-rata sasaran: " + mp(rsec / state.raceDist) + " /km. Bukan jaminan prediksi." : "Format atau target tidak valid untuk jarak ini. Contoh 55:00 atau 1:05:00.";
     if (ro) { ro.checked = rwOn(); rr.value = rwT((state.rw || {}).run || 225); rw2.value = rwT((state.rw || {}).walk || 30); }
     const tot = planWeekKm();
     const lk = Math.max(0, ...PLAN_DAYS.filter((d) => (state.plan[d[0]] || {}).t === "long").map((d) => Number(state.plan[d[0]].km) || 0));
@@ -5402,7 +5404,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
   function renderMe(a, g) {
     g = g || state.goalEst || {};
-    [["#inWeight", state.weight], ["#inHeight", state.height], ["#inRest", state.rest], ["#inMax", state.max]].forEach(([s, v]) => {
+    [["#inWeight", state.weight], ["#inRest", state.rest], ["#inMax", state.max]].forEach(([s, v]) => {
       const el = $(s);
       if (el && document.activeElement !== el) el.value = v > 0 ? v : "";
     });
@@ -5983,7 +5985,6 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
           age: state.age,
           birthDate: state.birthDate,
           weight: state.weight,
-          height: state.height,
           weightHistory: state.weightHistory,
           hwLast: state.hwLast,
           sx: state.sx,
@@ -6759,7 +6760,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   }
   function cadHTML(a) {
     const c = cadOf(a); if (a[1] !== "run") return "";
-    const st = strideOf(a), ht = +state.height || 0, n = [], sx = a[9] && state.sx ? state.sx[String(a[9])] : null;
+    const st = strideOf(a), n = [], sx = a[9] && state.sx ? state.sx[String(a[9])] : null;
     const runSegs = sx && Array.isArray(sx.segments) ? sx.segments.filter(q => Number(q.cadence) > 0 && Number(q.cadenceSamples) > 0) : [];
     const runN = runSegs.reduce((v, q) => v + Number(q.cadenceSamples || 0), 0);
     const runCadence = runN ? Math.round(runSegs.reduce((v, q) => v + Number(q.cadence) * Number(q.cadenceSamples || 0), 0) / runN) : null;
