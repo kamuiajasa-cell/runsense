@@ -1309,6 +1309,80 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
  #screen-me .plan-row{grid-template-columns:38px minmax(0,1fr) 70px}
 }
 
+
+/* Pengaturan · koreksi berdasarkan audit tangkapan layar */
+#screen-me .sg-t{
+  font-size:11.5px!important;
+  line-height:1.4;
+  letter-spacing:.075em;
+  color:var(--light-grey);
+  padding:0 3px;
+  margin-bottom:1px;
+}
+#screen-me .sg{gap:9px}
+#screen-me .sgroup{border-radius:17px!important}
+#screen-me .srow-t,
+#screen-me .sfield>.srow-t{font-size:13.5px!important;line-height:1.4}
+#screen-me .srow-s{font-size:11.5px;line-height:1.45}
+#screen-me .srow-hint,
+#screen-me .hint,
+#screen-me .plan-warn{font-size:11.5px;line-height:1.55}
+#screen-me .sfield{gap:10px;padding:14px 0}
+#screen-me .sfield+.sfield{border-top:1px solid var(--card-border)}
+#screen-me input:not([type=checkbox]),
+#screen-me select{
+  min-height:44px!important;
+  border-radius:11px!important;
+  font-size:13px!important;
+}
+#screen-me .style-list{gap:0}
+#screen-me .style-option{
+  min-height:58px;
+  margin:0!important;
+  padding:12px 4px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+#screen-me .style-option+.style-option{border-top:1px solid var(--card-border)!important}
+#screen-me .style-option.active{
+  margin:4px 0!important;
+  padding:12px 11px!important;
+  border:1px solid color-mix(in srgb,var(--primary) 48%,var(--card-border))!important;
+  border-radius:12px!important;
+  background:var(--primary-dim)!important;
+}
+#screen-me .style-option .title{font-size:13.5px!important;line-height:1.35}
+#screen-me .style-option .sub{font-size:11.5px!important;line-height:1.45}
+#screen-me .style-option .check{width:21px;height:21px}
+#screen-me .plan-row{
+  min-height:44px;
+  grid-template-columns:42px minmax(0,1fr) 76px!important;
+  gap:8px!important;
+}
+#screen-me .plan-row b{font-size:12.5px!important}
+#screen-me .plan-row select,
+#screen-me .plan-row input{
+  min-height:42px!important;
+  font-size:12.5px!important;
+  border-radius:10px!important;
+}
+#screen-me .srow-v{font-size:12.5px}
+#screen-me .sic{width:31px;height:31px}
+#screen-me .seg{min-height:38px;align-items:center}
+#screen-me .seg .chip{min-height:32px;font-size:12px}
+#screen-me .sactions .btn{min-height:44px;font-size:12.5px}
+#screen-me .srow-body p{font-size:12.5px;line-height:1.65}
+#screen-me .logout,
+#screen-me .btn-danger{font-size:12.5px}
+@media(max-width:370px){
+  #screen-me .sg-t{font-size:11px!important}
+  #screen-me .srow-t,
+  #screen-me .sfield>.srow-t{font-size:13px!important}
+  #screen-me .plan-row{grid-template-columns:38px minmax(0,1fr) 70px!important}
+}
+
 </style>
 </head>
 <body>
