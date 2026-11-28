@@ -1489,8 +1489,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         <div class="sg-t">Data tubuh &amp; detak</div>
         <div class="sgroup">
           <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><span class="srow-t">Tanggal lahir</span><input type="date" id="inBirthDate" oninput="saveProfile()"><span class="srow-s" id="agePreview"></span></div>
-          <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M8 7h8M8 17h8"/></svg></span><span class="srow-t">Berat badan<span class="srow-s">kg · konteks Planner</span></span><input type="number" inputmode="decimal" id="inWeight" min="25" max="250" step="0.1" placeholder="—" oninput="saveProfile()"></div>
-          <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18M9 3v3M9 9v3M9 15v3M9 21h10"/></svg></span><span class="srow-t">Tinggi badan<span class="srow-s">cm · konteks Planner &amp; kadens</span></span><input type="number" inputmode="numeric" id="inHeight" min="100" max="230" placeholder="—" oninput="saveProfile()"></div>
+          <div class="srow"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M8 7h8M8 17h8"/></svg></span><span class="srow-t">Berat badan<span class="srow-s">kg · pemantauan tren pemulihan</span></span><input type="number" inputmode="decimal" id="inWeight" min="25" max="250" step="0.1" placeholder="—" oninput="saveProfile()"></div>
+          
           <div class="srow has-hint"><span class="sic y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z"/></svg></span><span class="srow-t">Detak istirahat<span class="srow-s">Rata-rata 28 hari</span></span><input type="number" inputmode="numeric" id="inRest" placeholder="—" oninput="saveProfile()"><div class="srow-hint" id="inRestHint"></div></div>
           <div class="srow"><span class="sic r"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="srow-t">Detak maksimal</span><input type="number" inputmode="numeric" id="inMax" placeholder="—" oninput="saveProfile()"></div>
           <div class="srow has-hint"><span class="sic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span><span class="srow-t">LTHR custom<span class="srow-s">bpm</span></span><input type="number" inputmode="numeric" id="inLthr" placeholder="auto" oninput="saveProfile()"><div class="srow-hint" id="autoLthr"></div></div>
@@ -1514,11 +1514,11 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
             </div>
           </div>
           <div class="sfield">
-            <span class="srow-t">Gaya coaching</span>
+            <span class="srow-t">Respons beban coach<span class="srow-s">Mengatur dosis dan ambang sesi keras, bukan menambah hari keras.</span></span>
             <div class="style-list">
-              <div class="style-option" data-style="moderate" onclick="pickStyle('moderate')"><div><div class="title">Moderat</div><div class="sub">Seimbang (disarankan)</div></div><div class="check">✓</div></div>
-              <div class="style-option" data-style="conservative" onclick="pickStyle('conservative')"><div><div class="title">Konservatif</div><div class="sub">Lebih banyak recovery</div></div><div class="check">✓</div></div>
-              <div class="style-option" data-style="aggressive" onclick="pickStyle('aggressive')"><div><div class="title">Agresif</div><div class="sub">Lebih banyak sesi kualitas</div></div><div class="check">✓</div></div>
+              <div class="style-option" data-style="moderate" onclick="pickStyle('moderate')"><div><div class="title">Moderat</div><div class="sub">Dosis standar sesuai fase dan kesiapan</div></div><div class="check">✓</div></div>
+              <div class="style-option" data-style="conservative" onclick="pickStyle('conservative')"><div><div class="title">Konservatif</div><div class="sub">Dosis lebih ringan; ambang sesi keras lebih ketat</div></div><div class="check">✓</div></div>
+              <div class="style-option" data-style="aggressive" onclick="pickStyle('aggressive')"><div><div class="title">Agresif</div><div class="sub">Dosis penuh saat kesiapan baik; tidak menambah sesi keras</div></div><div class="check">✓</div></div>
             </div>
           </div>
         </div>
@@ -1528,7 +1528,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         <div class="sg-t">Jadwal latihan</div>
         <div class="sgroup">
           <div class="sfield">
-            <span class="srow-t">Rencana mingguan<span class="srow-s">Pilih jenis latihan dan jarak tiap hari. Auto berarti coach yang menentukan.</span></span>
+            <span class="srow-t">Rencana mingguan<span class="srow-s">Pilih jenis sesi dan estimasi km per hari. Total km dipakai untuk memeriksa progresi terhadap rerata 4 minggu; bukan perintah jarak sesi dari coach. Auto berarti coach menentukan jenis sesi.</span></span>
             <div id="planGrid"></div>
             <div class="plan-warn" id="planWarn"></div>
           </div>
@@ -1544,9 +1544,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
             <button type="button" class="btn btn-outline sm" onclick="setRace('')">Hapus tanggal lomba</button>
           </div>
           <div class="sfield">
-            <span class="srow-t">Jarak &amp; target waktu</span>
+            <span class="srow-t">Jarak &amp; target waktu lomba<span class="srow-s">Target waktu dihitung menjadi pace rata-rata sasaran untuk panduan hari lomba.</span></span>
             <select id="raceDist" onchange="setRaceX()"><option value="">Pilih jarak</option><option value="5">5K</option><option value="10">10K</option><option value="21.1">Half marathon</option><option value="42.2">Maraton</option></select>
-            <input type="text" id="raceGoal" placeholder="Target, mis. 1:05:00 atau 55:00" onchange="setRaceX()" />
+            <input type="text" id="raceGoal" inputmode="numeric" placeholder="Target waktu (mis. 1:05:00)" onchange="setRaceX()" /><div class="srow-s" id="raceGoalHint">Opsional. Format mm:ss atau jj:mm:ss.</div>
           </div>
         </div>
       </div>
@@ -1853,8 +1853,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
   /* BB/TB hanya konteks tubuh di Planner. BMI bukan skor kebugaran/risiko cedera. */
   function bodyLoadContext() {
-    const w = +state.weight || 0, h = +state.height || 0;
-    const bmi = w > 0 && h >= 100 ? w / Math.pow(h / 100, 2) : null;
+    const w = +state.weight || 0;
     const hist = (state.weightHistory || []).filter(x => x && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && Number.isFinite(+x.weight) && x.weight >= 25 && x.weight <= 250).sort((a,b)=>a.date.localeCompare(b.date));
     const cutoff = new Date(Date.now() - 28 * 864e5).toISOString().slice(0,10);
     const recent = hist.filter(x => x.date >= cutoff);
@@ -1863,7 +1862,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const deltaPct = deltaKg != null ? deltaKg / first.weight * 100 : null;
     const spanDays = first && last ? Math.round((Date.parse(last.date + "T00:00:00Z") - Date.parse(first.date + "T00:00:00Z")) / 864e5) : 0;
     const trend = deltaKg != null && spanDays >= 7 ? { kg: deltaKg, pct: Math.round(deltaPct * 10) / 10, days: spanDays, n: recent.length } : null;
-    return { weight: w || null, height: h || null, bmi: bmi != null ? Math.round(bmi * 10) / 10 : null, trend, historyCount: hist.length };
+    return { weight: w || null, trend, historyCount: hist.length };
   }
 
   /* Simpan satu titik per hari; perubahan input pada hari yang sama memperbarui titik itu. */
@@ -3858,9 +3857,21 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     return inv > 0 ? Math.max(1 / inv, 4.5) : avg;
   }
 
+  function parseRaceTime(value) {
+    const p = String(value || "").trim().split(":").map(Number);
+    if (p.some(x => !Number.isInteger(x) || x < 0)) return 0;
+    let sec = 0;
+    if (p.length === 2 && p[1] < 60) sec = p[0] * 60 + p[1];
+    else if (p.length === 3 && p[1] < 60 && p[2] < 60) sec = p[0] * 3600 + p[1] * 60 + p[2];
+    const km = Number(state.raceDist) || 0, pace = km > 0 ? sec / km : 0;
+    return sec > 0 && pace >= 150 && pace <= 1200 ? sec : 0;
+  }
+  function raceTargetPace() { const sec = parseRaceTime(state.raceGoal); return sec > 0 && state.raceDist > 0 ? sec / state.raceDist : 0; }
   function setRaceX() {
     state.raceDist = +$("#raceDist").value || 0;
     state.raceGoal = ($("#raceGoal").value || "").trim();
+    const sec = parseRaceTime(state.raceGoal), hint = $("#raceGoalHint");
+    if (hint) hint.textContent = !state.raceGoal ? "Opsional. Format mm:ss atau jj:mm:ss." : sec ? "Pace rata-rata sasaran: " + mp(sec / state.raceDist) + " /km. Bukan jaminan prediksi." : "Format atau target tidak valid untuk jarak ini. Contoh 55:00 atau 1:05:00.";
     try { localStorage.setItem("runsense_racex", JSON.stringify({ d: state.raceDist, g: state.raceGoal })); } catch (_) {}
     applyLater();
   }
@@ -4393,6 +4404,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const explicitQualityDays = PLAN_DAYS.filter(([d]) => planOf(d)?.t === "quality").map(([d]) => d);
     const engineInput = {
       now, activities, raceDate:state.race || "", raceDistance:Number(state.raceDist) || 0,
+      raceTargetSeconds:parseRaceTime(state.raceGoal), raceTargetLabel:state.raceGoal || "", style:state.style || "moderate",
       goal:state.goal || "5K", lthr:L, ltPace:state.athlete && state.athlete.ltPace || "",
       easyPace:state.athlete && state.athlete.easyPace || "",
       readiness:readiness(), pain:flag && flag.lv || 0, feel:todayFeel,
@@ -4435,7 +4447,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     }
     if (a.ltPace && r.pace === "Mendekati LTPace") r.pace = a.ltPace + " /km (LTPace)";
     const bc = bodyLoadContext();
-    if (bc.bmi != null && r.status !== "done") r.reason += ` Profil tubuh tercatat: ${bc.weight} kg, ${bc.height} cm (BMI ${bc.bmi}); dipakai sebagai konteks pemantauan beban, bukan penalti kemampuan atau prediksi cedera.`;
+    if (bc.weight != null && r.status !== "done") r.reason += ` Berat badan tercatat ${bc.weight} kg sebagai konteks pemantauan perubahan dan pemulihan, bukan penentu kemampuan atau risiko cedera.`;
     if (bc.trend && Math.abs(bc.trend.pct) >= 3 && r.status === "train") r.reason += ` Tren BB berubah ${bc.trend.kg > 0 ? "+" : ""}${bc.trend.kg} kg dalam ${bc.trend.days} hari. Pertahankan progres konservatif dan evaluasi energi serta pemulihan; angka ini bukan prediksi cedera.`;
     const RW = ["Easy Run", "Easy terbatas", "Easy recovery", "Long Run", "Long Run mudah", "Easy taper", "Long dipotong", "Recovery Run"];
     if (rwOn() && r.status === "train" && stage().s >= 3 && RW.includes(r.title)) {
@@ -5435,9 +5447,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     const bd = $("#inBirthDate") ? $("#inBirthDate").value : "";
     state.birthDate = bd && ageFromBirthDate(bd) ? bd : "";
     state.age = ageFromBirthDate(state.birthDate);
-    const wt = +$("#inWeight").value || 0, ht = +$("#inHeight").value || 0;
+    const wt = +$("#inWeight").value || 0;
     state.weight = wt >= 25 && wt <= 250 ? Math.round(wt * 10) / 10 : 0;
-    state.height = ht >= 100 && ht <= 230 ? Math.round(ht) : 0;
+    state.height = 0;
     recordWeightPoint();
     const rv = Math.max(0, Math.min(120, +$("#inRest").value || 0));
     if (rv > 0) { state.rest = rv; state.restManual = 1; }
@@ -6005,7 +6017,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         state.birthDate = d.birthDate || "";
         state.age = ageFromBirthDate(state.birthDate) || d.age || 0;
         state.weight = d.weight || 0;
-        state.height = d.height || (+localStorage.getItem("runsense_ht") || 0);
+        state.height = 0;
         state.weightHistory = Array.isArray(d.weightHistory) ? d.weightHistory : [];
         if (!state.weightHistory.length && state.weight >= 25) state.weightHistory = [{ date: ymd(), weight: state.weight }];
         state.sx = d.sx && typeof d.sx === "object" ? d.sx : {};
@@ -6041,8 +6053,8 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
   let _ap = null;
   function applyLater() { clearTimeout(_ap); _ap = setTimeout(() => { if (state.athlete) processData(); }, 600); }
   function pickStyle(s) {
-    state.style = s;
-    localStorage.setItem("runsense_style", s);
+    state.style = ["moderate","conservative","aggressive"].includes(s) ? s : "moderate";
+    localStorage.setItem("runsense_style", state.style);
     syncSettingsUI();
     applyLater();
   }
@@ -7320,7 +7332,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     if (watchOnly) {
       state.src = "watch";
       state.goal = localStorage.getItem("runsense_goal") || "5K";
-      state.style = localStorage.getItem("runsense_style") || "moderate";
+      state.style = ["moderate","conservative","aggressive"].includes(localStorage.getItem("runsense_style")) ? localStorage.getItem("runsense_style") : "moderate";
       document.querySelectorAll(".chip[data-goal]").forEach((c) => c.classList.toggle("active", c.dataset.goal === state.goal));
       document.querySelectorAll(".style-option").forEach((o) => o.classList.toggle("active", o.dataset.style === state.style));
       if (state.acts.length || state.wellness.length) enterFromWatch();
