@@ -1476,7 +1476,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
       <div id="raceProgramBody">
         <section class="sg"><div class="sg-t">Strategi lomba</div><div class="sgroup">
           <div class="row"><span>Jarak</span><b id="raceMenuDistance">—</b></div><div class="row"><span>Tanggal</span><b id="raceMenuDate">—</b></div><div class="row"><span>Target</span><b id="raceMenuGoal">—</b></div><div class="row"><span>Pace rata-rata</span><b id="raceMenuPace">—</b></div><p class="race-note" id="raceMenuReadiness"></p>
-          <div id="raceStrategyBody">Strategi belum dibuat.</div><button class="btn btn-primary" type="button" onclick="generateRaceStrategy()">Buat strategi lomba</button><button class="btn btn-outline" id="btnRaceSend" type="button" style="margin-top:8px" onclick="sendRaceStrategy()" disabled>Kirim strategi ke jam</button>
+          <div id="raceStrategyBody">Strategi belum dibuat.</div><button class="btn btn-primary" id="btnRaceSend" type="button" onclick="sendRaceStrategy()" disabled>Kirim strategi ke jam</button>
         </div></section>
         <section class="sg"><div class="sg-t">Evaluasi pascalomba</div><div class="sgroup"><div id="raceEvaluation"><p class="race-note">Evaluasi muncul setelah aktivitas lomba tersinkron.</p></div><button class="btn btn-outline" type="button" onclick="refreshRaceEvaluation()">Periksa aktivitas lomba</button></div></section>
       </div>
@@ -6644,8 +6644,18 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 
   function raceClock(s){s=Math.max(0,Math.round(+s||0));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0");}
   function raceDistanceToken(k){return (Math.round(k*100)/100).toString().replace(/\.0+$/,"")+"km";}
+  function ensureRaceStrategy(){
+    const d=+state.raceDist||0,t=parseRaceTime(state.raceGoal),date=state.race||"",old=state.raceStrategy;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!d||!t)return null;
+    if(old&&old.date===date&&old.targetSeconds===t&&Math.abs(old.distance-d)<.001)return old;
+    const p=t/d,parts=[["Awal · kendalikan",.2,10,"Jangan terpancing start cepat; napas tetap terkendali."],["Tengah · stabil",.6,0,"Jaga ritme sasaran dan evaluasi kondisi berkala."],["Akhir · progresif",.2,-10,"Naikkan usaha hanya jika form dan napas masih terjaga."]];
+    let rem=d;const segments=parts.map((x,i)=>{const km=i===2?rem:Math.round(d*x[1]*100)/100;rem=Math.round((rem-km)*100)/100;return{name:x[0],distance:km,pace:p+x[2],cue:x[3]};});
+    state.raceStrategy={version:1,date,distance:d,goalLabel:state.raceGoal,targetSeconds:t,targetPace:p,segments,createdAt:Date.now(),eventId:null,sentAt:null};
+    try{localStorage.setItem("runsense_race_strategy",JSON.stringify(state.raceStrategy));}catch(_){}persist();
+    return state.raceStrategy;
+  }
   function renderRaceMenu(){
-    const d=+state.raceDist||0,t=parseRaceTime(state.raceGoal),st=state.raceStrategy;
+    const d=+state.raceDist||0,t=parseRaceTime(state.raceGoal),st=ensureRaceStrategy();
     const put=(id,v)=>{const e=$("#"+id);if(e)e.textContent=v;};
     put("raceMenuDistance",d?d+" km":"Belum diatur");put("raceMenuDate",state.race||"Belum diatur");put("raceMenuGoal",state.raceGoal||"Belum diatur");put("raceMenuPace",t&&d?raceClock(t/d)+"/km":"—");
     put("raceMenuReadiness",state.race&&d&&t?"Target waktu adalah sasaran yang kamu masukkan, bukan prediksi atau jaminan.":"Lengkapi tanggal, jarak, dan target di Pengaturan.");
@@ -6656,12 +6666,9 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
     refreshRaceEvaluation(false);
   }
   function generateRaceStrategy(){
-    const d=+state.raceDist||0,t=parseRaceTime(state.raceGoal),date=state.race||"";
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!d||!t){showError("Lengkapi tanggal, jarak, dan target waktu di Pengaturan.");return;}
-    const p=t/d,parts=[["Awal · kendalikan",.2,10,"Jangan terpancing start cepat; napas tetap terkendali."],["Tengah · stabil",.6,0,"Jaga ritme sasaran dan evaluasi kondisi berkala."],["Akhir · progresif",.2,-10,"Naikkan usaha hanya jika form dan napas masih terjaga."]];
-    let rem=d;const segments=parts.map((x,i)=>{const km=i===2?rem:Math.round(d*x[1]*100)/100;rem=Math.round((rem-km)*100)/100;return{name:x[0],distance:km,pace:p+x[2],cue:x[3]};});
-    state.raceStrategy={version:1,date,distance:d,goalLabel:state.raceGoal,targetSeconds:t,targetPace:p,segments,createdAt:Date.now(),eventId:null,sentAt:null};
-    try{localStorage.setItem("runsense_race_strategy",JSON.stringify(state.raceStrategy));}catch(_){}persist();renderRaceMenu();
+    const st=ensureRaceStrategy();
+    if(!st){showError("Lengkapi tanggal, jarak, dan target waktu di Pengaturan.");return;}
+    renderRaceMenu();
   }
   function sendRaceStrategy(){
     const st=state.raceStrategy;if(!st||st.date!==state.race||st.targetSeconds!==parseRaceTime(state.raceGoal)){showError("Buat ulang strategi karena target lomba berubah.");return;}
