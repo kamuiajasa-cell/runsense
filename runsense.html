@@ -22,34 +22,6 @@
 </script>
 <style>html.rs-boot #screen-setup{display:none!important}
 
-/* ===== Konsistensi jarak lintas tab · audit 2026-11 =====
-   Satu ritme antarkartu: 12px. Jarak khusus hanya untuk isi internal. */
-:root{--card-gap:12px}
-.content{gap:var(--card-gap)}
-.content>*{margin-top:0!important;margin-bottom:0!important}
-/* Jangan menambahkan ruang header di atas gap milik .content */
-.page-hero,.home-hero{padding-top:4px;padding-bottom:0}
-.page-hero + .section-kicker,.home-hero + .section-kicker{padding-top:0}
-.section-kicker{padding-top:0;margin:0!important}
-/* Semua tumpukan kartu menggunakan gap yang sama */
-#mainCard,#historyList,#progressBody,
-.session-analysis,.session-analysis .sa-flow,.sa-flow,
-.profile-layout>.sg,.sg{gap:var(--card-gap)}
-#mainCard,#historyList,#progressBody{display:flex;flex-direction:column}
-#mainCard>*,#historyList>*,#progressBody>*{margin:0!important}
-#historyList>.hist-grp{padding-top:0;margin:0!important}
-#historyList>.hist-grp:first-child{padding-top:0}
-.card,.prg-card,.hero,.hcard,.hist-card,.activity-item{margin:0!important}
-.card,.prg-card,.hero{scroll-margin-top:16px}
-/* Kelompok profil dan pengaturan: jarak antarkelompok setara kartu */
-#screen-me .profile-layout>.sg{margin:0!important}
-.sg{display:flex;flex-direction:column}
-.sa-flow{display:flex;flex-direction:column}
-.session-analysis{display:grid}
-@media(max-width:370px){
-  .content{gap:var(--card-gap)}
-}
-
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -1149,6 +1121,100 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
 .bar-big{grid-template-columns:92px 1fr 56px}.bar-big .bt{height:12px}.bar-big b{font-size:20px}
 </style>
 
+
+<style id="runsense-visual-system">
+/* RunSense visual system: satu keluarga kartu, hierarki ditentukan fungsi. */
+:root{
+ --rs-space:12px;
+ --rs-radius:18px;
+ --rs-radius-inner:14px;
+ --rs-card-pad:16px;
+ --rs-card-border:1px solid var(--card-border);
+ --rs-card-shadow:0 6px 20px rgba(0,0,0,.08);
+}
+/* Satu ritme layout untuk semua layar/tab */
+.content{
+ display:flex;flex-direction:column;gap:var(--rs-space);
+ padding:24px 20px 36px;
+}
+.content>*{margin:0!important}
+.page-hero,.home-hero{padding:4px 0 0!important}
+.page-hero .page-title,.home-hero .page-title{margin:12px 0!important}
+.page-hero p{margin:0!important}
+.section-kicker{margin:0!important;padding:0!important}
+/* Kartu utama dan kartu data: struktur permukaan identik */
+.card,.prg-card,.hist-card,.hcard,.sa-card,.setup-panel,.sgroup{
+ border:var(--rs-card-border)!important;
+ border-radius:var(--rs-radius)!important;
+ box-shadow:var(--rs-card-shadow)!important;
+}
+.card,.prg-card,.hist-card,.hcard,.sa-card{padding:var(--rs-card-pad)!important}
+.card,.prg-card,.hist-card,.hcard,.sa-card,.setup-panel,.sgroup{background:var(--card)}
+/* Hero adalah satu-satunya kartu yang boleh lebih dominan */
+.hero{
+ border:var(--rs-card-border)!important;
+ border-radius:22px!important;
+ padding:20px!important;
+ box-shadow:0 8px 24px rgba(0,0,0,.10)!important;
+}
+#mainCard>.card,#mainCard .card{
+ border-radius:var(--rs-radius)!important;
+ padding:var(--rs-card-pad)!important;
+}
+/* Kartu ringkas/statistik adalah komponen sekunder, bukan kartu utama mini */
+.hist-sum .hs,.me-stat,.stat-box,.prg-mix .pm,.sa-metric{
+ border:1px solid var(--card-border)!important;
+ border-radius:var(--rs-radius-inner)!important;
+ background:var(--el)!important;
+ box-shadow:none!important;
+}
+.me-id{border:var(--rs-card-border);border-radius:var(--rs-radius);box-shadow:var(--rs-card-shadow)}
+/* Pengaturan memakai satu panel berkelompok; baris di dalamnya bukan kartu terpisah */
+.sg{display:flex;flex-direction:column;gap:8px}
+.sgroup{padding:0 16px!important}
+.sgroup>*+*{border-top:1px solid var(--card-border)}
+.sgroup>.srow-hint-wrap,.sgroup>.sactions{border-top:0}
+/* Daftar aktivitas dan progres: jarak konsisten tanpa margin ganda */
+#mainCard,#historyList,#progressBody{display:flex;flex-direction:column;gap:var(--rs-space)}
+#mainCard>*,#historyList>*,#progressBody>*{margin:0!important}
+#historyList{gap:var(--rs-space)}
+#historyList>.hist-grp{padding-top:0!important;margin:0!important}
+.hist-grp{margin:0!important}
+.hcard{margin:0!important}
+.prg-card{margin:0!important}
+.profile-layout .card,#screen-me .profile-layout>.card{margin:0!important}
+.session-analysis{display:flex;flex-direction:column;gap:var(--rs-space);margin:0!important}
+.sa-flow{gap:var(--rs-space)!important}
+.sa-sec{gap:8px}
+.sa-card{gap:10px}
+.sa-card>*{margin:0!important}
+/* Komponen isi: tidak meniru kartu utama */
+.insight,.prg-insight,.sa-read,.review-note{border-radius:var(--rs-radius-inner)}
+/* Ruang dalam kartu mengikuti skala yang sama */
+.card>.label{margin:0 0 8px!important}
+.card .body-line,.card .week{margin-top:12px!important}
+.card .rows .row:first-child{padding-top:0}
+.card .rows .row:last-child{padding-bottom:0;border-bottom:0}
+.prg-card h4{margin:0 0 6px!important}
+.prg-card .sub{margin:0 0 10px!important}
+.prg-card svg{margin-top:10px!important}
+.hcard-top{margin-bottom:8px}
+.hcard-mid{margin-bottom:10px}
+.filter-dock{margin:0!important;border-radius:var(--rs-radius);border:var(--rs-card-border)}
+.hist-sum{margin:0!important}
+.hist-grp{padding-top:0!important}
+.setup-panel{padding:20px!important}
+.style-option{border-radius:var(--rs-radius-inner)!important;margin:0!important}
+.style-list{display:flex;flex-direction:column;gap:8px}
+/* Aksi dan navigasi tetap kontrol, bukan kartu konten */
+.btn{box-shadow:none}
+.btn-primary{box-shadow:0 4px 14px rgba(198,255,56,.12)}
+@media(max-width:370px){
+ .content{padding-left:16px;padding-right:16px}
+ .card,.prg-card,.hist-card,.hcard,.sa-card{padding:14px!important}
+ .hero{padding:18px!important}
+}
+</style>
 </head>
 <body>
 <div class="app">
