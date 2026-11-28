@@ -6037,6 +6037,7 @@ body.rs-keyboard-open .screen { padding-bottom: 24px; }
         state.sx = d.sx && typeof d.sx === "object" ? d.sx : {};
         state.hx = d.hx && typeof d.hx === "object" ? d.hx : {};
         state.workouts = d.workouts && typeof d.workouts === "object" ? d.workouts : {};
+        state.raceStrategy = d.raceStrategy && typeof d.raceStrategy === "object" ? d.raceStrategy : (()=>{try{return JSON.parse(localStorage.getItem("runsense_race_strategy")||"null")}catch(_){return null}})();
         state.hwLast = d.hwLast || 0;
       }
     } catch (_) {}
