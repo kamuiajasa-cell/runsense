@@ -42,7 +42,7 @@ check("Touch transitions avoid layout-bound geometry",()=>{
  assert.doesNotMatch(transitions,/(^|[,\\s])(top|left|width|height|margin|padding)\\s*(,|$)/);
 });
 check("Service worker updates shell cache and uses navigation-only HTML fallback",()=>{
- assert.match(sw,/const CACHE = "runsense-v\\d+"/);assert.match(sw,/req\.mode === "navigate"/);
+ assert.match(sw,/const CACHE = "runsense-v[0-9]+"/);assert.match(sw,/req\.mode === "navigate"/);
  assert.doesNotMatch(sw,/location\.reload/);
 });
 const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(x=>x[1]).filter(x=>x.trim());
