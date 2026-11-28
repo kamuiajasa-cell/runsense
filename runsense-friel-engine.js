@@ -190,6 +190,13 @@
     const priorWeeks = [1,2,3,4].map(w => acts.filter(a=>a.kind === "run" && a.timestamp>=today-(6+w*7)*DAY && a.timestamp<today-(6+(w-1)*7)*DAY).reduce((sum,a)=>sum+(Number(a.duration)||0),0));
     const baselineMinutes = priorWeeks.reduce((sum,v)=>sum+v,0)/4;
     const loadRatio = baselineMinutes>0 ? currentMinutes/baselineMinutes : null;
+    // Session-RPE load: durasi × RPE. Hanya bandingkan bila kedua periode punya cukup input.
+    const ratedLast7 = last7.filter(a=>a.kind==="run"&&Number(a.rpe)>0);
+    const ratedPrior21 = acts.filter(a=>a.kind==="run"&&a.timestamp>=today-27*DAY&&a.timestamp<today-6*DAY&&Number(a.rpe)>0);
+    const rpeLoad7d = ratedLast7.reduce((sum,a)=>sum+(Number(a.duration)||0)*Number(a.rpe),0);
+    const rpeLoadPrior21d = ratedPrior21.reduce((sum,a)=>sum+(Number(a.duration)||0)*Number(a.rpe),0);
+    const rpeLoadBaseline = ratedPrior21.length>=2 ? rpeLoadPrior21d/3 : null;
+    const rpeLoadRatio = ratedLast7.length>=2&&rpeLoadBaseline>0 ? rpeLoad7d/rpeLoadBaseline : null;
     const plannedType = input.plannedType || "auto";
     const isLongDay = plannedType === "long" || (plannedType === "auto" && (input.preferredLongDay != null ? new Date(now).getDay() === Number(input.preferredLongDay) : new Date(now).getDay() === 6));
     const plannedHardDay = plannedType === "quality" || (plannedType === "auto" && (input.preferredQualityDays ? input.preferredQualityDays.includes(new Date(now).getDay()) : [2,4].includes(new Date(now).getDay())));
@@ -270,8 +277,11 @@
     if (phase.name === "transition") return rest("Fase transisi setelah lomba atau siklus latihan. Pulihkan diri sebelum membangun siklus berikutnya.");
     if (plannedType === "rest") return rest("Hari ini ditetapkan sebagai hari istirahat dalam jadwal mingguan.");
     if (phase.name === "taper" && raceDays < 4) return easy("Easy taper", 15, "Jaga kaki tetap segar. Tidak ada sesi kualitas atau penambahan volume menjelang lomba.", "TAPER");
-    if (recoveryWeek || readiness < 42 || yesterday && yesterday.stress) {
-      return easy("Easy recovery", Math.max(15, Math.round(baseDuration * .65)), recoveryWeek ? "Pekan pemulihan terjadwal: kurangi volume, pertahankan gerak mudah, tanpa sesi kualitas." : "Beri jarak pemulihan setelah beban berat atau kesiapan rendah.", "RECOVERY");
+    if (recoveryWeek || readiness < 42 || yesterday && yesterday.stress || rpeLoadRatio != null && rpeLoadRatio >= 1.5) {
+      const why = recoveryWeek ? "Pekan pemulihan terjadwal: kurangi volume, pertahankan gerak mudah, tanpa sesi kualitas."
+        : rpeLoadRatio != null && rpeLoadRatio >= 1.5 ? "Beban subjektif 7 hari mencapai "+Math.round(rpeLoadRatio*100)+"% dari rerata mingguan 3 minggu sebelumnya. Hari ini diprioritaskan untuk pemulihan."
+        : "Beri jarak pemulihan setelah beban berat atau kesiapan rendah.";
+      return easy("Easy recovery", Math.max(15, Math.round(baseDuration * .65)), why, "RECOVERY");
     }
     if (readiness < 55) return easy("Easy terbatas", Math.max(15, Math.round(baseDuration * .7)), "Kesiapan belum mendukung latihan berat. Pertahankan intensitas rendah dan evaluasi respons tubuh.", "EASY");
     const longIsStressful = runs.some(a=>a.timestamp>=now-42*DAY && classify(a,lthr,typicalDuration).long);
@@ -279,7 +289,7 @@
     const phasePlan = phasePrescription(phase.name);
     // Long run yang >=75 menit dihitung sebagai hari stres; jangan menambahkan quality kedua.
     const maxQuality = longIsStressful ? 1 : phasePlan.quality;
-    const qualityAllowed = plannedType !== "easy" && plannedHardDay && qualityDays < maxQuality && stressDays < 2 && readiness >= 65 && !taper && !(loadRatio != null && loadRatio >= 1.1);
+    const qualityAllowed = plannedType !== "easy" && plannedHardDay && qualityDays < maxQuality && stressDays < 2 && readiness >= 65 && !taper && !(loadRatio != null && loadRatio >= 1.1) && !(rpeLoadRatio != null && rpeLoadRatio >= 1.3);
     if (qualityAllowed) {
       const type = phase.name === "peak" ? "peak" : phase.name === "prep" || phase.name === "base1" ? "strides" : phase.name === "base2" ? "hills" : phase.name === "base3" ? "threshold" : (trainingWeek % 2 ? "threshold" : "vo2");
       const result = quality(type);
@@ -289,13 +299,17 @@
     const easyCap = phase.name === "peak" ? 40 : taper ? 35 : 65;
     const easyFactor = phase.name === "peak" ? .8 : taper ? .7 : 1;
     let easyMins = Math.round(clamp(baseDuration * easyFactor, 15, easyCap) / 5) * 5;
-    if (loadRatio != null && loadRatio >= 1.1) easyMins = Math.max(15, Math.round(easyMins * (loadRatio >= 1.3 ? .8 : .9)));
+    let easyAdjustment = 1;
+    if (loadRatio != null && loadRatio >= 1.1) easyAdjustment = Math.min(easyAdjustment, loadRatio >= 1.3 ? .8 : .9);
+    if (rpeLoadRatio != null && rpeLoadRatio >= 1.3) easyAdjustment = Math.min(easyAdjustment, .9);
+    if (easyAdjustment < 1) easyMins = Math.max(15, Math.round(easyMins * easyAdjustment));
     const reason = "Fase "+phaseLabel(phase.name)+" · hari mudah. Beban keras minggu ini "+stressDays+"/2 hari; mayoritas latihan dijaga ringan agar adaptasi dan pemulihan berjalan.";
     const r = easy("Easy Run", easyMins, reason, taper ? "TAPER" : "EASY");
     r.periodization = { phase:phase.name, phaseWeek:phase.weekInPhase||phase.week||1, phaseStart:phase.start||null, phaseEnd:phase.end||null, recoveryWeek, recoveryCycle:recoveryCycle+":1" };
     if (heat) { r.duration = Math.max(15, Math.round(easyMins*.85))+" menit"; r.reason += " Cuaca panas: kurangi durasi dan utamakan rasa nyaman."; }
     if (rain) r.reason += " Hujan: pilih rute aman atau pindahkan sesi.";
     if (loadRatio != null && loadRatio >= 1.1) r.reason += " Durasi disesuaikan karena total menit 7 hari mendekati atau melampaui baseline 4 minggu.";
+    if (rpeLoadRatio != null && rpeLoadRatio >= 1.3) r.reason += " Durasi mudah dipangkas 10% karena beban subjektif 7 hari meningkat "+Math.round(rpeLoadRatio*100)+"% dari rerata mingguan 3 minggu sebelumnya.";
     if (metrics.efficiencyChangePct != null) r.reason += " Efisiensi aerobik terbaru "+(metrics.efficiencyChangePct>0?"+":"")+metrics.efficiencyChangePct+"% dibanding kelompok sesi sebelumnya (indikator tren, bukan diagnosis).";
     if (metrics.medianDecouplingPct != null) r.reason += " Drift aerobik median "+metrics.medianDecouplingPct+"% pada sesi dengan stream lengkap; pantau trennya, bukan satu sesi saja.";
     const strength = strengthForPhase(phase.name);
