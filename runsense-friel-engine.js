@@ -198,6 +198,8 @@
     const rpeLoadBaseline = ratedPrior21.length>=2 ? rpeLoadPrior21d/3 : null;
     const rpeLoadRatio = ratedLast7.length>=2&&rpeLoadBaseline>0 ? rpeLoad7d/rpeLoadBaseline : null;
     const plannedType = input.plannedType || "auto";
+    const style = ["moderate","conservative","aggressive"].includes(input.style) ? input.style : "moderate";
+    const styleConfig = style === "conservative" ? {qualityReadiness:75,easyFactor:.9,longProgress:1.02,repFactor:.8,label:"Konservatif"} : style === "aggressive" ? {qualityReadiness:70,easyFactor:1,longProgress:1.05,repFactor:1,label:"Agresif-terkendali"} : {qualityReadiness:65,easyFactor:1,longProgress:1.05,repFactor:1,label:"Moderat"};
     const isLongDay = plannedType === "long" || (plannedType === "auto" && (input.preferredLongDay != null ? new Date(now).getDay() === Number(input.preferredLongDay) : new Date(now).getDay() === 6));
     const plannedHardDay = plannedType === "quality" || (plannedType === "auto" && (input.preferredQualityDays ? input.preferredQualityDays.includes(new Date(now).getDay()) : [2,4].includes(new Date(now).getDay())));
     const taper = phase.name === "taper";
@@ -218,7 +220,8 @@
     const quality = (kind) => {
       const peak = kind === "peak";
       const strides = kind === "strides", hills = kind === "hills", threshold = kind === "threshold";
-      const reps = peak ? 4 : strides ? 6 : hills ? 6 : threshold ? (phase.name === "base3" ? 3 : 2) : 5;
+      const baseReps = peak ? 4 : strides ? 6 : hills ? 6 : threshold ? (phase.name === "base3" ? 3 : 2) : 5;
+      const reps = style === "conservative" ? Math.max(strides ? 4 : 2, Math.floor(baseReps * styleConfig.repFactor)) : baseReps;
       const work = peak ? 1 : strides ? 20 : hills ? 1 : threshold ? 6 : 2;
       const restMin = strides ? 1 : 2;
       const total = strides ? 23 : 15 + reps * (work + restMin);
@@ -248,7 +251,7 @@
         ? longSamples.reduce((sum, value) => sum + value, 0) / longSamples.length
         : (recentDurations.length >= 3 ? baseDuration : Math.min(30, baseDuration));
       // Batas fase membatasi progresi, bukan memotong kebiasaan mapan secara mendadak.
-      const target = avgLongRun >= cap ? avgLongRun : Math.min(cap, avgLongRun * 1.05);
+      const target = avgLongRun >= cap ? avgLongRun : Math.min(cap, avgLongRun * styleConfig.longProgress);
       const mins = Math.round(clamp(target, 25, Math.max(cap, avgLongRun)));
       return easy("Long Run mudah", mins,
         longSamples.length ? "Durasi mengacu pada rata-rata sesi panjang per pekan dalam 6 minggu terakhir; progresi maksimal sekitar 5% dan tidak memotong kebiasaan mapan secara mendadak." : "Belum ada riwayat long run yang cukup; sesi ini hanya perpanjangan ringan dari durasi lari biasa, bukan target long run penuh.",
@@ -273,7 +276,12 @@
         reason:"Aktivitas lari hari ini sudah tercatat"+(completedKm>0?" ("+completedKm.toFixed(2)+" km)":"")+". Tidak perlu menambah sesi lari. Pulihkan diri dan lanjutkan rencana besok."
       };
     }
-    if (phase.name === "race") return { k:"race", status:"train", title:"Hari lomba", duration:"Sesuai jarak lomba", hr:"Mulai terkendali", pace:"Ikuti target realistis", reason:"Hari lomba. Awali konservatif dan jangan mengejar pace pada kilometer awal.", adaptation:"Eksekusi performa spesifik lomba", steps:[["Pemanasan","10–15 mnt mudah"],["Lomba","Atur usaha bertahap sesuai jarak"],["Pemulihan","Jalan ringan setelah finis"]], score:readiness, tag:"LOMBA" };
+    if (phase.name === "race") {
+      const targetSeconds = Number(input.raceTargetSeconds) || 0;
+      const targetPace = targetSeconds > 0 && Number(input.raceDistance) > 0 ? targetSeconds / Number(input.raceDistance) : 0;
+      const paceText = targetPace > 0 ? Math.floor(targetPace/60)+":"+String(Math.round(targetPace%60)).padStart(2,"0")+" /km rata-rata sasaran" : "Ikuti target realistis";
+      return { k:"race", status:"train", title:"Hari lomba", duration:"Sesuai jarak lomba", hr:"Mulai terkendali", pace:paceText, reason:"Hari lomba. Awali konservatif dan jangan mengejar pace pada kilometer awal."+(targetPace>0?" Target waktu "+input.raceTargetLabel+" setara sekitar "+paceText+". Pace ini panduan rata-rata, bukan kewajiban tiap kilometer.":""), adaptation:"Eksekusi performa spesifik lomba", steps:[["Pemanasan","10–15 mnt mudah"],["Lomba",targetPace>0?"Mulai sedikit lebih lambat dari pace rata-rata sasaran; evaluasi napas dan kondisi tiap 2–3 km.":"Atur usaha bertahap sesuai jarak"],["Pemulihan","Jalan ringan setelah finis"]], score:readiness, tag:"LOMBA" };
+    }
     if (phase.name === "transition") return rest("Fase transisi setelah lomba atau siklus latihan. Pulihkan diri sebelum membangun siklus berikutnya.");
     if (plannedType === "rest") return rest("Hari ini ditetapkan sebagai hari istirahat dalam jadwal mingguan.");
     if (phase.name === "taper" && raceDays < 4) return easy("Easy taper", 15, "Jaga kaki tetap segar. Tidak ada sesi kualitas atau penambahan volume menjelang lomba.", "TAPER");
@@ -289,7 +297,7 @@
     const phasePlan = phasePrescription(phase.name);
     // Long run yang >=75 menit dihitung sebagai hari stres; jangan menambahkan quality kedua.
     const maxQuality = longIsStressful ? 1 : phasePlan.quality;
-    const qualityAllowed = plannedType !== "easy" && plannedHardDay && qualityDays < maxQuality && stressDays < 2 && readiness >= 65 && !taper && !(loadRatio != null && loadRatio >= 1.1) && !(rpeLoadRatio != null && rpeLoadRatio >= 1.3);
+    const qualityAllowed = plannedType !== "easy" && plannedHardDay && qualityDays < maxQuality && stressDays < 2 && readiness >= styleConfig.qualityReadiness && !taper && !(loadRatio != null && loadRatio >= 1.1) && !(rpeLoadRatio != null && rpeLoadRatio >= 1.3);
     if (qualityAllowed) {
       const type = phase.name === "peak" ? "peak" : phase.name === "prep" || phase.name === "base1" ? "strides" : phase.name === "base2" ? "hills" : phase.name === "base3" ? "threshold" : (trainingWeek % 2 ? "threshold" : "vo2");
       const result = quality(type);
@@ -298,7 +306,7 @@
     }
     const easyCap = phase.name === "peak" ? 40 : taper ? 35 : 65;
     const easyFactor = phase.name === "peak" ? .8 : taper ? .7 : 1;
-    let easyMins = Math.round(clamp(baseDuration * easyFactor, 15, easyCap) / 5) * 5;
+    let easyMins = Math.round(clamp(baseDuration * easyFactor * styleConfig.easyFactor, 15, easyCap) / 5) * 5;
     let easyAdjustment = 1;
     if (loadRatio != null && loadRatio >= 1.1) easyAdjustment = Math.min(easyAdjustment, loadRatio >= 1.3 ? .8 : .9);
     if (rpeLoadRatio != null && rpeLoadRatio >= 1.3) easyAdjustment = Math.min(easyAdjustment, .9);
